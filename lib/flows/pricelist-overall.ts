@@ -49,6 +49,13 @@ export const pricelistOverall: FlowChart = {
   groupDirection: "LR",
   nodeWidth: 250,
 
+  howToRead: [
+    "대문자 그룹 라벨은 워커의 배치 상태 이름입니다. 배치는 위에서 아래로 상태를 넘어가고, 한 상태 안에서는 왼쪽에서 오른쪽으로 처리됩니다.",
+    "브랜드 라우팅에서 KNOWN / CHANGED / UNKNOWN 이 갈라집니다. 신규·변경 구조는 전체 추출 전에 파일럿과 구조 카드 승인을 먼저 받습니다.",
+    "Tier 3 사람 수정은 검증 면제가 아닙니다 — staging 갱신 후 재검증을 거쳐 새 AUDIT-PASS 를 받고 게이트를 재판정합니다.",
+    "실패·반려는 전부 복구 루프의 원인 분류로 모이고, 원본/구조/판독/조립 중 가장 가까운 단계로만 되돌아갑니다.",
+  ],
+
   groups: [
     {
       id: "g-read",
