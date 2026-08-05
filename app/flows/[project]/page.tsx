@@ -7,8 +7,17 @@ import { flowProjects, getProject, resolveChart } from "@/lib/flows/registry";
 
 type PageProps = {
   params: Promise<{ project: string }>;
-  searchParams: Promise<{ cat?: string; chart?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+/**
+ * `?cat=a&cat=b` 처럼 같은 키가 여러 번 오면 배열로 들어온다. 첫 값만 쓴다 —
+ * 사이드바의 `URLSearchParams.get()` 과 같은 규칙이라야 활성 표시가 어긋나지
+ * 않는다.
+ */
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export function generateStaticParams() {
   return flowProjects.map((p) => ({ project: p.slug }));
@@ -22,10 +31,11 @@ export async function generateMetadata({
   const project = getProject(projectSlug);
   if (!project) return {};
   const sp = await searchParams;
-  const { chart } = resolveChart(project, sp.cat, sp.chart);
+  const resolved = resolveChart(project, first(sp.cat), first(sp.chart));
+  if (!resolved) return {};
   return {
-    title: `${chart.title} — ${project.title} — 프로젝트 매니지먼트`,
-    description: chart.description,
+    title: `${resolved.chart.title} — ${project.title} — 프로젝트 매니지먼트`,
+    description: resolved.chart.description,
   };
 }
 
@@ -38,7 +48,10 @@ export default async function ProjectFlowsPage({
   if (!project) notFound();
   const sp = await searchParams;
   // 잘못된 cat/chart 는 첫 카테고리·첫 차트로 폴백한다 (404 아님).
-  const { category, chart } = resolveChart(project, sp.cat, sp.chart);
+  // 차트가 하나도 없는 프로젝트만 404 로 떨어진다.
+  const resolved = resolveChart(project, first(sp.cat), first(sp.chart));
+  if (!resolved) notFound();
+  const { category, chart } = resolved;
 
   return (
     <div className="mx-auto max-w-[1200px] px-6 py-6">
@@ -85,8 +98,8 @@ export default async function ProjectFlowsPage({
             읽는 법
           </h3>
           <ul className="m-0 list-disc space-y-1.5 pl-5 text-[13px] leading-[1.7] text-[var(--bi-fg)]">
-            {chart.howToRead.map((line) => (
-              <li key={line}>{line}</li>
+            {chart.howToRead.map((line, i) => (
+              <li key={i}>{line}</li>
             ))}
           </ul>
         </section>

@@ -19,6 +19,9 @@ import { HiOutlineDownload } from "react-icons/hi";
 
 const PAD = 40;
 
+/** revoke 를 click 직후에 하면 브라우저가 다운로드를 취소하는 경우가 있다. */
+const REVOKE_DELAY_MS = 60_000;
+
 export function ExportSvgButton({
   slug,
   wrapper,
@@ -28,22 +31,30 @@ export function ExportSvgButton({
   wrapper: React.RefObject<HTMLDivElement | null>;
 }) {
   const { getNodes, getNodesBounds } = useReactFlow();
+  const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const onExport = async () => {
+    // 큰 차트는 직렬화가 수 초 걸린다. 그동안 눌러도 중복 실행하지 않는다.
+    if (busy) return;
+    setBusy(true);
+    setFailed(false);
     try {
-      setFailed(false);
       const viewport = wrapper.current?.querySelector<HTMLElement>(
         ".react-flow__viewport"
       );
-      if (!viewport) throw new Error("viewport not found");
-      const bounds = getNodesBounds(getNodes());
+      if (!viewport) throw new Error("react-flow viewport 를 찾지 못했다");
+      const nodes = getNodes();
+      if (!nodes.length) throw new Error("내보낼 노드가 없다");
+
+      const bounds = getNodesBounds(nodes);
       const width = Math.ceil(bounds.width) + PAD * 2;
       const height = Math.ceil(bounds.height) + PAD * 2;
       const bg =
         getComputedStyle(document.documentElement)
           .getPropertyValue("--bi-bg")
           .trim() || "#ffffff";
+
       const dataUrl = await toSvg(viewport, {
         width,
         height,
@@ -54,12 +65,23 @@ export function ExportSvgButton({
           transform: `translate(${PAD - bounds.x}px, ${PAD - bounds.y}px) scale(1)`,
         },
       });
+
+      // toSvg 는 data: URL 을 준다. 큰 차트는 수 MB 라 data: URL 다운로드
+      // 한계에 걸릴 수 있어서 Blob 으로 바꿔 내려받는다.
+      const svg = decodeURIComponent(dataUrl.slice(dataUrl.indexOf(",") + 1));
+      const url = URL.createObjectURL(
+        new Blob([svg], { type: "image/svg+xml;charset=utf-8" })
+      );
       const a = document.createElement("a");
-      a.href = dataUrl;
+      a.href = url;
       a.download = `${slug}.svg`;
       a.click();
-    } catch {
+      window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS);
+    } catch (e) {
+      console.error("SVG 저장 실패", e);
       setFailed(true);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -71,11 +93,12 @@ export function ExportSvgButton({
       <button
         type="button"
         onClick={onExport}
-        className="flex items-center gap-1 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-0.5 text-[11px] text-[var(--bi-fg)] transition hover:border-[var(--bi-accent)] hover:text-[var(--bi-accent)]"
+        disabled={busy}
+        className="flex items-center gap-1 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-0.5 text-[11px] text-[var(--bi-fg)] transition hover:border-[var(--bi-accent)] hover:text-[var(--bi-accent)] disabled:opacity-50"
         aria-label="SVG 로 저장"
       >
         <HiOutlineDownload size={11} />
-        SVG 저장
+        {busy ? "저장 중…" : "SVG 저장"}
       </button>
     </span>
   );

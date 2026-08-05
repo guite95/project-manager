@@ -102,7 +102,7 @@ export type FlowDirection = "LR" | "TB";
 
 /** 플로우차트 한 장. */
 export type FlowChart = {
-  /** URL 경로에 쓰이는 식별자 — `/flows/<slug>` */
+  /** `chart` 쿼리파람 값 — 같은 카테고리 안에서 유일해야 한다. */
   slug: string;
   /** 화면 제목 */
   title: string;

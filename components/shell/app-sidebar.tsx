@@ -5,12 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { HiChevronRight, HiOutlineSearch } from "react-icons/hi";
 import type { FlowChart } from "@/components/flow/types";
-import {
-  chartHref,
-  flowProjects,
-  projectChartCount,
-  resolveChart,
-} from "@/lib/flows/registry";
+import { chartHref, flowProjects, resolveChart } from "@/lib/flows/registry";
 
 /* -------------------------------------------------------------------------
  * 3단 트리 사이드바 — 프로젝트 → 카테고리 → 차트.
@@ -46,20 +41,30 @@ export function AppSidebar() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setUserOverrides(JSON.parse(raw) as Record<string, boolean>);
+      if (!raw) return;
+      const parsed: unknown = JSON.parse(raw);
+      // 형태까지 확인한다. 유효한 JSON 이어도 객체가 아니면(`5`, `[]`, `null`)
+      // 아래 `key in overrides` 가 던져서 사이드바째 렌더가 죽는다.
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        setUserOverrides(parsed as Record<string, boolean>);
+      }
     } catch {
       /* ignore */
     }
   }, []);
 
+  const persist = (next: Record<string, boolean>) => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* quota 에러 무시 */
+    }
+  };
+
   const toggle = (key: string, currentlyCollapsed: boolean) => {
     setUserOverrides((prev) => {
       const next = { ...prev, [key]: !currentlyCollapsed };
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        /* quota 에러 무시 */
-      }
+      persist(next);
       return next;
     });
   };
@@ -70,17 +75,37 @@ export function AppSidebar() {
     if (!m) return null;
     const project = flowProjects.find((p) => p.slug === m[1]);
     if (!project) return null;
-    const { category, chart } = resolveChart(
+    const resolved = resolveChart(
       project,
       searchParams.get("cat") ?? undefined,
       searchParams.get("chart") ?? undefined
     );
+    if (!resolved) return null;
     return {
       project: project.slug,
-      category: category.slug,
-      chart: chart.slug,
+      category: resolved.category.slug,
+      chart: resolved.chart.slug,
     };
   }, [pathname, searchParams]);
+
+  // 다른 차트로 이동하면 그 조상의 접힘 override 를 지운다. 접어둔 프로젝트의
+  // 차트로 갔을 때 정작 보고 있는 차트가 트리에서 사라지는 걸 막는다.
+  // (override 를 무시하는 게 아니라 지우는 것이라, 이동 후 다시 접을 수 있다.)
+  useEffect(() => {
+    if (!active) return;
+    const pKey = projectKey(active.project);
+    const cKey = categoryKey(active.project, active.category);
+    setUserOverrides((prev) => {
+      if (!prev[pKey] && !prev[cKey]) return prev;
+      const next = { ...prev };
+      delete next[pKey];
+      delete next[cKey];
+      persist(next);
+      return next;
+    });
+    // active 객체는 매 렌더 새로 만들어지므로 식별자만 의존한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.project, active?.category, active?.chart]);
 
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
@@ -157,8 +182,9 @@ export function AppSidebar() {
                 }`}
               />
               <span className="truncate">{project.title}</span>
+              {/* 검색 중에는 필터링된 개수 — 카테고리 배지와 셈법이 같아야 한다 */}
               <span className="ml-auto font-normal tracking-normal">
-                {projectChartCount(project)}
+                {categories.reduce((n, c) => n + c.charts.length, 0)}
               </span>
             </button>
 

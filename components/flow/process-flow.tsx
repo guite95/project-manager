@@ -84,6 +84,12 @@ export function ProcessFlow({
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // 같은 라우트에서 차트만 바뀌는 경우(쿼리파람 이동·뒤로가기) 이 컴포넌트는
+  // 살아남는다. 열어둔 모달이 새 차트로 이어지지 않게 닫는다.
+  useEffect(() => {
+    setOpen(false);
+  }, [chart.slug]);
+
   // ESC 닫기 + 모달 열렸을 때 body 스크롤 잠금
   useEffect(() => {
     if (!open) return;
@@ -109,7 +115,10 @@ export function ProcessFlow({
           fill ? "flex min-h-0 flex-1 flex-col" : "my-4"
         }`}
       >
-        <ReactFlowProvider>
+        {/* key: 같은 라우트에서 쿼리파람만 바뀌면 Next 는 이 서브트리를 remount
+            하지 않는다. 그러면 React Flow 의 fitView 가 다시 돌지 않아 이전
+            차트의 줌·위치가 그대로 남는다. 차트가 바뀌면 캔버스를 새로 만든다. */}
+        <ReactFlowProvider key={chart.slug}>
           <div className="flex items-center justify-between gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-sidebar-bg)] px-3 py-1.5 text-[11px] text-[var(--bi-muted)]">
             <span className="truncate">
               {chart.caption ?? chart.title} · {HINT}
@@ -165,7 +174,7 @@ export function ProcessFlow({
                 </button>
               </div>
               <div className="relative flex-1">
-                <FlowCanvas chart={chart} />
+                <FlowCanvas key={chart.slug} chart={chart} />
               </div>
             </div>,
             document.body
