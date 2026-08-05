@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-primary: #1b2a4a;
+  --color-primary-foreground: #ffffff;
+  --font-sans:
+    Pretendard, "Pretendard Variable", ui-sans-serif, system-ui, -apple-system,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}
+
+/*
+ * 브랜드 토큰 (단일 진실 공급원).
+ * 프로젝트별 테마는 --bi-accent / --bi-accent-light 만 덮어쓴다.
+ * 나머지 --bi-* 키는 이름을 바꾸거나 지우지 않는다.
+ *
+ * 플로우차트 컴포넌트(components/flow/*)가 이 토큰만 참조하므로,
+ * 색을 바꾸려면 여기만 고치면 된다. 컴포넌트에 색 하드코딩 금지.
+ */
+:root {
+  --bi-bg: #ffffff;
+  --bi-fg: #0a0a0a;
+  --bi-muted: #666666;
+  --bi-border: #eaeaea;
+  --bi-border-strong: #d4d4d4;
+  --bi-accent: #1b2a4a;
+  --bi-accent-light: #e8edf5;
+  --bi-card-bg: #ffffff;
+  --bi-sidebar-bg: #fafafa;
+  --bi-sidebar-active: #e8e8e8;
+  --bi-table-header: #fafafa;
+  --bi-success: #10b981;
+  --bi-warning: #f5a623;
+  --bi-error: #ee0000;
+  /* 문서 배지용 보라 */
+  --bi-doc: #7c3aed;
+  /* 엣지 전용 회색 (border-strong 보다 약간 진하게) */
+  --bi-edge-muted: #c4c4c4;
+
+  /*
+   * 도메인 계열 노드 색 (DomainKind).
+   * 각 쌍은 옅은 배경 + 진한 테두리/글자. 아키텍처 다이어그램의 8색 범례와 1:1.
+   * 엣지 마커는 SVG 속성이라 var() 가 안 먹으므로 flow-theme.ts 에 hex 거울이 있다.
+   */
+  --bi-k-entry-bg: #dbeafe;
+  --bi-k-entry-line: #1971c2;
+  --bi-k-model-bg: #ede9fe;
+  --bi-k-model-line: #7048e8;
+  --bi-k-deterministic-bg: #ccfbf1;
+  --bi-k-deterministic-line: #0f766e;
+  --bi-k-verify-bg: #fef3c7;
+  --bi-k-verify-line: #b7791f;
+  --bi-k-gate-bg: #ffedd5;
+  --bi-k-gate-line: #c2410c;
+  --bi-k-activate-bg: #dcfce7;
+  --bi-k-activate-line: #2f9e44;
+  --bi-k-store-bg: #f1f3f5;
+  --bi-k-store-line: #495057;
+  --bi-k-failure-bg: #fee2e2;
+  --bi-k-failure-line: #c92a2a;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  background: var(--bi-bg);
+  color: var(--bi-fg);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--bi-accent-light);
+}

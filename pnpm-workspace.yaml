@@ -1,0 +1,4 @@
+# pnpm 10+ 부터 설정이 package.json 의 "pnpm" 필드에서 이 파일로 옮겨졌다.
+# sharp 는 next 의 이미지 최적화용 네이티브 모듈이라 postinstall 빌드가 필요하다.
+allowBuilds:
+  sharp: true
