@@ -29,8 +29,8 @@ pnpm typecheck  # tsc --noEmit
 
 | 경로 | 내용 |
 | --- | --- |
-| `/flows` | 플로우차트 목록 |
-| `/flows/[slug]` | 플로우차트 전체 화면 뷰 + 그 차트의 색 범례 |
+| `/flows` | 전체 목록 — 프로젝트 → 카테고리 → 차트 |
+| `/flows/[project]?cat=&chart=` | 프로젝트 화면 — 쿼리파람으로 차트 전환, 잘못된 값은 첫 차트 폴백 |
 | `/guide` | 플로우차트 작성 가이드 (MDX) |
 
 ## 디렉터리
@@ -51,16 +51,17 @@ components/
     process-flow.tsx     읽기 전용 캔버스 + 전체화면 모달
     flow-legend.tsx      차트별 색 범례
   mdx/                   Callout · Steps (MDX 컴포넌트)
-  shell/                 헤더 + 사이드바
+  shell/                 헤더 + 3단 트리 사이드바(검색)
+  rich-text.tsx          `**강조**` 만 지원하는 초소형 리치텍스트
 lib/flows/
-  registry.ts            사이드바·목록·라우트의 단일 소스
+  registry.ts            프로젝트 → 카테고리 → 차트 트리의 단일 소스
   <slug>.ts              플로우차트 데이터 ← 새 차트는 여기만 작성
 ```
 
 ## 새 플로우차트 추가
 
 1. `lib/flows/<slug>.ts` 에 `FlowChart` 선언 (기존 파일 복사 권장)
-2. `lib/flows/registry.ts` 의 `flowCategories` 에 등록
+2. `lib/flows/registry.ts` 의 `flowProjects` 에서 알맞은 프로젝트/카테고리에 등록
 
 그 외 등록 절차는 없다. 사이드바·목록·라우트가 전부 레지스트리에서 파생된다.
 자세한 규약은 `/guide` 참고.

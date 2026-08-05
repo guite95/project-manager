@@ -39,7 +39,7 @@ export const metadata = {
     import type { FlowChart } from "@/components/flow/types";
 
     export const myFlow: FlowChart = {
-      slug: "my-flow",              // URL: /flows/my-flow
+      slug: "my-flow",              // chart 쿼리파람 값
       title: "내 업무 흐름",
       description: "목록 카드에 뜨는 한 줄 설명",
       direction: "LR",              // LR(좌→우, 기본) | TB(위→아래)
@@ -57,18 +57,26 @@ export const metadata = {
   </Step>
 
   <Step title="레지스트리에 등록">
-    `lib/flows/registry.ts` 의 `flowCategories` 에 넣습니다. 사이드바, 목록 페이지,
-    `/flows/<slug>` 라우트가 전부 여기서 파생되므로 **다른 등록 절차는 없습니다.**
+    `lib/flows/registry.ts` 의 `flowProjects` 에서 알맞은 프로젝트/카테고리의
+    `charts` 에 넣습니다. 사이드바 트리, 목록 페이지, `/flows/<project>` 라우트가
+    전부 여기서 파생되므로 **다른 등록 절차는 없습니다.**
 
     ```ts
-    export const flowCategories: FlowCategory[] = [
-      { title: "프로젝트 수행", charts: [deliveryLifecycle, changeControl, myFlow] },
+    export const flowProjects: FlowProject[] = [
+      {
+        slug: "common",
+        title: "공통",
+        categories: [
+          { slug: "delivery", title: "프로젝트 수행", charts: [deliveryLifecycle, changeControl, myFlow] },
+        ],
+      },
     ];
     ```
   </Step>
 
   <Step title="확인">
-    `pnpm dev` 후 `/flows` 에서 카드로, `/flows/<slug>` 에서 전체 화면으로 확인합니다.
+    `pnpm dev` 후 `/flows` 에서 카드로,
+    `/flows/<project>?cat=<카테고리>&chart=<slug>` 에서 차트 화면으로 확인합니다.
   </Step>
 </Steps>
 

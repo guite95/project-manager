@@ -87,12 +87,3 @@ export function chartHref(
 export function projectChartCount(project: FlowProject): number {
   return project.categories.reduce((n, c) => n + c.charts.length, 0);
 }
-
-/* ── 임시 호환 export — Task 5(목록 재편)에서 소비처 정리 후 삭제한다 ── */
-export const flowCategories: FlowCategory[] = flowProjects.flatMap(
-  (p) => p.categories
-);
-export const allCharts: FlowChart[] = flowCategories.flatMap((c) => c.charts);
-export function getChart(slug: string): FlowChart | undefined {
-  return allCharts.find((c) => c.slug === slug);
-}
