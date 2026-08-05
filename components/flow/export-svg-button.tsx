@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getNodesBounds, useReactFlow } from "@xyflow/react";
+import { useReactFlow } from "@xyflow/react";
 import { toSvg } from "html-to-image";
 import { HiOutlineDownload } from "react-icons/hi";
 
@@ -11,6 +11,10 @@ import { HiOutlineDownload } from "react-icons/hi";
  * 노드가 HTML 카드라 순수 SVG 직렬화는 불가능하다 — React Flow 공식 권장대로
  * html-to-image 로 `.react-flow__viewport` 를 찍는다. 현재 줌과 무관하게 노드
  * 바운즈 기준 scale(1) 로 캡처하므로 결과물은 항상 전체 차트다.
+ *
+ * `getNodesBounds` 는 반드시 `useReactFlow()` 가 주는 것을 쓴다. 같은 이름의
+ * standalone export 는 그룹 자식 노드의 부모 오프셋을 모르는 탓에 바운즈가
+ * 작게 나오고, 그룹이 있는 차트가 오른쪽·아래로 잘려 저장된다.
  * ---------------------------------------------------------------------- */
 
 const PAD = 40;
@@ -23,7 +27,7 @@ export function ExportSvgButton({
   /** `.react-flow__viewport` 를 포함하는 캔버스 래퍼 (모달 쪽 캔버스와 구분용) */
   wrapper: React.RefObject<HTMLDivElement | null>;
 }) {
-  const { getNodes } = useReactFlow();
+  const { getNodes, getNodesBounds } = useReactFlow();
   const [failed, setFailed] = useState(false);
 
   const onExport = async () => {
