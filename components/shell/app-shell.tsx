@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { HiOutlineShare } from "react-icons/hi";
 import { AppSidebar } from "./app-sidebar";
 
@@ -20,7 +20,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-h-0 flex-1">
         <aside className="w-[240px] shrink-0 border-r border-[var(--bi-border)] bg-[var(--bi-sidebar-bg)]">
-          <AppSidebar />
+          <Suspense fallback={null}>
+            <AppSidebar />
+          </Suspense>
         </aside>
 
         <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
