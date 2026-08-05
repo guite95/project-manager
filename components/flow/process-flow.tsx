@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Background,
@@ -8,9 +8,11 @@ import {
   Controls,
   PanOnScrollMode,
   ReactFlow,
+  ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { HiOutlineArrowsExpand, HiOutlineX } from "react-icons/hi";
+import { ExportSvgButton } from "./export-svg-button";
 import { FlowNode } from "./flow-node";
 import { GroupNode } from "./group-node";
 import { layoutChart } from "./layout";
@@ -80,6 +82,7 @@ export function ProcessFlow({
   fill?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   // ESC 닫기 + 모달 열렸을 때 body 스크롤 잠금
   useEffect(() => {
@@ -106,26 +109,32 @@ export function ProcessFlow({
           fill ? "flex min-h-0 flex-1 flex-col" : "my-4"
         }`}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-sidebar-bg)] px-3 py-1.5 text-[11px] text-[var(--bi-muted)]">
-          <span className="truncate">
-            {chart.caption ?? chart.title} · {HINT}
-          </span>
-          <button
-            type="button"
-            onClick={openModal}
-            className="flex shrink-0 items-center gap-1 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-0.5 text-[11px] text-[var(--bi-fg)] transition hover:border-[var(--bi-accent)] hover:text-[var(--bi-accent)]"
-            aria-label="전체화면으로 보기"
+        <ReactFlowProvider>
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-sidebar-bg)] px-3 py-1.5 text-[11px] text-[var(--bi-muted)]">
+            <span className="truncate">
+              {chart.caption ?? chart.title} · {HINT}
+            </span>
+            <span className="flex shrink-0 items-center gap-1.5">
+              <ExportSvgButton slug={chart.slug} wrapper={wrapperRef} />
+              <button
+                type="button"
+                onClick={openModal}
+                className="flex shrink-0 items-center gap-1 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-0.5 text-[11px] text-[var(--bi-fg)] transition hover:border-[var(--bi-accent)] hover:text-[var(--bi-accent)]"
+                aria-label="전체화면으로 보기"
+              >
+                <HiOutlineArrowsExpand size={11} />
+                전체화면
+              </button>
+            </span>
+          </div>
+          <div
+            ref={wrapperRef}
+            className={fill ? "min-h-0 flex-1" : undefined}
+            style={fill ? undefined : { height }}
           >
-            <HiOutlineArrowsExpand size={11} />
-            전체화면
-          </button>
-        </div>
-        <div
-          className={fill ? "min-h-0 flex-1" : undefined}
-          style={fill ? undefined : { height }}
-        >
-          <FlowCanvas chart={chart} />
-        </div>
+            <FlowCanvas chart={chart} />
+          </div>
+        </ReactFlowProvider>
       </figure>
 
       {open && typeof document !== "undefined"
