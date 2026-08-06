@@ -40,27 +40,34 @@ import {
   filterExternalProjects,
 } from "./external-projects.ts";
 
-test("포커스에이아이 NotebookLM 링크를 정확히 제공한다", () => {
-  assert.deepEqual(externalProjects, [
+const expectedFocusAiProject = {
+  slug: "focus-ai",
+  title: "포커스에이아이",
+  links: [
     {
-      slug: "focus-ai",
-      title: "포커스에이아이",
-      links: [
-        {
-          title: "NotebookLM",
-          href: "https://notebook.google.com/notebook/a17b9008-778c-407a-8ca0-08bd2e8a0f2e?authuser=2",
-        },
-      ],
+      title: "NotebookLM",
+      href: "https://notebook.google.com/notebook/a17b9008-778c-407a-8ca0-08bd2e8a0f2e?authuser=2",
     },
+  ],
+};
+
+test("검색어가 없으면 포커스에이아이 NotebookLM 링크를 제공한다", () => {
+  assert.deepEqual(filterExternalProjects(externalProjects, ""), [
+    expectedFocusAiProject,
   ]);
 });
 
 test("프로젝트 이름으로 검색하면 프로젝트의 링크를 모두 유지한다", () => {
-  assert.deepEqual(filterExternalProjects(externalProjects, "포커스에이아이"), externalProjects);
+  assert.deepEqual(
+    filterExternalProjects(externalProjects, "포커스에이아이"),
+    [expectedFocusAiProject]
+  );
 });
 
 test("링크 이름 검색은 대소문자를 구분하지 않는다", () => {
-  assert.deepEqual(filterExternalProjects(externalProjects, "notebooklm"), externalProjects);
+  assert.deepEqual(filterExternalProjects(externalProjects, "notebooklm"), [
+    expectedFocusAiProject,
+  ]);
 });
 
 test("일치하지 않는 검색어는 빈 목록을 반환한다", () => {
@@ -270,4 +277,3 @@ Run: `pnpm dev`
 Run: `git diff --check && git status --short && git diff -- components/shell/app-sidebar.tsx lib/navigation/external-projects.ts lib/navigation/external-projects.test.mjs`
 
 Expected: `app-sidebar.tsx`의 작업 전 행 스타일 변경이 남아 있고, 새 외부 링크 변경만 추가되어 있다. 사용자가 구현 커밋을 요청하지 않았으므로 작업 트리 변경은 커밋하지 않는다.
-
