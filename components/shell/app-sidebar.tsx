@@ -161,7 +161,7 @@ export function AppSidebar() {
   return (
     <nav className="flex h-full flex-col gap-2 overflow-y-auto py-3">
       <Link href="/flows" className={`${linkCls(pathname === "/flows")} pl-2`}>
-        전체 플로우차트
+        전체 프로젝트
       </Link>
       <Link
         href="/guide"
