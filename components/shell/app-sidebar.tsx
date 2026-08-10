@@ -3,9 +3,17 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { HiChevronRight, HiOutlineSearch } from "react-icons/hi";
+import {
+  HiChevronRight,
+  HiOutlineExternalLink,
+  HiOutlineSearch,
+} from "react-icons/hi";
 import type { FlowChart } from "@/components/flow/types";
 import { chartHref, flowProjects, resolveChart } from "@/lib/flows/registry";
+import {
+  externalProjects,
+  filterExternalProjects,
+} from "@/lib/navigation/external-projects";
 
 /* -------------------------------------------------------------------------
  * 3단 트리 사이드바 — 프로젝트 → 카테고리 → 차트.
@@ -23,8 +31,22 @@ function chartMatches(chart: FlowChart, q: string): boolean {
   return `${chart.title} ${chart.description ?? ""}`.toLowerCase().includes(q);
 }
 
+/*
+ * 모든 행이 같은 12px 글자 크기·32px 높이를 쓴다. 층위는 오직 들여쓰기와
+ * 굵기·색으로만 구분한다 (한글 제목이라 uppercase·tracking 은 의미가 없다).
+ *
+ * 글자 시작 위치는 단계당 12px:
+ *   프로젝트 32px · 카테고리 44px · 차트 56px
+ * (mx-2 8px + pl-* + 셰브런 10px + gap-1.5 6px 의 합)
+ */
+const ROW =
+  "mx-2 flex h-8 items-center gap-1.5 rounded-[3px] pr-2 text-[12px] transition";
+/** button 은 w:auto 가 fit-content 라 폭을 직접 준다 (좌우 mx-2 = 1rem 제외). */
+const ROW_BTN = `${ROW} w-[calc(100%-1rem)]`;
+
+/** 들여쓰기(pl-*)는 호출부가 붙인다 — 트리 밖 링크는 pl-2, 차트는 pl-12. */
 const linkCls = (active: boolean) =>
-  `mx-2 flex h-8 items-center gap-2 rounded-[3px] px-2 text-[12px] transition ${
+  `${ROW} ${
     active
       ? "bg-[var(--bi-sidebar-active)] font-semibold text-[var(--bi-fg)]"
       : "text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-active)]"
@@ -131,12 +153,20 @@ export function AppSidebar() {
       .filter((p) => p.categories.length > 0);
   }, [searching, q]);
 
+  const visibleExternalProjects = useMemo(
+    () => filterExternalProjects(externalProjects, q),
+    [q]
+  );
+
   return (
     <nav className="flex h-full flex-col gap-2 overflow-y-auto py-3">
-      <Link href="/flows" className={linkCls(pathname === "/flows")}>
+      <Link href="/flows" className={`${linkCls(pathname === "/flows")} pl-2`}>
         전체 플로우차트
       </Link>
-      <Link href="/guide" className={`-mt-1 ${linkCls(pathname === "/guide")}`}>
+      <Link
+        href="/guide"
+        className={`-mt-1 ${linkCls(pathname === "/guide")} pl-2`}
+      >
         작성 가이드
       </Link>
 
@@ -146,15 +176,17 @@ export function AppSidebar() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="차트 검색"
-          aria-label="차트 검색"
+          placeholder="메뉴 검색"
+          aria-label="메뉴 검색"
           className="h-7 w-full bg-transparent text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)]"
         />
       </div>
 
-      {searching && visibleProjects.length === 0 ? (
+      {searching &&
+      visibleProjects.length === 0 &&
+      visibleExternalProjects.length === 0 ? (
         <p className="mx-4 my-1 text-[11px] text-[var(--bi-muted)]">
-          일치하는 차트 없음
+          일치하는 메뉴 없음
         </p>
       ) : null}
 
@@ -173,7 +205,7 @@ export function AppSidebar() {
               type="button"
               aria-expanded={!pCollapsed}
               onClick={() => toggle(pKey, pCollapsed)}
-              className="flex w-full items-center gap-1.5 px-4 pt-2 pb-1 text-[10px] font-semibold tracking-[0.16em] text-[var(--bi-muted)] uppercase transition hover:text-[var(--bi-fg)]"
+              className={`${ROW_BTN} pl-2 font-semibold text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-active)]`}
             >
               <HiChevronRight
                 size={10}
@@ -183,7 +215,7 @@ export function AppSidebar() {
               />
               <span className="truncate">{project.title}</span>
               {/* 검색 중에는 필터링된 개수 — 카테고리 배지와 셈법이 같아야 한다 */}
-              <span className="ml-auto font-normal tracking-normal">
+              <span className="ml-auto font-normal text-[var(--bi-muted)]">
                 {categories.reduce((n, c) => n + c.charts.length, 0)}
               </span>
             </button>
@@ -205,7 +237,7 @@ export function AppSidebar() {
                         type="button"
                         aria-expanded={!cCollapsed}
                         onClick={() => toggle(cKey, cCollapsed)}
-                        className="flex w-full items-center gap-1.5 py-1 pr-4 pl-7 text-[11px] font-medium text-[var(--bi-muted)] transition hover:text-[var(--bi-fg)]"
+                        className={`${ROW_BTN} pl-5 font-medium text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]`}
                       >
                         <HiChevronRight
                           size={10}
@@ -230,7 +262,7 @@ export function AppSidebar() {
                                   chart.slug
                                 )}
                                 aria-current={isActive ? "page" : undefined}
-                                className={`${linkCls(isActive)} ml-6`}
+                                className={`${linkCls(isActive)} pl-12`}
                               >
                                 <span className="truncate">{chart.title}</span>
                               </Link>
@@ -240,6 +272,57 @@ export function AppSidebar() {
                     </div>
                   );
                 })
+              : null}
+          </div>
+        );
+      })}
+
+      {visibleExternalProjects.map((project) => {
+        const pKey = projectKey(project.slug);
+        const pCollapsed = searching
+          ? false
+          : pKey in userOverrides
+            ? userOverrides[pKey]
+            : false;
+
+        return (
+          <div key={project.slug}>
+            <button
+              type="button"
+              aria-expanded={!pCollapsed}
+              onClick={() => toggle(pKey, pCollapsed)}
+              className={`${ROW_BTN} pl-2 font-semibold text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-active)]`}
+            >
+              <HiChevronRight
+                size={10}
+                className={`shrink-0 transition-transform ${
+                  pCollapsed ? "rotate-0" : "rotate-90"
+                }`}
+              />
+              <span className="truncate">{project.title}</span>
+              <span className="ml-auto font-normal text-[var(--bi-muted)]">
+                {project.links.length}
+              </span>
+            </button>
+
+            {!pCollapsed
+              ? project.links.map((externalLink) => (
+                  <a
+                    key={externalLink.href}
+                    href={externalLink.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${linkCls(false)} pl-12`}
+                  >
+                    <span className="truncate">{externalLink.title}</span>
+                    <HiOutlineExternalLink
+                      size={13}
+                      aria-hidden
+                      className="ml-auto shrink-0 text-[var(--bi-muted)]"
+                    />
+                    <span className="sr-only">(새 탭에서 열림)</span>
+                  </a>
+                ))
               : null}
           </div>
         );
