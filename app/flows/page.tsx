@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RichText } from "@/components/rich-text";
+import { UiReferenceGallery } from "@/components/ui-reference/ui-reference-gallery";
 import { chartHref, flowProjects } from "@/lib/flows/registry";
 import {
   resolveFlowsView,
@@ -115,9 +116,7 @@ export default async function FlowsIndexPage({
       {view === "projects" ? (
         <ProjectsOverview />
       ) : (
-        <p className="text-[12px] text-[var(--bi-muted)]">
-          UI 컴포넌트 레퍼런스를 준비하고 있습니다.
-        </p>
+        <UiReferenceGallery />
       )}
     </div>
   );
