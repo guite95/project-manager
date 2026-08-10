@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/erp/page-header";
 import { FormsSection } from "./forms-section";
 import { ManagedTableSection } from "./managed-table-section";
+import { ModalDemoSection } from "./modal-demo-section";
 import {
   BadgesSection,
   ButtonsSection,
@@ -23,6 +24,7 @@ export function UiReferenceGallery() {
       <BadgesSection />
       <TableFilterSection />
       <ManagedTableSection />
+      <ModalDemoSection />
     </div>
   );
 }
