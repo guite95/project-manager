@@ -1,10 +1,12 @@
 import { PageHeader } from "@/components/erp/page-header";
+import { FormsSection } from "./forms-section";
 import {
   BadgesSection,
   ButtonsSection,
   TokensSection,
   TypographySection,
 } from "./static-sections";
+import { TableFilterSection } from "./table-filter-section";
 
 export function UiReferenceGallery() {
   return (
@@ -16,7 +18,9 @@ export function UiReferenceGallery() {
       <TokensSection />
       <TypographySection />
       <ButtonsSection />
+      <FormsSection />
       <BadgesSection />
+      <TableFilterSection />
     </div>
   );
 }
