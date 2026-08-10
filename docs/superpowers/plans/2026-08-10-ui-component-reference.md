@@ -50,7 +50,7 @@ test("components만 UI 레퍼런스 뷰로 허용한다", () => {
 
 - [ ] **Step 2: RED 확인**
 
-Run: `node --test lib/ui-reference/view.test.mjs`
+Run: `node --no-warnings --experimental-strip-types --test lib/ui-reference/view.test.mjs`
 Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `view.ts`.
 
 - [ ] **Step 3: 최소 정규화 구현**
@@ -75,7 +75,7 @@ export function resolveFlowsView(
 
 - [ ] **Step 4: GREEN과 타입 검사**
 
-Run: `node --test lib/ui-reference/view.test.mjs && pnpm typecheck`
+Run: `node --no-warnings --experimental-strip-types --test lib/ui-reference/view.test.mjs && pnpm typecheck`
 Expected: all tests PASS and TypeScript exits 0.
 
 - [ ] **Step 5: 작업 범위 커밋**
@@ -189,7 +189,7 @@ test("문자열과 초성 검색을 모두 지원한다", () => {
 });
 ```
 
-Run: `node --test components/erp/hangul-match.test.mjs`
+Run: `node --no-warnings --experimental-strip-types --test components/erp/hangul-match.test.mjs`
 Expected: FAIL because `hangul-match.ts` does not exist.
 
 - [ ] **Step 2: 한글 검색 GREEN 구현**
@@ -198,7 +198,7 @@ Expected: FAIL because `hangul-match.ts` does not exist.
 소문자 부분 일치로 처리한다. 초성 query이면 대상 문자열의 초성 문자열에 대해
 부분 일치를 수행한다.
 
-Run: `node --test components/erp/hangul-match.test.mjs`
+Run: `node --no-warnings --experimental-strip-types --test components/erp/hangul-match.test.mjs`
 Expected: PASS.
 
 - [ ] **Step 3: 접근 가능한 검색형 Dropdown과 폼 구현**
@@ -215,7 +215,7 @@ select, 텍스트 필드, 체크박스와 취소·저장 버튼을 로컬 상태
 
 - [ ] **Step 5: 통합 검증과 커밋**
 
-Run: `node --test components/erp/hangul-match.test.mjs && pnpm typecheck && pnpm build`
+Run: `node --no-warnings --experimental-strip-types --test components/erp/hangul-match.test.mjs && pnpm typecheck && pnpm build`
 Expected: all commands exit 0.
 
 ```bash
@@ -258,7 +258,7 @@ test("손상되거나 오래된 컬럼 설정을 현재 기본값으로 정규�
 });
 ```
 
-Run: `node --test lib/ui-reference/table-preferences.test.mjs`
+Run: `node --no-warnings --experimental-strip-types --test lib/ui-reference/table-preferences.test.mjs`
 Expected: FAIL because module is missing.
 
 - [ ] **Step 2: 정규화 GREEN 구현**
@@ -267,7 +267,7 @@ Expected: FAIL because module is missing.
 `maxWidth`를 가진다. 정규화는 중복·미등록 key를 제거하고 빠진 key를 기본
 순서로 붙이며, width를 각 컬럼 min/max 안으로 clamp한다.
 
-Run: `node --test lib/ui-reference/table-preferences.test.mjs`
+Run: `node --no-warnings --experimental-strip-types --test lib/ui-reference/table-preferences.test.mjs`
 Expected: PASS.
 
 - [ ] **Step 3: localStorage hook과 컬럼 설정 팝오버 구현**
@@ -284,7 +284,7 @@ hook은 mount 후 저장값을 parse·정규화하고 변경마다 try/catch 안
 
 - [ ] **Step 5: 검증과 커밋**
 
-Run: `node --test lib/ui-reference/table-preferences.test.mjs && pnpm typecheck && pnpm build`
+Run: `node --no-warnings --experimental-strip-types --test lib/ui-reference/table-preferences.test.mjs && pnpm typecheck && pnpm build`
 Expected: all commands exit 0.
 
 ```bash
@@ -346,9 +346,9 @@ git commit -m "feat: 상세 모달 레퍼런스 추가"
 Run:
 
 ```bash
-node --test lib/ui-reference/view.test.mjs
-node --test components/erp/hangul-match.test.mjs
-node --test lib/ui-reference/table-preferences.test.mjs
+node --no-warnings --experimental-strip-types --test lib/ui-reference/view.test.mjs
+node --no-warnings --experimental-strip-types --test components/erp/hangul-match.test.mjs
+node --no-warnings --experimental-strip-types --test lib/ui-reference/table-preferences.test.mjs
 pnpm typecheck
 pnpm build
 ```
@@ -380,4 +380,3 @@ Expected: every command exits 0.
 ```bash
 git commit -m "feat: 전체 프로젝트 UI 레퍼런스 완성"
 ```
-
