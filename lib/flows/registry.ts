@@ -5,6 +5,7 @@ import type {
 } from "@/components/flow/types";
 import { changeControl } from "./change-control";
 import { deliveryLifecycle } from "./delivery-lifecycle";
+import { pricelistHumanReview } from "./pricelist-human-review";
 import { pricelistOverall } from "./pricelist-overall";
 import { pricelistSummary } from "./pricelist-summary";
 import { pricelistWorker } from "./pricelist-worker";
@@ -43,12 +44,18 @@ export const flowProjects: FlowProject[] = [
     title: "티앤에스",
     intro:
       "티앤에스 **가격표 자동 적재** 파이프라인입니다. " +
-      "**요약 → 전체 → 워커 상세** 순서로, 앞의 것으로 설명하고 뒤의 것으로 구현합니다.",
+      "**요약 → 사람 검토형 → 전체 → 워커 상세** 순서로, " +
+      "업무 검토 경계와 구현 상세를 단계적으로 확인합니다.",
     categories: [
       {
         slug: "pricelist",
         title: "가격표 자동 적재",
-        charts: [pricelistSummary, pricelistOverall, pricelistWorker],
+        charts: [
+          pricelistSummary,
+          pricelistHumanReview,
+          pricelistOverall,
+          pricelistWorker,
+        ],
       },
     ],
   },
