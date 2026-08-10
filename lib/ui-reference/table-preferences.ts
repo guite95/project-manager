@@ -43,6 +43,10 @@ export function normalizeTablePreferences(
     : columns
         .filter((column) => !column.defaultVisible)
         .map((column) => column.key);
+  if (columns.length > 0 && hidden.length === columns.length) {
+    const firstOrderedKey = order[0];
+    hidden.splice(hidden.indexOf(firstOrderedKey), 1);
+  }
 
   const savedWidths = isRecord(record?.widths) ? record.widths : {};
   const widths = Object.fromEntries(

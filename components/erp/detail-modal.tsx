@@ -7,6 +7,7 @@ import {
   HiOutlineX,
 } from "react-icons/hi";
 import { Select } from "./select";
+import { resolveFocusTrapTarget } from "./focus-trap";
 
 const FOCUSABLE = [
   "button:not([disabled])",
@@ -63,12 +64,15 @@ export function DetailModal({
       const first = elements[0];
       const last = elements[elements.length - 1];
       const active = document.activeElement;
-      if (event.shiftKey && (active === first || !frameRef.current?.contains(active))) {
+      const target = resolveFocusTrapTarget({
+        inside: Boolean(active && frameRef.current?.contains(active)),
+        atFirst: active === first,
+        atLast: active === last,
+        shiftKey: event.shiftKey,
+      });
+      if (target) {
         event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
+        (target === "first" ? first : last).focus();
       }
     };
 
@@ -216,6 +220,13 @@ export function RailEditRow({
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const displayRef = useRef<HTMLElement>(null);
+  const wasEditingRef = useRef(false);
+
+  useEffect(() => {
+    if (wasEditingRef.current && !editing) displayRef.current?.focus();
+    wasEditingRef.current = editing;
+  }, [editing]);
 
   useEffect(() => {
     setEditing(false);
@@ -259,6 +270,7 @@ export function RailEditRow({
           {editor === "select" ? (
             <Select
               ariaLabel={label}
+              autoFocus
               disabled={saving}
               onChange={(next) => void commit(next)}
               options={options}
@@ -303,6 +315,7 @@ export function RailEditRow({
             }
           }}
           role="button"
+          ref={displayRef}
           tabIndex={0}
           title="클릭하여 수정"
         >

@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
@@ -39,6 +40,14 @@ export function useManagedColumns<Row>(
   );
   const [prefs, setPrefs] = useState<TablePreferences>(defaults);
   const [hydrated, setHydrated] = useState(false);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(
+    () => () => {
+      resizeCleanupRef.current?.();
+    },
+    [],
+  );
 
   useEffect(() => {
     try {
@@ -108,6 +117,7 @@ export function useManagedColumns<Row>(
   const startResize = useCallback(
     (key: string, event: ReactMouseEvent) => {
       event.preventDefault();
+      resizeCleanupRef.current?.();
       const startX = event.clientX;
       const startWidth = prefs.widths[key] ?? 120;
       const previousCursor = document.body.style.cursor;
@@ -118,14 +128,20 @@ export function useManagedColumns<Row>(
       const handleMove = (moveEvent: MouseEvent) => {
         setWidth(key, startWidth + moveEvent.clientX - startX);
       };
-      const handleUp = () => {
+      const cleanup = () => {
         document.removeEventListener("mousemove", handleMove);
-        document.removeEventListener("mouseup", handleUp);
+        document.removeEventListener("mouseup", cleanup);
+        window.removeEventListener("blur", cleanup);
         document.body.style.cursor = previousCursor;
         document.body.style.userSelect = previousUserSelect;
+        if (resizeCleanupRef.current === cleanup) {
+          resizeCleanupRef.current = null;
+        }
       };
       document.addEventListener("mousemove", handleMove);
-      document.addEventListener("mouseup", handleUp);
+      document.addEventListener("mouseup", cleanup);
+      window.addEventListener("blur", cleanup);
+      resizeCleanupRef.current = cleanup;
     },
     [prefs.widths, setWidth]
   );

@@ -68,7 +68,10 @@ export function SelectField(props: {
     ? [{ value: "", label: "선택 안 함" }, ...props.options]
     : props.options;
   return (
-    <FieldLabel error={props.error} label={props.label}>
+    <div className="block">
+      <span className="text-[11px] font-medium tracking-[0.02em] text-[var(--bi-muted)]">
+        {props.label}
+      </span>
       <div className="mt-1">
         <Dropdown
           ariaLabel={props.label}
@@ -80,7 +83,10 @@ export function SelectField(props: {
           value={props.value}
         />
       </div>
-    </FieldLabel>
+      {props.error ? (
+        <p className="mt-1 text-[11px] text-[var(--bi-error)]">{props.error}</p>
+      ) : null}
+    </div>
   );
 }
 

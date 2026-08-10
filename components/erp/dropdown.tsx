@@ -10,6 +10,7 @@ import {
 } from "react";
 import { HiChevronDown, HiOutlineSearch } from "react-icons/hi";
 import { cn } from "./cn";
+import { resolveDropdownKey } from "./dropdown-navigation";
 import { hangulIncludes } from "./hangul-match";
 
 export type DropdownOption = { value: string; label: string };
@@ -22,6 +23,7 @@ export function Dropdown({
   searchable = false,
   disabled = false,
   error = false,
+  autoFocus = false,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -30,6 +32,7 @@ export function Dropdown({
   searchable?: boolean;
   disabled?: boolean;
   error?: boolean;
+  autoFocus?: boolean;
 }) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -47,7 +50,11 @@ export function Dropdown({
   useEffect(() => {
     if (!open) return;
     const handlePointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery("");
+        setActiveIndex(0);
+      }
     };
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
@@ -77,30 +84,22 @@ export function Dropdown({
   };
 
   const handleMenuKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
+    const action = resolveDropdownKey(
+      event.key,
+      open,
+      activeIndex,
+      visibleOptions.length,
+    );
+    if (!action) return;
+    event.preventDefault();
+    if (action.type === "open") {
+      openMenu();
+    } else if (action.type === "close") {
       close();
-      return;
-    }
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveIndex((index) =>
-        visibleOptions.length ? (index + 1) % visibleOptions.length : 0
-      );
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveIndex((index) =>
-        visibleOptions.length
-          ? (index - 1 + visibleOptions.length) % visibleOptions.length
-          : 0
-      );
-      return;
-    }
-    if (event.key === "Enter" && visibleOptions[activeIndex]) {
-      event.preventDefault();
-      choose(visibleOptions[activeIndex]);
+    } else if (action.type === "move") {
+      setActiveIndex(action.index);
+    } else {
+      choose(visibleOptions[action.index]);
     }
   };
 
@@ -117,14 +116,10 @@ export function Dropdown({
           error ? "border-[var(--bi-error)]" : "border-[var(--bi-border)]",
           disabled && "cursor-not-allowed bg-[var(--bi-sidebar-bg)] opacity-45"
         )}
+        autoFocus={autoFocus}
         disabled={disabled}
         onClick={() => (open ? close() : openMenu())}
-        onKeyDown={(event) => {
-          if (!open && ["ArrowDown", "ArrowUp"].includes(event.key)) {
-            event.preventDefault();
-            openMenu();
-          }
-        }}
+        onKeyDown={handleMenuKeyDown}
         type="button"
       >
         <span className={cn("truncate", !selected && "text-[var(--bi-muted)]")}>
