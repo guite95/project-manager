@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/erp/page-header";
 import { FormsSection } from "./forms-section";
+import { ManagedTableSection } from "./managed-table-section";
 import {
   BadgesSection,
   ButtonsSection,
@@ -21,6 +22,7 @@ export function UiReferenceGallery() {
       <FormsSection />
       <BadgesSection />
       <TableFilterSection />
+      <ManagedTableSection />
     </div>
   );
 }
