@@ -2506,8 +2506,8 @@ Expected: FAIL — `./notes-store.ts` 를 찾을 수 없다
 `lib/server/notes-store.ts`:
 
 ```ts
-import { prisma } from "@/lib/db";
-import type { ProjectNote, ProjectNotePriority } from "@/lib/project-notes";
+import { prisma } from "../db.ts";
+import type { ProjectNote, ProjectNotePriority } from "../project-notes.ts";
 
 const PRIORITIES = new Set<ProjectNotePriority>([
   "urgent",
