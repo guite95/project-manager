@@ -14,6 +14,9 @@ type IssuePoolProps = {
   onAdd: (projectSlug: string, title: string) => void;
   onRemove: (issue: Issue) => void;
   onSendToToday: (issue: Issue) => void;
+  onAddProject: (title: string) => void;
+  onRemoveProject: (group: IssueGroup) => void;
+  isProjectTitleTaken: (title: string) => boolean;
 };
 
 export function IssuePool({
@@ -21,6 +24,9 @@ export function IssuePool({
   onAdd,
   onRemove,
   onSendToToday,
+  onAddProject,
+  onRemoveProject,
+  isProjectTitleTaken,
 }: IssuePoolProps) {
   return (
     <section
@@ -39,10 +45,57 @@ export function IssuePool({
           key={group.slug ?? "__ungrouped__"}
           onAdd={onAdd}
           onRemove={onRemove}
+          onRemoveProject={onRemoveProject}
           onSendToToday={onSendToToday}
         />
       ))}
+      <AddProjectForm
+        isProjectTitleTaken={isProjectTitleTaken}
+        onAddProject={onAddProject}
+      />
     </section>
+  );
+}
+
+function AddProjectForm({
+  onAddProject,
+  isProjectTitleTaken,
+}: Pick<IssuePoolProps, "onAddProject" | "isProjectTitleTaken">) {
+  const [draft, setDraft] = useState("");
+  const trimmed = draft.trim();
+  const taken = isProjectTitleTaken(draft);
+
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2 rounded-[4px] border border-dashed border-[var(--bi-border-strong)] px-3 py-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!trimmed || taken) return;
+        onAddProject(draft);
+        setDraft("");
+      }}
+    >
+      <input
+        aria-label="프로젝트 추가"
+        className="h-[30px] min-w-0 flex-1 rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)] hover:border-[var(--bi-border-strong)] focus:border-[var(--bi-accent)]"
+        maxLength={40}
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder="새 프로젝트"
+        value={draft}
+      />
+      <Button disabled={!trimmed || taken} size="sm" type="submit">
+        <HiOutlinePlus aria-hidden size={14} />
+        프로젝트 추가
+      </Button>
+      {taken ? (
+        <p
+          aria-live="polite"
+          className="m-0 w-full text-[11px] text-[var(--bi-error)]"
+        >
+          이미 같은 이름의 프로젝트가 있습니다.
+        </p>
+      ) : null}
+    </form>
   );
 }
 
@@ -50,8 +103,12 @@ function ProjectGroup({
   group,
   onAdd,
   onRemove,
+  onRemoveProject,
   onSendToToday,
-}: { group: IssueGroup } & Omit<IssuePoolProps, "groups">) {
+}: { group: IssueGroup } & Pick<
+  IssuePoolProps,
+  "onAdd" | "onRemove" | "onRemoveProject" | "onSendToToday"
+>) {
   const [draft, setDraft] = useState("");
 
   const submit = () => {
@@ -66,9 +123,20 @@ function ProjectGroup({
         <span className="truncate text-[12px] font-semibold text-[var(--bi-fg)]">
           {group.title}
         </span>
-        <span className="shrink-0 text-[11px] text-[var(--bi-muted)]">
+        <span className="ml-auto shrink-0 text-[11px] text-[var(--bi-muted)]">
           {group.issues.length}건
         </span>
+        {group.removable ? (
+          <button
+            aria-label={`${group.title} 프로젝트 삭제`}
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-error)]/10 hover:text-[var(--bi-error)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
+            onClick={() => onRemoveProject(group)}
+            title="프로젝트 삭제"
+            type="button"
+          >
+            <HiOutlineTrash aria-hidden size={14} />
+          </button>
+        ) : null}
       </div>
 
       <ul className="m-0 list-none p-0">

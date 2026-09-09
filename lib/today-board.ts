@@ -17,19 +17,33 @@ export type Issue = {
 
 export type TodayItem = Issue & { done: boolean };
 
+/**
+ * 화면에서 직접 만든 프로젝트. 플로우차트 레지스트리(`lib/flows/registry.ts`)에는
+ * 넣지 않는다 — 거기 프로젝트는 카테고리·차트를 하나 이상 가져야 하고, 사이드바와
+ * 차트 라우트가 전부 그 전제를 깔고 있다.
+ */
+export type CustomProject = {
+  slug: string;
+  title: string;
+  createdAt: string;
+};
+
 export type TodayBoard = {
   /** 로컬 기준 YYYY-MM-DD. 이 값이 오늘과 다르면 롤오버 대상이다. */
   date: string;
   issues: Issue[];
   today: TodayItem[];
+  customProjects: CustomProject[];
 };
 
 export type IssueGroup = {
-  /** 레지스트리에 없는 이슈를 모은 그룹은 null. */
+  /** 어느 프로젝트에도 속하지 않는 이슈를 모은 그룹은 null. */
   slug: string | null;
   title: string;
   /** 이 그룹에 새 이슈를 넣을 수 있는지. 미분류 그룹은 false. */
   canAdd: boolean;
+  /** 그룹(프로젝트) 자체를 지울 수 있는지. 직접 추가한 프로젝트만 true. */
+  removable: boolean;
   issues: Issue[];
 };
 
@@ -54,7 +68,7 @@ export function todayDateString(date: Date): string {
 }
 
 export function createBoard(date: string): TodayBoard {
-  return { date, issues: [], today: [] };
+  return { date, issues: [], today: [], customProjects: [] };
 }
 
 /** 여분 필드를 떨어뜨린다. today → issues 로 옮길 때 done 이 따라가지 않게 한다. */
@@ -81,6 +95,18 @@ function isIssue(value: unknown): value is Issue {
 
 function isTodayItem(value: unknown): value is TodayItem {
   return isIssue(value) && typeof (value as TodayItem).done === "boolean";
+}
+
+function isCustomProject(value: unknown): value is CustomProject {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const project = value as Record<string, unknown>;
+  return (
+    typeof project.slug === "string" &&
+    project.slug.length > 0 &&
+    typeof project.title === "string" &&
+    project.title.length > 0 &&
+    typeof project.createdAt === "string"
+  );
 }
 
 export function normalizeTodayBoard(
@@ -116,7 +142,23 @@ export function normalizeTodayBoard(
     })
     .map(toIssue);
 
-  return { date, issues, today };
+  // customProjects 는 나중에 생긴 필드다. 없던 저장값도 그대로 열려야 한다.
+  const slugs = new Set<string>();
+  const customProjects: CustomProject[] = (
+    Array.isArray(raw.customProjects) ? raw.customProjects : []
+  )
+    .filter((item): item is CustomProject => {
+      if (!isCustomProject(item) || slugs.has(item.slug)) return false;
+      slugs.add(item.slug);
+      return true;
+    })
+    .map((item) => ({
+      slug: item.slug,
+      title: item.title,
+      createdAt: item.createdAt,
+    }));
+
+  return { date, issues, today, customProjects };
 }
 
 /**
@@ -130,6 +172,7 @@ export function rollOverBoard(
   if (board.date === todayDate) return board;
   const carried = board.today.filter((item) => !item.done).map(toIssue);
   return {
+    ...board,
     date: todayDate,
     issues: [...board.issues, ...carried],
     today: [],
@@ -192,29 +235,94 @@ export function toggleDone(board: TodayBoard, itemId: string): TodayBoard {
   };
 }
 
+export function addProject(
+  board: TodayBoard,
+  title: string,
+  slug: string,
+  now: string,
+): TodayBoard {
+  const trimmed = title.trim();
+  if (!trimmed) return board;
+  return {
+    ...board,
+    customProjects: [
+      ...board.customProjects,
+      { slug, title: trimmed, createdAt: now },
+    ],
+  };
+}
+
 /**
- * 레지스트리 순서로 묶는다. 레지스트리에서 사라진 프로젝트의 이슈는 지우지 않고
- * 미분류 그룹으로 몬다 — 데이터를 잃는 것보다 낫다. 그 그룹에는 새 이슈를
- * 넣을 수 없다 (꺼내 쓰거나 지우기 위한 자리다).
+ * 프로젝트를 목록에서만 뺀다. 그 프로젝트의 이슈는 손대지 않는다 —
+ * `groupIssuesByProject` 가 소속 없는 이슈를 미분류로 몰아주므로 이슈를 지울
+ * 이유가 없다.
+ */
+export function removeProject(board: TodayBoard, slug: string): TodayBoard {
+  if (!board.customProjects.some((project) => project.slug === slug)) {
+    return board;
+  }
+  return {
+    ...board,
+    customProjects: board.customProjects.filter(
+      (project) => project.slug !== slug,
+    ),
+  };
+}
+
+/**
+ * 이미 쓰는 프로젝트 이름인지. 레지스트리와 직접 추가한 목록 양쪽을 본다.
+ * 빈 제목은 중복 판정 대상이 아니다 (추가 자체가 막히는 별개의 경우다).
+ */
+export function isProjectTitleTaken(
+  board: TodayBoard,
+  title: string,
+  registryProjects: { slug: string; title: string }[],
+): boolean {
+  const trimmed = title.trim();
+  if (!trimmed) return false;
+  return (
+    registryProjects.some((project) => project.title === trimmed) ||
+    board.customProjects.some((project) => project.title === trimmed)
+  );
+}
+
+/**
+ * 레지스트리 → 직접 추가한 프로젝트 → 미분류 순서로 묶는다. 어느 쪽에도 없는
+ * 프로젝트의 이슈는 지우지 않고 미분류로 몬다 — 데이터를 잃는 것보다 낫다.
+ * 미분류 그룹에는 새 이슈를 넣을 수 없다 (꺼내 쓰거나 지우기 위한 자리다).
  */
 export function groupIssuesByProject(
   issues: Issue[],
-  projects: { slug: string; title: string }[],
+  registryProjects: { slug: string; title: string }[],
+  customProjects: CustomProject[] = [],
 ): IssueGroup[] {
-  const known = new Set(projects.map((project) => project.slug));
-  const groups: IssueGroup[] = projects.map((project) => ({
+  const groupFor = (
+    project: { slug: string; title: string },
+    removable: boolean,
+  ): IssueGroup => ({
     slug: project.slug,
     title: project.title,
     canAdd: true,
+    removable,
     issues: issues.filter((issue) => issue.projectSlug === project.slug),
-  }));
+  });
 
+  const groups: IssueGroup[] = [
+    ...registryProjects.map((project) => groupFor(project, false)),
+    ...customProjects.map((project) => groupFor(project, true)),
+  ];
+
+  const known = new Set([
+    ...registryProjects.map((project) => project.slug),
+    ...customProjects.map((project) => project.slug),
+  ]);
   const ungrouped = issues.filter((issue) => !known.has(issue.projectSlug));
   if (ungrouped.length > 0) {
     groups.push({
       slug: null,
       title: UNGROUPED_TITLE,
       canAdd: false,
+      removable: false,
       issues: ungrouped,
     });
   }

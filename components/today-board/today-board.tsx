@@ -6,10 +6,13 @@ import { TodayList } from "@/components/today-board/today-list";
 import { flowProjects } from "@/lib/flows/registry";
 import {
   addIssue,
+  addProject,
   createBoard,
   groupIssuesByProject,
+  isProjectTitleTaken,
   normalizeTodayBoard,
   removeIssue,
+  removeProject,
   returnToPool,
   rollOverBoard,
   sendToToday,
@@ -17,15 +20,16 @@ import {
   toggleDone,
   TODAY_BOARD_STORAGE_KEY,
   type Issue,
+  type IssueGroup,
   type TodayBoard,
   type TodayItem,
 } from "@/lib/today-board";
 
-function createId(): string {
+function createId(prefix: string): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
+    return `${prefix}-${crypto.randomUUID()}`;
   }
-  return `issue-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function TodayBoardView() {
@@ -74,15 +78,18 @@ export function TodayBoardView() {
     [],
   );
 
+  const customProjects = board?.customProjects ?? [];
+
   const projectTitles = useMemo(() => {
     const map: Record<string, string> = {};
     for (const project of projects) map[project.slug] = project.title;
+    for (const project of customProjects) map[project.slug] = project.title;
     return map;
-  }, [projects]);
+  }, [projects, customProjects]);
 
   const groups = useMemo(
-    () => groupIssuesByProject(board?.issues ?? [], projects),
-    [board?.issues, projects],
+    () => groupIssuesByProject(board?.issues ?? [], projects, customProjects),
+    [board?.issues, projects, customProjects],
   );
 
   const handleAdd = (projectSlug: string, title: string) => {
@@ -92,11 +99,39 @@ export function TodayBoardView() {
             current,
             projectSlug,
             title,
-            createId(),
+            createId("issue"),
             new Date().toISOString(),
           )
         : current,
     );
+  };
+
+  const handleAddProject = (title: string) => {
+    setBoard((current) =>
+      current
+        ? addProject(
+            current,
+            title,
+            createId("custom"),
+            new Date().toISOString(),
+          )
+        : current,
+    );
+    setAnnouncement(`${title.trim()} 프로젝트를 추가했습니다.`);
+  };
+
+  const handleRemoveProject = (group: IssueGroup) => {
+    if (!group.slug) return;
+    const moved = group.issues.length
+      ? ` 이슈 ${group.issues.length}건은 미분류로 옮겨집니다.`
+      : "";
+    if (!window.confirm(`“${group.title}” 프로젝트를 삭제할까요?${moved}`)) {
+      return;
+    }
+    setBoard((current) =>
+      current ? removeProject(current, group.slug as string) : current,
+    );
+    setAnnouncement(`${group.title} 프로젝트를 삭제했습니다.${moved}`);
   };
 
   const handleRemove = (issue: Issue) => {
@@ -153,8 +188,13 @@ export function TodayBoardView() {
         />
         <IssuePool
           groups={groups}
+          isProjectTitleTaken={(title) =>
+            isProjectTitleTaken(board, title, projects)
+          }
           onAdd={handleAdd}
+          onAddProject={handleAddProject}
           onRemove={handleRemove}
+          onRemoveProject={handleRemoveProject}
           onSendToToday={handleSendToToday}
         />
       </div>
