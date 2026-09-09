@@ -1,0 +1,134 @@
+name: Deploy to OCI
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-management-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    env:
+      APP_IMAGE: project-management:${{ github.sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Configure SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          for name in SSH_HOST SSH_PORT SSH_USER SSH_PRIVATE_KEY; do
+            test -n "${!name}" || { echo "$name secret is required." >&2; exit 1; }
+          done
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.:-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_][a-zA-Z0-9_-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]]
+          (( 10#$SSH_PORT >= 1 && 10#$SSH_PORT <= 65535 ))
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          install -m 600 .github/deploy_known_hosts ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<CONFIG
+          Host deploy-target
+            HostName $SSH_HOST
+            User $SSH_USER
+            Port $SSH_PORT
+            HostKeyAlias deploy-target
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+            ServerAliveInterval 30
+            ServerAliveCountMax 3
+          CONFIG
+          chmod 600 ~/.ssh/config
+
+      - name: Check server prerequisites
+        run: |
+          ssh deploy-target 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd ~/project-management
+          test -r .env || { echo 'Deployment .env is required.' >&2; exit 1; }
+          test -w .
+          docker info > /dev/null
+          docker compose version
+          command -v curl > /dev/null
+          REMOTE
+
+      - name: Build ARM64 image and verify Prisma CLI
+        run: |
+          set -euo pipefail
+          docker build --pull --platform linux/arm64 --tag "$APP_IMAGE" .
+          docker run --rm --entrypoint node_modules/.bin/prisma \
+            -e DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build \
+            "$APP_IMAGE" validate
+          docker save "$APP_IMAGE" | gzip > "$RUNNER_TEMP/project-management.tar.gz"
+
+      - name: Upload image and Compose file
+        run: |
+          scp "$RUNNER_TEMP/project-management.tar.gz" docker-compose.yml \
+            deploy-target:project-management/
+
+      - name: Start app and verify response
+        run: |
+          ssh deploy-target bash -se -- "$APP_IMAGE" <<'REMOTE'
+          set -euo pipefail
+          cd ~/project-management
+          export APP_IMAGE="$1"
+          docker compose config --quiet
+          docker load --input project-management.tar.gz
+          rm project-management.tar.gz
+          docker compose up -d --no-build --pull never app
+
+          # migrate deploy 가 끝나고 로그인 화면이 응답할 때까지 최대 30회 확인한다.
+          for attempt in $(seq 1 30); do
+            response=$(curl --silent --output /dev/null --max-time 5 \
+              --write-out '%{http_code} %{redirect_url}' http://127.0.0.1:30001/today) || response=''
+            login_status=$(curl --silent --output /dev/null --max-time 5 \
+              --write-out '%{http_code}' http://127.0.0.1:30001/login) || login_status=''
+            if [[ "$response" =~ ^307\ https?://[^/]+/login$ && "$login_status" == '200' ]]; then
+              printf 'Deployment healthy: %s\n' "$APP_IMAGE"
+              # 이후 수동 compose 명령도 배포된 이미지 태그를 사용한다.
+              docker tag "$APP_IMAGE" project-management:local
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'App did not return the expected login redirect.' >&2
+          docker compose ps app
+          exit 1
+          REMOTE
+
+      - name: Verify public HTTPS route
+        run: |
+          set -euo pipefail
+          response=$(curl --silent --show-error --output /dev/null --max-time 20 \
+            --write-out '%{http_code} %{redirect_url}' https://project.dev-uk.shop/today)
+          [[ "$response" == '307 https://project.dev-uk.shop/login' ]]
+          login_status=$(curl --silent --show-error --output /dev/null --max-time 20 \
+            --write-out '%{http_code}' https://project.dev-uk.shop/login)
+          [[ "$login_status" == '200' ]]
+
+      - name: Clean up runner credentials
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/config "$RUNNER_TEMP/project-management.tar.gz"

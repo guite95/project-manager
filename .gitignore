@@ -1,23 +1,51 @@
+# 의존성과 패키지 캐시
 node_modules/
-.next/
-out/
-build/
+.pnpm-store/
 
+# Next.js / TypeScript 빌드 산출물
+.next/
+.next-*/
+/out/
+/build/
+/dist/
 *.tsbuildinfo
 next-env.d.ts
 
-.env
-.env.local
-.env.*.local
-
-.DS_Store
+# 환경변수와 개인키 (공유용 환경변수 예시는 추적)
+.env*
+!.env.example
+!.env.*.example
+*.key
 *.pem
+/.initial-login-password
+/.provisioning-before.json
+
+# 로그와 테스트·브라우저 검증 산출물
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+/coverage/
+/.nyc_output/
+/playwright-report/
+/test-results/
+/.playwright/
+/.playwright-mcp/
 
-.vercel
+# 로컬 DB 백업과 배포 이미지 (Prisma migration.sql은 추적)
+/backups/
+/backup-*.sql
+/backup-*.sql.gz
+/backup-*.dump
+/project-management.tar.gz
 
-# 검증용 두 번째 dev 서버의 빌드 산출물
-.next-*/
+# 배포 도구의 로컬 설정
+/.vercel/
+
+# OS·편집기 임시 파일
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

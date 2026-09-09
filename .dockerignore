@@ -2,8 +2,11 @@ node_modules
 .next
 .next-*
 .git
-.env
-.env.local
+.env*
+*.key
+*.pem
+.github
+nginx
 docs
 *.md
 tsconfig.tsbuildinfo
