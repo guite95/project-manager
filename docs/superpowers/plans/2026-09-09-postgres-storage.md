@@ -15,7 +15,10 @@
 - **커밋 메시지에 `Co-Authored-By` 트레일러를 넣지 않는다.** 사용자 전역 규칙이다.
 - 사용자에게 보이는 문구는 전부 한국어다. 코드 식별자와 파일명은 영어다.
 - 색과 간격은 `app/globals.css` 에 이미 있는 `--bi-*` 토큰만 쓴다. 새 토큰을 추가하지 않는다.
-- 새 npm 의존성은 `prisma` 와 `@prisma/client` 둘뿐이다. 그 밖의 패키지를 추가하지 않는다. 비밀번호 해시와 서명은 런타임 내장 기능으로 한다.
+- 새 npm 의존성은 Prisma 한 묶음뿐이다: `@prisma/client`, `@prisma/adapter-pg`,
+  `pg` 와 개발용 `prisma`, `@types/pg`. Prisma 7 은 쿼리 컴파일러를 쓰므로
+  드라이버 어댑터가 필수다. 그 밖의 패키지를 추가하지 않는다. 비밀번호 해시와
+  서명은 런타임 내장 기능으로 한다.
 - 날짜 문자열은 로컬 시간 기준 `YYYY-MM-DD` 다. UTC 로 계산하지 않는다. 기존 `todayDateString` 을 그대로 쓴다.
 - 순수 함수는 입력을 변형하지 않고 새 값을 반환한다. `id` 와 `now` 는 호출부가 넘긴다. 테스트가 결정적이어야 한다.
 - 비밀번호와 서명 키를 코드에 적지 않는다. 환경변수로만 받는다.
@@ -30,7 +33,8 @@
 | `DATABASE_URL` | PostgreSQL 접속 문자열 | 앱 런타임, 마이그레이션 |
 | `TEST_DATABASE_URL` | 통합 테스트용 별도 데이터베이스 | 테스트만 |
 | `APP_PASSWORD_HASH` | `salt:hash` 형식의 scrypt 결과 | 로그인 라우트 |
-| `SESSION_SECRET` | 세션 쿠키 서명 키 | 로그인 라우트, 미들웨어 |
+| `SESSION_SECRET` | 세션 쿠키 서명 키 | 로그인 라우트, `proxy.ts` |
+| `REQUIRE_LOGIN` | 개발 환경에서도 로그인을 강제할 때 `1`. 선택 | `proxy.ts` |
 
 ## File Structure
 
@@ -39,8 +43,9 @@
 | 경로 | 책임 |
 | --- | --- |
 | `prisma/schema.prisma` | 테이블 정의 |
-| `lib/db.ts` | Prisma 클라이언트 싱글턴 |
-| `lib/session.ts` | 세션 토큰 생성·검증 (Web Crypto HMAC, 미들웨어에서도 동작) |
+| `prisma.config.ts` | Prisma CLI 설정. 접속 URL 과 스키마 경로 |
+| `lib/db.ts` | Prisma 클라이언트 싱글턴 (pg 어댑터) |
+| `lib/session.ts` | 세션 토큰 생성·검증. Web Crypto HMAC 이라 `proxy.ts` 에서도 돈다 |
 | `lib/password.ts` | 비밀번호 해시·대조 (`node:crypto` scrypt) |
 | `lib/rollover.ts` | 롤오버 판정 순수 함수 |
 | `lib/completions.ts` | 완료 이력 타입과 날짜별 묶기 순수 함수 |
@@ -48,7 +53,7 @@
 | `lib/server/notes-store.ts` | 명심할 점 DB 접근 |
 | `lib/server/history-store.ts` | 완료 이력 DB 접근 |
 | `lib/api-client.ts` | 화면이 쓰는 fetch 래퍼 |
-| `middleware.ts` | 세션 검사 |
+| `proxy.ts` | 세션 검사. Next 16 은 `middleware` 대신 `proxy` 규약을 쓴다 |
 | `scripts/hash-password.mjs` | 해시 생성 CLI |
 | `app/login/page.tsx` | 로그인 화면 |
 | `app/api/**` | 라우트 핸들러 |
@@ -88,22 +93,35 @@
 - [ ] **Step 1: 의존성 설치**
 
 ```bash
-pnpm add @prisma/client
-pnpm add -D prisma
+pnpm add @prisma/client@7.10.0 @prisma/adapter-pg@7.10.0 pg
+pnpm add -D prisma@7.10.0 @types/pg
+```
+
+**버전을 반드시 고정한다.** 태그만 쓰면 `prisma` 가 8 릴리스 후보로 잡혀
+`@prisma/client` 와 메이저가 어긋난다.
+
+`pnpm-workspace.yaml` 의 `allowBuilds` 에 다음을 넣어야 엔진이 설치된다.
+
+```yaml
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
 ```
 
 - [ ] **Step 2: 스키마 작성**
 
 `prisma/schema.prisma`:
 
+Prisma 7 은 `url` 을 스키마에 두지 않는다. `prisma.config.ts` 로 옮긴다.
+
 ```prisma
 generator client {
   provider = "prisma-client-js"
 }
 
+// 접속 URL 은 prisma.config.ts 에 있다. Prisma 7 부터 스키마에 두지 않는다.
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 /// 화면에서 직접 추가한 프로젝트만 담는다.
@@ -176,22 +194,83 @@ model AppSetting {
 }
 ```
 
-- [ ] **Step 3: Prisma 클라이언트 싱글턴**
+- [ ] **Step 3: Prisma CLI 설정**
+
+Prisma 7 은 `.env` 를 알아서 읽지 않는다. Node 내장 `process.loadEnvFile` 로 읽는다.
+
+`prisma.config.ts` (저장소 루트):
+
+```ts
+/**
+ * Prisma 7 부터 접속 URL 은 스키마가 아니라 여기에 둔다.
+ * 런타임 클라이언트는 `lib/db.ts` 에서 드라이버 어댑터로 따로 연결한다.
+ * 이 파일은 migrate·introspect 같은 CLI 명령이 쓴다.
+ */
+import { defineConfig, env } from "prisma/config";
+
+// Prisma 7 은 .env 를 알아서 읽지 않는다. Node 내장 기능으로 읽는다.
+// 컨테이너처럼 파일 없이 환경변수만 주는 곳도 있으므로 없으면 그냥 넘어간다.
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // 파일이 없으면 이미 환경에 들어있는 값을 쓴다.
+}
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  datasource: {
+    url: env("DATABASE_URL"),
+  },
+});
+```
+
+- [ ] **Step 3b: Prisma 클라이언트 싱글턴**
 
 `lib/db.ts`:
 
 ```ts
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 /**
+ * Prisma 7 은 쿼리 컴파일러를 쓰므로 Rust 엔진 대신 드라이버 어댑터로 붙는다.
+ * `pg` 는 순수 자바스크립트라 컨테이너 이미지에 네이티브 바이너리가 들어가지 않는다.
+ *
  * 개발 중 핫리로드가 연결을 계속 새로 열지 않도록 전역에 하나만 둔다.
  * 프로덕션은 프로세스가 하나뿐이라 전역에 붙이지 않는다.
  */
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+let client: PrismaClient | undefined;
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+function getClient(): PrismaClient {
+  const cached = globalForPrisma.prisma ?? client;
+  if (cached) return cached;
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL 이 없습니다. .env 를 확인하세요.");
+  }
+
+  client = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = client;
+  return client;
+}
+
+/**
+ * 처음 실제로 쓸 때 연결한다.
+ *
+ * 모듈을 읽는 것만으로 연결하면 `next build` 가 깨진다. 빌드는 라우트 모듈을
+ * 불러 정보를 모으는데, 그때는 DATABASE_URL 이 없다 (도커 빌드 단계에는 .env 가
+ * 없다). 그래서 프록시로 감싸 첫 접근까지 미룬다.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const real = getClient() as unknown as Record<string | symbol, unknown>;
+    const value = real[property];
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});
 ```
 
 - [ ] **Step 4: 환경변수 예시와 무시 규칙**
@@ -199,11 +278,17 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 `.env.example`:
 
 ```
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/project_management"
-TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/project_management_test"
+# 로컬 개발용. 사용자 이름과 비밀번호는 각자 환경에 맞춘다.
+DATABASE_URL="postgresql://USER@localhost:5432/project_management"
+TEST_DATABASE_URL="postgresql://USER@localhost:5432/project_management_test"
+# node scripts/hash-password.mjs 결과
 APP_PASSWORD_HASH=""
+# openssl rand -hex 32 결과
 SESSION_SECRET=""
 ```
+
+Homebrew 로 깐 PostgreSQL 은 기본 사용자가 OS 계정 이름이다. `whoami` 결과를
+`USER` 자리에 넣는다. 사용자를 빼면 `P1010: User was denied access` 가 난다.
 
 `.gitignore` 에 다음 줄이 없으면 더한다.
 
@@ -217,7 +302,7 @@ SESSION_SECRET=""
 `package.json` 의 `scripts` 에 더한다.
 
 ```json
-"test": "node --test \"lib/**/*.test.mjs\"",
+"test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"lib/**/*.test.mjs\"",
 "db:migrate": "prisma migrate dev",
 "db:deploy": "prisma migrate deploy",
 "db:generate": "prisma generate"
@@ -248,7 +333,7 @@ Expected: 통과
 - [ ] **Step 8: 커밋**
 
 ```bash
-git add prisma lib/db.ts .env.example .gitignore package.json pnpm-lock.yaml
+git add prisma prisma.config.ts lib/db.ts .env.example .gitignore package.json pnpm-workspace.yaml pnpm-lock.yaml
 git commit -m "feat: Prisma 스키마와 클라이언트 싱글턴 추가"
 ```
 
@@ -273,7 +358,7 @@ git commit -m "feat: Prisma 스키마와 클라이언트 싱글턴 추가"
   - `SESSION_COOKIE_NAME: string` — `"pm_session"`
   - `SESSION_MAX_AGE_SECONDS: number` — 30일
 
-두 파일을 나누는 이유: 세션 검증은 미들웨어에서도 돌아야 해서 표준 Web Crypto 만 쓴다. 비밀번호 해시는 `node:crypto` 의 `scrypt` 를 쓰며 라우트 핸들러와 CLI 에서만 쓴다.
+두 파일을 나누는 이유: 세션 검증은 `proxy.ts` 에서도 돌아야 해서 표준 Web Crypto 만 쓴다. 비밀번호 해시는 `node:crypto` 의 `scrypt` 를 쓰며 라우트 핸들러와 CLI 에서만 쓴다.
 
 - [ ] **Step 1: 비밀번호 테스트를 먼저 쓴다**
 
@@ -421,7 +506,7 @@ Expected: FAIL — `./session.ts` 를 찾을 수 없다
 /**
  * 세션 토큰은 `만료시각.서명` 이다. 서명은 만료시각 문자열에 대한 HMAC-SHA256.
  *
- * 미들웨어에서도 그대로 돌아야 하므로 `node:crypto` 가 아니라 표준 Web Crypto 만
+ * `proxy.ts` 에서도 그대로 돌아야 하므로 `node:crypto` 가 아니라 표준 Web Crypto 만
  * 쓴다. 비밀번호 해시는 `lib/password.ts` 에 따로 있다.
  */
 
@@ -502,46 +587,74 @@ Expected: PASS
  *
  *   node scripts/hash-password.mjs
  *
- * 입력은 화면에 표시하지 않는다. 인자로 받지 않는 이유는 셸 히스토리에
- * 비밀번호가 남기 때문이다.
+ * 터미널에서 돌리면 입력한 글자가 화면에 보이지 않는다. 인자로 받지 않는 이유는
+ * 셸 히스토리에 비밀번호가 남기 때문이다.
  */
 import { createInterface } from "node:readline";
 import { hashPassword } from "../lib/password.ts";
 
-function ask(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  // 입력 중 화면에 아무것도 찍지 않는다.
-  rl._writeToOutput = () => {};
-  return new Promise((resolve) => {
-    process.stdout.write(question);
-    rl.question("", (answer) => {
-      rl.close();
-      process.stdout.write("\n");
-      resolve(answer);
-    });
-  });
+const isTty = process.stdin.isTTY === true;
+
+// 인터페이스를 하나만 만든다. 중간에 닫으면 stdin 이 끊겨 다음 질문을 받지 못한다.
+const rl = createInterface({
+  input: process.stdin,
+  output: process.stdout,
+  terminal: isTty,
+});
+
+let muted = false;
+const write = rl._writeToOutput?.bind(rl);
+rl._writeToOutput = (chunk) => {
+  if (!muted) write?.(chunk);
+};
+
+// 비동기 이터레이터는 줄 사이에 스트림을 멈춰 준다. `rl.question` 을 두 번 쓰면
+// 파이프로 들어온 둘째 줄이 대기자가 없는 사이에 흘러가 버린다.
+const lines = rl[Symbol.asyncIterator]();
+
+async function ask(question) {
+  process.stdout.write(question);
+  muted = isTty;
+  const { value, done } = await lines.next();
+  muted = false;
+  if (isTty) process.stdout.write("\n");
+  return done ? "" : value;
 }
 
-const password = await ask("새 비밀번호: ");
-if (!password) {
-  console.error("비밀번호가 비어 있습니다.");
-  process.exit(1);
-}
-const again = await ask("한 번 더: ");
-if (password !== again) {
-  console.error("두 입력이 다릅니다.");
-  process.exit(1);
-}
+try {
+  const password = (await ask("새 비밀번호: ")).trim();
+  if (!password) {
+    console.error("비밀번호가 비어 있습니다.");
+    process.exit(1);
+  }
 
-console.log("\nAPP_PASSWORD_HASH 에 아래 값을 넣으세요.\n");
-console.log(await hashPassword(password));
+  const again = (await ask("한 번 더: ")).trim();
+  if (password !== again) {
+    console.error("두 입력이 다릅니다.");
+    process.exit(1);
+  }
+
+  console.log("\nAPP_PASSWORD_HASH 에 아래 값을 넣으세요.\n");
+  console.log(await hashPassword(password));
+} finally {
+  rl.close();
+}
 ```
 
 - [ ] **Step 10: CLI 동작 확인**
 
-Run: `node scripts/hash-password.mjs`
-비밀번호를 두 번 입력한다.
-Expected: `salt:hash` 형식의 긴 16진 문자열이 출력된다. 입력한 글자는 화면에 보이지 않는다.
+세 경로를 모두 확인한다.
+
+```bash
+printf 'testpw\ntestpw\n' | node --no-warnings scripts/hash-password.mjs
+printf 'aaa\nbbb\n'       | node --no-warnings scripts/hash-password.mjs
+printf '\n'               | node --no-warnings scripts/hash-password.mjs
+```
+
+Expected: 차례로 `salt:hash` 형식의 긴 16진 문자열, "두 입력이 다릅니다.",
+"비밀번호가 비어 있습니다." 가 나온다. 뒤의 두 경우는 종료 코드가 1 이다.
+
+터미널에서 직접 돌리면 입력한 글자가 화면에 보이지 않는다.
 
 - [ ] **Step 11: 전체 테스트와 타입 검사**
 
@@ -557,21 +670,22 @@ git commit -m "feat: 비밀번호 해시와 세션 토큰 유틸 추가"
 
 ---
 
-### Task 3: 로그인 화면과 미들웨어
+### Task 3: 로그인 화면과 세션 검사
 
 **Files:**
 - Create: `app/api/login/route.ts`
 - Create: `app/api/logout/route.ts`
 - Create: `app/login/page.tsx`
 - Create: `app/login/login-form.tsx`
-- Create: `middleware.ts`
+- Create: `proxy.ts`
+- Modify: `next.config.ts`
 
 **Interfaces:**
 - Consumes: `SESSION_COOKIE_NAME`, `SESSION_MAX_AGE_SECONDS`, `createSessionToken`, `isSessionTokenValid` (Task 2), `verifyPassword` (Task 2)
 - Produces:
   - `POST /api/login` — 본문 `{ password: string }`, 성공 시 204 와 세션 쿠키, 실패 시 401
   - `POST /api/logout` — 204 와 만료된 쿠키
-  - 미들웨어가 `/login` 과 `/api/login` 을 뺀 모든 경로를 막는다
+  - `proxy.ts` 가 `/login` 과 `/api/login` 을 뺀 모든 경로를 막는다
 
 - [ ] **Step 1: 로그인 라우트**
 
@@ -649,18 +763,37 @@ export async function POST() {
 }
 ```
 
-- [ ] **Step 3: 미들웨어**
+- [ ] **Step 3: 세션 검사 프록시**
 
-`middleware.ts` (저장소 루트):
+Next 16 은 `middleware` 파일 규약을 폐기했다. `proxy.ts` 에 `proxy` 함수를 둔다.
+`middleware.ts` 로 만들면 시작할 때마다 폐기 경고가 뜬다.
+
+`proxy.ts` (저장소 루트):
 
 ```ts
 import { NextResponse, type NextRequest } from "next/server";
 import { isSessionTokenValid, SESSION_COOKIE_NAME } from "@/lib/session";
 
+/**
+ * 세션 검사. Next 16 부터 `middleware` 대신 `proxy` 규약을 쓴다.
+ *
+ * 비밀번호 해시가 아니라 서명만 검사하므로 Web Crypto 만 쓰는 `lib/session.ts` 를
+ * 부른다. DB 는 건드리지 않는다.
+ */
+
 /** 세션 없이도 열려야 하는 경로. */
 const PUBLIC_PATHS = new Set(["/login", "/api/login"]);
 
-export async function middleware(request: NextRequest) {
+/**
+ * 개발 환경에서는 비밀번호를 묻지 않는다. 로그인 흐름 자체를 확인하고 싶으면
+ * `REQUIRE_LOGIN=1` 로 켠다. 프로덕션 빌드에서는 이 스위치와 무관하게 항상 막는다.
+ */
+const REQUIRE_LOGIN =
+  process.env.NODE_ENV === "production" || process.env.REQUIRE_LOGIN === "1";
+
+export async function proxy(request: NextRequest) {
+  if (!REQUIRE_LOGIN) return NextResponse.next();
+
   const { pathname } = request.nextUrl;
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
 
@@ -792,35 +925,82 @@ export default function LoginPage() {
 감싸고 사이드바를 넣지 않는다. 사이드바(`AppShell`)는 `app/today/layout.tsx` 처럼
 구역별 레이아웃에만 있으므로 로그인 화면은 자연히 사이드바 없이 나온다.
 
-- [ ] **Step 6: 수동 확인**
+- [ ] **Step 6: 검증용 두 번째 dev 서버를 띄울 수 있게 한다**
 
-`.env` 에 `APP_PASSWORD_HASH` 와 `SESSION_SECRET` 을 채운다. `SESSION_SECRET` 은 `openssl rand -hex 32` 로 만든다.
+Next 는 `.next/dev` 에 잠금을 건다. 그래서 이미 dev 서버가 떠 있으면 두 번째를
+띄울 수 없고, `proxy.ts` 같은 새 루트 파일과 새 환경변수는 재시작해야 반영된다.
+남의 서버를 끄지 않고 확인하려면 빌드 디렉터리를 나눠야 한다.
 
-```bash
-pnpm dev
+`next.config.ts` 의 `nextConfig` 에 더한다.
+
+```ts
+  // 같은 저장소에서 dev 서버를 두 개 띄우려면 빌드 디렉터리를 나눠야 한다.
+  // Next 가 .next/dev 를 잠그기 때문이다. 평소에는 기본값을 쓴다.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 ```
 
-확인할 것:
-1. `http://localhost:30001/today` 로 가면 `/login` 으로 넘어간다.
-2. 틀린 비밀번호는 "비밀번호가 맞지 않습니다." 를 보여준다.
-3. 맞는 비밀번호로 들어가면 `/today` 가 열린다.
-4. 새로고침해도 로그인 상태가 유지된다.
+`.gitignore` 에 더한다.
 
-- [ ] **Step 7: 타입 검사**
+```
+# 검증용 두 번째 dev 서버의 빌드 산출물
+.next-*/
+```
+
+- [ ] **Step 7: 수동 확인**
+
+`.env` 에 `APP_PASSWORD_HASH` 와 `SESSION_SECRET` 을 채운다.
+
+```bash
+node scripts/hash-password.mjs   # APP_PASSWORD_HASH
+openssl rand -hex 32             # SESSION_SECRET
+```
+
+서버를 띄운다. 30001 이 이미 쓰이고 있으면 아래처럼 다른 포트와 디렉터리를 쓴다.
+
+개발 환경은 기본으로 비밀번호를 묻지 않는다. 로그인 흐름을 확인하려면
+`REQUIRE_LOGIN=1` 을 붙인다.
+
+```bash
+REQUIRE_LOGIN=1 NEXT_DIST_DIR=.next-verify pnpm exec next dev -p 30099
+```
+
+```bash
+B=http://localhost:30099
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" $B/today
+curl -s -X POST $B/api/login -H 'Content-Type: application/json' -d '{"password":"틀린값"}'
+curl -s -c /tmp/jar.txt -X POST $B/api/login -H 'Content-Type: application/json' -d '{"password":"<진짜값>"}'
+curl -s -b /tmp/jar.txt -o /dev/null -w "%{http_code}\n" $B/today
+```
+
+Expected: 차례로 `307` 과 `/login`, "비밀번호가 맞지 않습니다.", 아무 출력 없음(204),
+`200`.
+
+확인이 끝나면 띄운 서버를 끈다. Next 는 `NEXT_DIST_DIR` 을 쓸 때마다 그 경로를
+`tsconfig.json` 의 `include` 에 덧붙인다. 지워진 디렉터리를 가리키므로 작업이
+끝나면 `.next-` 로 시작하는 항목을 걷어낸다.
+
+- [ ] **Step 8: 타입 검사**
 
 Run: `pnpm typecheck`
 Expected: 통과
 
-- [ ] **Step 8: 커밋**
+- [ ] **Step 9: 커밋**
 
 ```bash
-git add app/login app/api/login app/api/logout middleware.ts
-git commit -m "feat: 비밀번호 한 겹 로그인과 세션 미들웨어 추가"
+git add app/login app/api/login app/api/logout proxy.ts next.config.ts .gitignore
+git commit -m "feat: 비밀번호 한 겹 로그인과 세션 검사 추가"
 ```
 
 ---
 
 ### Task 4: 롤오버와 완료 이력 순수 함수
+
+> **lib 안에서 값을 가져올 때는 상대 경로에 `.ts` 확장자를 붙인다.**
+> `@/` 별칭은 tsconfig 만 아는 것이라 `node --test` 가 `.ts` 를 직접 읽을 때
+> 해석하지 못한다. 확장자를 붙이려면 `tsconfig.json` 에
+> `"allowImportingTsExtensions": true` 가 있어야 한다 (`noEmit` 이 켜져 있어야
+> 쓸 수 있고, 이 저장소는 켜져 있다). 타입만 가져올 때는 `import type` 이
+> 컴파일에서 지워지므로 `@/` 를 써도 된다.
 
 **Files:**
 - Create: `lib/rollover.ts`
@@ -829,6 +1009,7 @@ git commit -m "feat: 비밀번호 한 겹 로그인과 세션 미들웨어 추�
 - Create: `lib/completions.test.mjs`
 - Modify: `lib/today-board.ts`
 - Modify: `lib/today-board.test.mjs`
+- Modify: `tsconfig.json` (`allowImportingTsExtensions`)
 
 **Interfaces:**
 - Consumes: `groupIssuesByProject`, `type Issue`, `type IssueGroup` (기존 `lib/today-board.ts`)
@@ -1052,12 +1233,14 @@ Expected: FAIL — `./completions.ts` 를 찾을 수 없다
  * `groupIssuesByProject` 를 그대로 쓴다.
  * ---------------------------------------------------------------------- */
 
+// lib 안에서는 상대 경로로 가져온다. `@/` 별칭은 tsconfig 만 아는 것이라
+// `node --test` 가 .ts 를 직접 읽을 때 값 import 를 해석하지 못한다.
 import {
   groupIssuesByProject,
   type CustomProject,
   type Issue,
   type IssueGroup,
-} from "@/lib/today-board";
+} from "./today-board.ts";
 
 export type Completion = {
   id: string;
@@ -1177,6 +1360,14 @@ git commit -m "feat: 항목별 롤오버 판정과 완료 이력 묶기 순수 �
   - `saveSettings(settings: { projectOrder: string[]; collapsedProjects: string[] }): Promise<void>`
   - `BOARD_SETTING_KEY: string` — `"board"`
 
+- [ ] **Step 0: 테스트 데이터베이스에 마이그레이션 적용**
+
+```bash
+DATABASE_URL="<TEST_DATABASE_URL 과 같은 값>" pnpm exec prisma migrate deploy
+```
+
+Expected: `All migrations have been successfully applied.`
+
 - [ ] **Step 1: 테스트용 DB 헬퍼**
 
 `lib/server/test-db.mjs`:
@@ -1185,6 +1376,10 @@ git commit -m "feat: 항목별 롤오버 판정과 완료 이력 묶기 순수 �
 /**
  * 통합 테스트용 헬퍼. TEST_DATABASE_URL 이 가리키는 별도 데이터베이스를 쓰고,
  * 각 테스트 앞에서 테이블을 비운다.
+ *
+ * 이 헬퍼를 쓰는 테스트 파일은 **반드시 순차로 돌아야 한다**. 여러 파일이 같은
+ * 데이터베이스를 동시에 비우면 서로의 데이터를 지운다. `package.json` 의 test
+ * 스크립트가 `--test-concurrency=1` 을 붙이는 이유다.
  *
  * Prisma 클라이언트는 import 시점에 DATABASE_URL 을 읽으므로 그 전에 덮어쓴다.
  */
@@ -1392,16 +1587,18 @@ Expected: FAIL — `./board-store.ts` 를 찾을 수 없다
  * 보드 관련 DB 접근. 라우트 핸들러만 이 파일을 부른다.
  *
  * id 와 시각은 전부 호출부가 넘긴다. 테스트가 결정적이어야 하기 때문이다.
+ * lib 안에서는 상대 경로에 .ts 확장자를 붙여 가져온다 — `node --test` 가 같은
+ * 파일을 그대로 읽어야 하기 때문이다.
  * ---------------------------------------------------------------------- */
 
-import { prisma } from "@/lib/db";
-import { planRollover } from "@/lib/rollover";
+import { prisma } from "../db.ts";
+import { planRollover } from "../rollover.ts";
 import type {
   CustomProject,
   Issue,
   TodayBoard,
   TodayItem,
-} from "@/lib/today-board";
+} from "../today-board.ts";
 
 export const BOARD_SETTING_KEY = "board";
 
@@ -1969,7 +2166,7 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
       : init?.headers,
   });
   if (!response.ok) {
-    // 세션이 끊기면 미들웨어가 401 을 준다. 로그인 화면으로 보낸다.
+    // 세션이 끊기면 proxy 가 401 을 준다. 로그인 화면으로 보낸다.
     if (response.status === 401 && typeof window !== "undefined") {
       window.location.href = "/login";
     }
@@ -2333,8 +2530,8 @@ Expected: FAIL — `./notes-store.ts` 를 찾을 수 없다
 `lib/server/notes-store.ts`:
 
 ```ts
-import { prisma } from "@/lib/db";
-import type { ProjectNote, ProjectNotePriority } from "@/lib/project-notes";
+import { prisma } from "../db.ts";
+import type { ProjectNote, ProjectNotePriority } from "../project-notes.ts";
 
 const PRIORITIES = new Set<ProjectNotePriority>([
   "urgent",
@@ -2707,7 +2904,9 @@ const removeNote = (note: ProjectNote) => {
 void sync(() => putNoteOrder(projectSlug, next.map((item) => item.id)));
 ```
 
-7. 오류 문구를 "이 브라우저에 내용을 저장할 수 없습니다." 에서 위의 서버 문구로 바꾼다. 로딩 문구가 있으면 "서버에서 내용을 불러오는 중입니다." 로 바꾼다.
+7. 오류 문구를 "이 브라우저에 내용을 저장할 수 없습니다." 에서 위의 서버 문구로 바꾼다.
+8. 표 아래 안내 문구 "내용과 우선순위는 이 브라우저에 프로젝트별로 자동 저장됩니다." 를
+   "내용과 우선순위는 서버에 프로젝트별로 자동 저장됩니다." 로 바꾼다.
 
 - [ ] **Step 3: 페이지 안내 문구 확인**
 
@@ -3301,8 +3500,8 @@ Expected: FAIL — `./history-store.ts` 를 찾을 수 없다
 `lib/server/history-store.ts`:
 
 ```ts
-import type { Completion } from "@/lib/completions";
-import { prisma } from "@/lib/db";
+import type { Completion } from "../completions.ts";
+import { prisma } from "../db.ts";
 
 /** from 과 to 를 모두 포함한다. 둘 다 로컬 기준 YYYY-MM-DD. */
 export async function listCompletions(
@@ -3666,7 +3865,7 @@ tsconfig.tsbuildinfo
 ```dockerfile
 # syntax=docker/dockerfile:1
 
-FROM node:26-alpine AS base
+FROM node:24-alpine AS base
 RUN corepack enable
 WORKDIR /app
 
@@ -3692,8 +3891,9 @@ ENV PORT=30001
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# 마이그레이션을 컨테이너 시작 때 적용하려면 prisma CLI 와 스키마가 필요하다.
+# 마이그레이션을 컨테이너 시작 때 적용하려면 prisma CLI 와 스키마, 설정이 필요하다.
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
@@ -3840,7 +4040,29 @@ pnpm test         # node --test
 Run: `pnpm build`
 Expected: 빌드 성공. `.next/standalone/server.js` 가 생긴다.
 
-- [ ] **Step 8: 이미지 빌드 확인**
+- [ ] **Step 8: 빌드가 DB 접속 정보 없이도 되는지 확인**
+
+도커 빌드 단계에는 `.env` 가 없다. `next build` 가 라우트 모듈을 불러 정보를
+모을 때 `lib/db.ts` 가 그 자리에서 연결하면 빌드가 깨진다. 그래서 `prisma` 를
+프록시로 감싸 첫 접근까지 연결을 미룬다 (Task 1 Step 3b).
+
+```bash
+mv .env .env.bak && NEXT_DIST_DIR=.next-nodb pnpm build; mv .env.bak .env
+```
+
+Expected: 빌드 성공. 실패하면 `lib/db.ts` 가 모듈을 읽을 때 연결하고 있다는 뜻이다.
+
+컨테이너 시작 명령도 `.env` 없이 환경변수만으로 돌아야 한다.
+
+```bash
+mv .env .env.bak
+DATABASE_URL="<접속 문자열>" pnpm exec prisma migrate deploy
+mv .env.bak .env
+```
+
+Expected: `No pending migrations to apply.`
+
+- [ ] **Step 8b: 이미지 빌드 확인**
 
 Run: `docker build -t project-management .`
 Expected: 빌드 성공. Docker 가 없는 환경이면 이 단계를 건너뛰고 OCI 에서 확인한다.
@@ -3866,7 +4088,8 @@ git commit -m "feat: OCI 배포용 Docker 구성과 문서 추가"
 - [ ] `pnpm test` 통과
 - [ ] `pnpm typecheck` 통과
 - [ ] `pnpm build` 통과
-- [ ] 로그인하지 않으면 `/today` 가 `/login` 으로 넘어간다
+- [ ] 프로덕션 빌드에서 로그인하지 않으면 `/today` 가 `/login` 으로 넘어간다
+- [ ] 개발 환경에서는 비밀번호 없이 바로 열린다
 - [ ] 두 브라우저에서 같은 할 일과 명심할 점이 보인다
 - [ ] 브라우저에 있던 옛 데이터가 첫 접속에 한 번 올라가고 중복되지 않는다
 - [ ] 체크한 항목이 `/today/history` 에 날짜별로 보인다

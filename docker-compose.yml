@@ -1,0 +1,21 @@
+# PostgreSQL 은 이 인스턴스에 이미 떠 있는 컨테이너를 쓴다. 여기서 새로 띄우지 않는다.
+services:
+  app:
+    build: .
+    container_name: project-management
+    restart: unless-stopped
+    ports:
+      - "30001:30001"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      APP_PASSWORD_HASH: ${APP_PASSWORD_HASH}
+      SESSION_SECRET: ${SESSION_SECRET}
+    networks:
+      - db
+
+networks:
+  db:
+    # 이미 돌고 있는 PostgreSQL 컨테이너가 붙어 있는 네트워크 이름으로 바꾼다.
+    # `docker network ls` 로 확인한다.
+    external: true
+    name: ${DB_NETWORK_NAME}

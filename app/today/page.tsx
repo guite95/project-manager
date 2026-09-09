@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/erp/page-header";
 import { TodayBoardView } from "@/components/today-board/today-board";
 
@@ -14,9 +15,17 @@ export default function TodayPage() {
     <div className="mx-auto flex max-w-[1200px] flex-col lg:h-full">
       <div className="shrink-0">
         <PageHeader
-          description="프로젝트별로 쌓인 이슈를 오늘 할 일로 옮겨 체크합니다. 내용은 이 브라우저에 자동 저장됩니다."
+          description="프로젝트별로 쌓인 이슈를 오늘 할 일로 옮겨 체크합니다. 내용은 서버에 저장되어 어느 브라우저에서나 같습니다."
           title="오늘의 할 일"
         />
+        <div className="px-6 pt-3">
+          <Link
+            className="text-[12px] text-[var(--bi-muted)] hover:text-[var(--bi-fg)] hover:underline"
+            href="/today/history"
+          >
+            완료 이력 보기 →
+          </Link>
+        </div>
       </div>
       <TodayBoardView />
     </div>

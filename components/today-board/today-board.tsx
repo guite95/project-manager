@@ -1,80 +1,129 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { IssuePool } from "@/components/today-board/issue-pool";
 import { TodayList } from "@/components/today-board/today-list";
+import {
+  deleteIssueRequest,
+  deleteProjectRequest,
+  fetchBoard,
+  patchIssue,
+  postImport,
+  postIssue,
+  postProject,
+  putSettings,
+} from "@/lib/api-client";
 import { flowProjects } from "@/lib/flows/registry";
 import {
-  addIssue,
-  addProject,
-  createBoard,
+  clearLegacyData,
+  hasLegacyData,
+  readLegacyData,
+} from "@/lib/import-legacy";
+import {
   formatWorklog,
   groupIssuesByProject,
   isProjectTitleTaken,
   moveProject,
-  normalizeTodayBoard,
   removeIssue,
   removeProject,
   returnToPool,
-  rollOverBoard,
   sendToToday,
   todayDateString,
   toggleDone,
   toggleProjectCollapsed,
-  TODAY_BOARD_STORAGE_KEY,
   type Issue,
   type IssueGroup,
   type TodayBoard,
   type TodayItem,
 } from "@/lib/today-board";
 
-function createId(prefix: string): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return `${prefix}-${crypto.randomUUID()}`;
-  }
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 export function TodayBoardView() {
-  // null 은 "아직 저장값을 안 읽음". 서버 렌더와 어긋나지 않도록 첫 렌더에서는
+  // null 은 "아직 서버에서 안 받아옴". 서버 렌더와 어긋나지 않도록 첫 렌더에서는
   // 안내만 보여준다.
   const [board, setBoard] = useState<TodayBoard | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  const loadedRef = useRef(false);
 
-  // 저장값을 읽고 그 자리에서 날짜 롤오버를 판정한다. 자정을 넘겨 켜둔 탭은
-  // 여기서 정리되지 않고 다음에 열 때 정리된다 (타이머로 감시하지 않는다).
-  useEffect(() => {
-    const today = todayDateString(new Date());
-    let next = createBoard(today);
-    try {
-      const saved = window.localStorage.getItem(TODAY_BOARD_STORAGE_KEY);
-      if (saved) {
-        next = rollOverBoard(
-          normalizeTodayBoard(JSON.parse(saved), today),
-          today,
-        );
-      }
-    } catch {
-      setStorageError("저장된 내용을 불러오지 못했습니다.");
-    }
-    setBoard(next);
-    loadedRef.current = true;
-  }, []);
+  // 롤오버는 서버가 보드를 읽을 때 판정한다. 자정을 넘겨 켜둔 탭은 여기서
+  // 정리되지 않고 다음에 열 때 정리된다 (타이머로 감시하지 않는다).
+  const today = todayDateString(new Date());
 
-  useEffect(() => {
-    if (!loadedRef.current || !board) return;
+  const reload = useCallback(async () => {
     try {
-      window.localStorage.setItem(
-        TODAY_BOARD_STORAGE_KEY,
-        JSON.stringify(board),
-      );
+      setBoard(await fetchBoard());
       setStorageError(null);
     } catch {
-      setStorageError("이 브라우저에 내용을 저장할 수 없습니다.");
+      setStorageError("서버에서 내용을 불러오지 못했습니다.");
     }
-  }, [board]);
+  }, []);
+
+  /** 이관 대상 키를 찾을 때 쓴다. 레지스트리 프로젝트만 명심할 점을 가진다. */
+  const projectSlugs = useMemo(
+    () => flowProjects.map((project) => project.slug),
+    [],
+  );
+
+  // 첫 로드. 서버가 비어 있을 때만 브라우저에 남은 옛 데이터를 한 번 올린다.
+  useEffect(() => {
+    let cancelled = false;
+
+    const start = async () => {
+      let loaded: TodayBoard;
+      try {
+        loaded = await fetchBoard();
+      } catch {
+        if (!cancelled) setStorageError("서버에서 내용을 불러오지 못했습니다.");
+        return;
+      }
+
+      const serverEmpty =
+        loaded.issues.length === 0 &&
+        loaded.today.length === 0 &&
+        loaded.customProjects.length === 0;
+
+      if (serverEmpty) {
+        try {
+          const payload = readLegacyData(window.localStorage, projectSlugs);
+          if (hasLegacyData(payload)) {
+            await postImport(payload);
+            clearLegacyData(window.localStorage, projectSlugs);
+            loaded = await fetchBoard();
+          }
+        } catch {
+          // 이관에 실패해도 앱은 열려야 한다. 브라우저 값은 지우지 않는다.
+        }
+      }
+
+      if (!cancelled) {
+        setBoard(loaded);
+        setStorageError(null);
+      }
+    };
+
+    void start();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectSlugs]);
+
+  /**
+   * 화면 상태를 먼저 바꾸고 서버에 반영한다. 실패하면 서버 상태를 다시 받아
+   * 덮어써서 화면과 서버가 어긋난 채로 남지 않게 한다.
+   */
+  const sync = useCallback(
+    async (call: () => Promise<unknown>) => {
+      try {
+        await call();
+        setStorageError(null);
+      } catch {
+        setStorageError(
+          "서버에 저장하지 못했습니다. 최신 내용을 다시 불러옵니다.",
+        );
+        await reload();
+      }
+    },
+    [reload],
+  );
 
   const projects = useMemo(
     () => flowProjects.map(({ slug, title }) => ({ slug, title })),
@@ -110,43 +159,45 @@ export function TodayBoardView() {
     [groups],
   );
 
+  // 서버가 id 를 만드므로 응답을 받은 뒤 상태에 넣는다.
   const handleAdd = (projectSlug: string, title: string) => {
-    setBoard((current) =>
-      current
-        ? addIssue(
-            current,
-            projectSlug,
-            title,
-            createId("issue"),
-            new Date().toISOString(),
-          )
-        : current,
-    );
+    void sync(async () => {
+      const issue = await postIssue(projectSlug, title);
+      setBoard((current) =>
+        current ? { ...current, issues: [...current.issues, issue] } : current,
+      );
+    });
   };
 
   const handleAddProject = (title: string) => {
-    setBoard((current) =>
-      current
-        ? addProject(
-            current,
-            title,
-            createId("custom"),
-            new Date().toISOString(),
-          )
-        : current,
-    );
-    setAnnouncement(`${title.trim()} 프로젝트를 추가했습니다.`);
+    void sync(async () => {
+      const project = await postProject(title);
+      setBoard((current) =>
+        current
+          ? { ...current, customProjects: [...current.customProjects, project] }
+          : current,
+      );
+      setAnnouncement(`${title.trim()} 프로젝트를 추가했습니다.`);
+    });
   };
 
+  /**
+   * `setBoard` 업데이터 안에서 요청을 보내면 안 된다. 업데이터는 순수해야 하고
+   * React 가 두 번 부를 수 있다. 다음 상태를 업데이터 밖에서 만든다.
+   */
   const handleMoveProject = (
     slug: string,
     targetSlug: string,
     position: "before" | "after",
   ) => {
-    setBoard((current) =>
-      current
-        ? moveProject(current, orderedSlugs, slug, targetSlug, position)
-        : current,
+    if (!board) return;
+    const next = moveProject(board, orderedSlugs, slug, targetSlug, position);
+    setBoard(next);
+    void sync(() =>
+      putSettings({
+        projectOrder: next.projectOrder,
+        collapsedProjects: next.collapsedProjects,
+      }),
     );
   };
 
@@ -171,26 +222,29 @@ export function TodayBoardView() {
     if (!window.confirm(`“${group.title}” 프로젝트를 삭제할까요?${moved}`)) {
       return;
     }
-    setBoard((current) =>
-      current ? removeProject(current, group.slug as string) : current,
-    );
+    const slug = group.slug;
+    setBoard((current) => (current ? removeProject(current, slug) : current));
     setAnnouncement(`${group.title} 프로젝트를 삭제했습니다.${moved}`);
+    void sync(() => deleteProjectRequest(slug));
   };
 
   const handleRemove = (issue: Issue) => {
     if (!window.confirm(`“${issue.title}” 이슈를 삭제할까요?`)) return;
     setBoard((current) => (current ? removeIssue(current, issue.id) : current));
     setAnnouncement(`${issue.title} 이슈를 삭제했습니다.`);
+    void sync(() => deleteIssueRequest(issue.id));
   };
 
   const handleSendToToday = (issue: Issue) => {
     setBoard((current) => (current ? sendToToday(current, issue.id) : current));
     setAnnouncement(`${issue.title} 이슈를 오늘의 할 일로 옮겼습니다.`);
+    void sync(() => patchIssue(issue.id, { placement: "today" }));
   };
 
   const handleReturn = (item: TodayItem) => {
     setBoard((current) => (current ? returnToPool(current, item.id) : current));
     setAnnouncement(`${item.title} 항목을 이슈 목록으로 되돌렸습니다.`);
+    void sync(() => patchIssue(item.id, { placement: "pool" }));
   };
 
   const handleToggle = (item: TodayItem) => {
@@ -200,24 +254,31 @@ export function TodayBoardView() {
         ? `${item.title} 항목의 완료를 취소했습니다.`
         : `${item.title} 항목을 완료했습니다.`,
     );
+    void sync(() => patchIssue(item.id, { done: !item.done }));
   };
 
   if (!board) {
     return (
       <p className="px-6 py-10 text-center text-[12px] text-[var(--bi-muted)]">
-        저장된 내용을 불러오는 중입니다.
+        서버에서 내용을 불러오는 중입니다.
       </p>
     );
   }
 
   const handleToggleCollapsed = (slug: string) => {
-    setBoard((current) =>
-      current ? toggleProjectCollapsed(current, slug) : current,
+    if (!board) return;
+    const next = toggleProjectCollapsed(board, slug);
+    setBoard(next);
+    void sync(() =>
+      putSettings({
+        projectOrder: next.projectOrder,
+        collapsedProjects: next.collapsedProjects,
+      }),
     );
   };
 
   const handleCopyWorklog = async (): Promise<boolean> => {
-    const text = formatWorklog(board, projects);
+    const text = formatWorklog(board, projects, today);
     if (!text) return false;
     try {
       await navigator.clipboard.writeText(text);
@@ -242,7 +303,7 @@ export function TodayBoardView() {
     <div className="flex flex-col px-6 py-5 lg:min-h-0 lg:flex-1">
       <div className="grid grid-cols-1 items-start gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch">
         <TodayList
-          date={board.date}
+          date={today}
           items={board.today}
           onCopyWorklog={handleCopyWorklog}
           onDropIssue={handleDropIssue}

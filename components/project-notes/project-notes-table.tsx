@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   HiOutlineChevronDown,
   HiOutlineChevronUp,
@@ -10,12 +10,16 @@ import {
 } from "react-icons/hi";
 import { Button } from "@/components/erp/button";
 import {
-  createProjectNote,
+  deleteNoteRequest,
+  fetchNotes,
+  patchNote,
+  postNote,
+  putNoteOrder,
+} from "@/lib/api-client";
+import {
   moveProjectNote,
-  normalizeProjectNotes,
   PROJECT_NOTE_DRAG_TYPE,
   PROJECT_NOTE_PRIORITIES,
-  projectNotesStorageKey,
   updateProjectNote,
   type ProjectNote,
   type ProjectNotePriority,
@@ -47,13 +51,6 @@ const PRIORITY_STYLES: Record<
   },
 };
 
-function createNoteId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 /** 빈 행도 말이 되게 부른다. 삭제 확인과 순서 변경 안내가 같이 쓴다. */
 function noteLabel(note: ProjectNote): string {
   const content = note.content.trim();
@@ -82,10 +79,6 @@ function formatUpdatedAt(value: string): string {
 }
 
 export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
-  const storageKey = useMemo(
-    () => projectNotesStorageKey(projectSlug),
-    [projectSlug],
-  );
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -97,33 +90,70 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     id: string;
     edge: "before" | "after";
   } | null>(null);
-  const loadedKeyRef = useRef<string | null>(null);
   const pendingFocusIdRef = useRef<string | null>(null);
   const inputRefs = useRef(new Map<string, HTMLInputElement>());
 
-  useEffect(() => {
-    let next: ProjectNote[] = [];
+  const reload = useCallback(async () => {
     try {
-      const saved = window.localStorage.getItem(storageKey);
-      next = saved ? normalizeProjectNotes(JSON.parse(saved)) : [];
+      setNotes(await fetchNotes(projectSlug));
       setStorageError(null);
     } catch {
-      setStorageError("저장된 내용을 불러오지 못했습니다.");
+      setStorageError("서버에서 내용을 불러오지 못했습니다.");
+    } finally {
+      setLoaded(true);
     }
-    loadedKeyRef.current = storageKey;
-    setNotes(next);
-    setLoaded(true);
-  }, [storageKey]);
+  }, [projectSlug]);
 
   useEffect(() => {
-    if (!loaded || loadedKeyRef.current !== storageKey) return;
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(notes));
-      setStorageError(null);
-    } catch {
-      setStorageError("이 브라우저에 내용을 저장할 수 없습니다.");
-    }
-  }, [loaded, notes, storageKey]);
+    setLoaded(false);
+    void reload();
+  }, [reload]);
+
+  /**
+   * 화면 상태를 먼저 바꾸고 서버에 반영한다. 실패하면 서버 상태를 다시 받아
+   * 덮어써서 화면과 서버가 어긋난 채로 남지 않게 한다.
+   */
+  const sync = useCallback(
+    async (call: () => Promise<unknown>) => {
+      try {
+        await call();
+        setStorageError(null);
+      } catch {
+        setStorageError(
+          "서버에 저장하지 못했습니다. 최신 내용을 다시 불러옵니다.",
+        );
+        await reload();
+      }
+    },
+    [reload],
+  );
+
+  /**
+   * 내용 입력은 글자마다 바뀐다. 타건마다 요청을 보내지 않도록 마지막 입력에서
+   * 500밀리초 뒤에 한 번만 보낸다. 우선순위·삭제·순서는 즉시 보낸다.
+   */
+  const contentTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+
+  useEffect(() => {
+    const timers = contentTimers.current;
+    return () => {
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+    };
+  }, []);
+
+  const queueContentSave = (id: string, content: string) => {
+    const timers = contentTimers.current;
+    const existing = timers.get(id);
+    if (existing) clearTimeout(existing);
+    timers.set(
+      id,
+      setTimeout(() => {
+        timers.delete(id);
+        void sync(() => patchNote(id, { content }));
+      }, 500),
+    );
+  };
 
   useEffect(() => {
     const pendingId = pendingFocusIdRef.current;
@@ -133,12 +163,11 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
   }, [notes]);
 
   const addNote = () => {
-    const id = createNoteId();
-    pendingFocusIdRef.current = id;
-    setNotes((current) => [
-      createProjectNote(id, new Date().toISOString()),
-      ...current,
-    ]);
+    void sync(async () => {
+      const note = await postNote(projectSlug);
+      pendingFocusIdRef.current = note.id;
+      setNotes((current) => [note, ...current]);
+    });
   };
 
   const editNote = (
@@ -148,12 +177,24 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     setNotes((current) =>
       updateProjectNote(current, id, patch, new Date().toISOString()),
     );
+    if (patch.content !== undefined) queueContentSave(id, patch.content);
+    if (patch.priority !== undefined) {
+      const priority = patch.priority;
+      void sync(() => patchNote(id, { priority }));
+    }
   };
 
   const removeNote = (note: ProjectNote) => {
     if (!window.confirm(`“${noteLabel(note)}” 항목을 삭제할까요?`)) return;
     inputRefs.current.delete(note.id);
+    // 예약된 내용 저장이 있으면 취소한다. 지운 항목에 PATCH 를 보내면 실패한다.
+    const timer = contentTimers.current.get(note.id);
+    if (timer) {
+      clearTimeout(timer);
+      contentTimers.current.delete(note.id);
+    }
     setNotes((current) => current.filter((item) => item.id !== note.id));
+    void sync(() => deleteNoteRequest(note.id));
   };
 
   /** 드래그와 위/아래 버튼이 함께 쓰는 자리 옮기기. 순서만 바꾸고 수정 시각은 그대로 둔다. */
@@ -165,6 +206,12 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     const next = moveProjectNote(notes, id, targetId, position);
     if (next === notes) return;
     setNotes(next);
+    void sync(() =>
+      putNoteOrder(
+        projectSlug,
+        next.map((item) => item.id),
+      ),
+    );
     const moved = next.find((note) => note.id === id);
     if (moved) {
       setAnnouncement(
@@ -414,7 +461,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
       </p>
 
       <div className="flex min-h-9 items-center justify-between gap-3 border-t border-[var(--bi-border)] px-4 py-2 text-[11px] text-[var(--bi-muted)]">
-        <span>내용과 우선순위는 이 브라우저에 프로젝트별로 자동 저장됩니다.</span>
+        <span>내용과 우선순위는 서버에 프로젝트별로 자동 저장됩니다.</span>
         <span aria-live="polite" className={storageError ? "text-[var(--bi-error)]" : ""}>
           {storageError ?? (loaded ? `${notes.length}개 항목 저장됨` : "불러오는 중")}
         </span>
