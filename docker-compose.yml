@@ -8,6 +8,10 @@ services:
     ports:
       - "127.0.0.1:30001:30001"
     environment:
+      # 오늘 목록 롤오버가 사용자 기준 날짜로 판정되어야 한다. 컨테이너 기본값은 UTC 라
+      # 한국 시간 자정부터 오전 9시까지 하루가 밀린다. alpine 에 zoneinfo 는 없지만
+      # Node 가 번들 ICU 로 해석하므로 TZ 만으로 충분하다.
+      TZ: Asia/Seoul
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       APP_PASSWORD_HASH: ${APP_PASSWORD_HASH:?APP_PASSWORD_HASH is required}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
