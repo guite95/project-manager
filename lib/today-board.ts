@@ -210,6 +210,34 @@ export function addIssue(
   };
 }
 
+/**
+ * 제목을 고친다. 항목이 풀에 있든 오늘 목록에 있든 같은 함수로 다룬다.
+ * 바뀔 게 없으면 (빈 제목·같은 제목·없는 id) 받은 보드를 그대로 돌려준다.
+ */
+export function renameIssue(
+  board: TodayBoard,
+  issueId: string,
+  title: string,
+): TodayBoard {
+  const trimmed = title.trim();
+  if (!trimmed) return board;
+
+  const target =
+    board.issues.find((item) => item.id === issueId) ??
+    board.today.find((item) => item.id === issueId);
+  if (!target || target.title === trimmed) return board;
+
+  return {
+    ...board,
+    issues: board.issues.map((item) =>
+      item.id === issueId ? { ...item, title: trimmed } : item,
+    ),
+    today: board.today.map((item) =>
+      item.id === issueId ? { ...item, title: trimmed } : item,
+    ),
+  };
+}
+
 export function removeIssue(board: TodayBoard, issueId: string): TodayBoard {
   if (!board.issues.some((issue) => issue.id === issueId)) return board;
   return {

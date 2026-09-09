@@ -149,6 +149,21 @@ export async function createIssue(input: {
   return toIssue(row);
 }
 
+/**
+ * 제목을 고친다. 빈 제목은 무시하고, 없는 id 는 조용히 넘어간다.
+ *
+ * 이미 쌓인 완료 이력의 제목은 건드리지 않는다. 이력은 완료한 시점의 기록이고,
+ * 원래 이슈를 지워도 남도록 제목을 복사해 두는 구조이기 때문이다.
+ */
+export async function setIssueTitle(
+  id: string,
+  title: string,
+): Promise<void> {
+  const trimmed = title.trim();
+  if (!trimmed) return;
+  await prisma.issue.updateMany({ where: { id }, data: { title: trimmed } });
+}
+
 export async function deleteIssue(id: string): Promise<void> {
   await prisma.issue.delete({ where: { id } });
 }

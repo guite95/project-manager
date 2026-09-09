@@ -22,6 +22,18 @@ const PRIORITIES = new Set<ProjectNotePriority>(
 /** dataTransfer 종류. 행 드래그가 아닌 것을 끌어와도 표가 반응하지 않게 한다. */
 export const PROJECT_NOTE_DRAG_TYPE = "application/x-project-note";
 
+/**
+ * 명심할 점을 두는 프로젝트. 공통 하나뿐이다.
+ *
+ * 명심할 점은 고객사와 무관하게 반복 적용하는 기준이라 프로젝트마다 나눌 이유가
+ * 없다. 사이드바 링크와 라우트가 이 값 하나에서 파생된다.
+ */
+export const NOTES_PROJECT_SLUG = "common";
+
+export function hasProjectNotes(projectSlug: string): boolean {
+  return projectSlug === NOTES_PROJECT_SLUG;
+}
+
 export function projectNotesStorageKey(projectSlug: string): string {
   return `project-management.project-notes.v1:${projectSlug}`;
 }

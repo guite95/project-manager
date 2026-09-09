@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createId, jsonError, readJson } from "@/lib/api-types";
-import { deleteIssue, moveIssue, setIssueDone } from "@/lib/server/board-store";
+import {
+  deleteIssue,
+  moveIssue,
+  setIssueDone,
+  setIssueTitle,
+} from "@/lib/server/board-store";
 import { todayDateString } from "@/lib/today-board";
 
 type Context = { params: Promise<{ id: string }> };
@@ -10,9 +15,20 @@ export async function PATCH(request: Request, context: Context) {
   const body = await readJson(request);
   const today = todayDateString(new Date());
 
-  if (body.placement === undefined && body.done === undefined) {
+  const title = typeof body.title === "string" ? body.title.trim() : undefined;
+
+  if (
+    body.placement === undefined &&
+    body.done === undefined &&
+    title === undefined
+  ) {
     return jsonError("바꿀 내용이 없습니다.", 400);
   }
+  if (title !== undefined && !title) {
+    return jsonError("제목이 비어 있습니다.", 400);
+  }
+
+  if (title) await setIssueTitle(id, title);
 
   if (body.placement === "pool" || body.placement === "today") {
     await moveIssue(id, body.placement, today);

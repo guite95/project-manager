@@ -60,7 +60,7 @@ pnpm test         # node --test
 | `/today/history` | 날짜별 완료 이력 — 체크한 순간의 날짜로 쌓인다 |
 | `/flows` | 전체 목록 — 프로젝트 → 카테고리 → 차트 |
 | `/flows/[project]?cat=&chart=` | 프로젝트 화면 — 쿼리파람으로 차트 전환, 잘못된 값은 첫 차트 폴백 |
-| `/flows/[project]/notes` | 프로젝트별 명심할 점 — 4단계 우선순위와 서버 자동 저장 |
+| `/flows/common/notes` | 명심할 점 — 4단계 우선순위와 서버 자동 저장. 공통 프로젝트에만 있다 |
 | `/guide` | 플로우차트 작성 가이드 (MDX) |
 
 ## 디렉터리
@@ -81,7 +81,8 @@ app/
   flows/                 목록 · 차트 상세 · 프로젝트 명심할 점 라우트
   guide/page.mdx         작성 가이드
 components/
-  project-notes/         프로젝트별 명심할 점 편집 표
+  inline-edit.tsx        연필을 눌러야 열리는 제자리 편집 (이슈·명심할 점 공용)
+  project-notes/         명심할 점 편집 표
   today-board/           오늘의 할 일 보드 (이슈 풀 · 오늘 목록 · 완료 이력)
   flow/
     types.ts             FlowChart · NodeKind · EdgeKind 선언 타입

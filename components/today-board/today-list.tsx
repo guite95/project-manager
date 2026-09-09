@@ -4,6 +4,7 @@ import { useState } from "react";
 import { HiOutlineArrowRight, HiOutlineClipboardCopy } from "react-icons/hi";
 import { Badge } from "@/components/erp/badge";
 import { Button } from "@/components/erp/button";
+import { EditButton, InlineEdit } from "@/components/inline-edit";
 import {
   ISSUE_DRAG_TYPE,
   UNGROUPED_TITLE,
@@ -15,6 +16,7 @@ type TodayListProps = {
   items: TodayItem[];
   projectTitles: Record<string, string>;
   onToggle: (item: TodayItem) => void;
+  onRename: (item: TodayItem, title: string) => void;
   onReturn: (item: TodayItem) => void;
   onDropIssue: (issueId: string) => void;
   onCopyWorklog: () => Promise<boolean>;
@@ -36,11 +38,14 @@ export function TodayList({
   items,
   projectTitles,
   onToggle,
+  onRename,
   onReturn,
   onDropIssue,
   onCopyWorklog,
 }: TodayListProps) {
   const [dragOver, setDragOver] = useState(false);
+  // 한 번에 한 항목만 편집한다.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
   );
@@ -132,21 +137,37 @@ export function TodayList({
                   onChange={() => onToggle(item)}
                   type="checkbox"
                 />
-                <label
-                  className={`min-w-0 flex-1 truncate text-[12px] ${
-                    item.done
-                      ? "text-[var(--bi-muted)] line-through"
-                      : "text-[var(--bi-fg)]"
-                  }`}
-                  htmlFor={`today-item-${item.id}`}
+                <InlineEdit
+                  editing={editingId === item.id}
+                  inputClassName="min-w-0 flex-1 rounded-[3px] border border-[var(--bi-accent)] bg-[var(--bi-bg)] px-1.5 py-0.5 text-[12px] text-[var(--bi-fg)] outline-none"
+                  label="이슈 제목"
+                  onCancel={() => setEditingId(null)}
+                  onCommit={(next) => {
+                    setEditingId(null);
+                    onRename(item, next);
+                  }}
+                  value={item.title}
                 >
-                  {item.title}
-                </label>
+                  <label
+                    className={`min-w-0 flex-1 truncate text-[12px] ${
+                      item.done
+                        ? "text-[var(--bi-muted)] line-through"
+                        : "text-[var(--bi-fg)]"
+                    }`}
+                    htmlFor={`today-item-${item.id}`}
+                  >
+                    {item.title}
+                  </label>
+                </InlineEdit>
                 <span className="shrink-0">
                   <Badge variant="neutral">
                     {projectTitles[item.projectSlug] ?? UNGROUPED_TITLE}
                   </Badge>
                 </span>
+                <EditButton
+                  label={`${item.title} 수정`}
+                  onClick={() => setEditingId(item.id)}
+                />
                 <button
                   aria-label={`${item.title} 이슈 목록으로 되돌리기`}
                   className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-accent-light)] hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
