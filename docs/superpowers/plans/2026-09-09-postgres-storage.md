@@ -1327,6 +1327,14 @@ git commit -m "feat: 항목별 롤오버 판정과 완료 이력 묶기 순수 �
   - `saveSettings(settings: { projectOrder: string[]; collapsedProjects: string[] }): Promise<void>`
   - `BOARD_SETTING_KEY: string` — `"board"`
 
+- [ ] **Step 0: 테스트 데이터베이스에 마이그레이션 적용**
+
+```bash
+DATABASE_URL="<TEST_DATABASE_URL 과 같은 값>" pnpm exec prisma migrate deploy
+```
+
+Expected: `All migrations have been successfully applied.`
+
 - [ ] **Step 1: 테스트용 DB 헬퍼**
 
 `lib/server/test-db.mjs`:
@@ -1542,16 +1550,18 @@ Expected: FAIL — `./board-store.ts` 를 찾을 수 없다
  * 보드 관련 DB 접근. 라우트 핸들러만 이 파일을 부른다.
  *
  * id 와 시각은 전부 호출부가 넘긴다. 테스트가 결정적이어야 하기 때문이다.
+ * lib 안에서는 상대 경로에 .ts 확장자를 붙여 가져온다 — `node --test` 가 같은
+ * 파일을 그대로 읽어야 하기 때문이다.
  * ---------------------------------------------------------------------- */
 
-import { prisma } from "@/lib/db";
-import { planRollover } from "@/lib/rollover";
+import { prisma } from "../db.ts";
+import { planRollover } from "../rollover.ts";
 import type {
   CustomProject,
   Issue,
   TodayBoard,
   TodayItem,
-} from "@/lib/today-board";
+} from "../today-board.ts";
 
 export const BOARD_SETTING_KEY = "board";
 
