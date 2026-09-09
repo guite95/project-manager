@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { HiOutlineArrowRight } from "react-icons/hi";
+import { HiOutlineArrowRight, HiOutlineClipboardCopy } from "react-icons/hi";
 import { Badge } from "@/components/erp/badge";
+import { Button } from "@/components/erp/button";
 import {
   ISSUE_DRAG_TYPE,
   UNGROUPED_TITLE,
@@ -16,6 +17,7 @@ type TodayListProps = {
   onToggle: (item: TodayItem) => void;
   onReturn: (item: TodayItem) => void;
   onDropIssue: (issueId: string) => void;
+  onCopyWorklog: () => Promise<boolean>;
 };
 
 /** "2026-09-09" → "9월 9일 (수)". 클라이언트에서만 렌더하므로 하이드레이션 걱정이 없다. */
@@ -36,25 +38,55 @@ export function TodayList({
   onToggle,
   onReturn,
   onDropIssue,
+  onCopyWorklog,
 }: TodayListProps) {
   const [dragOver, setDragOver] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
+    "idle",
+  );
   const doneCount = items.filter((item) => item.done).length;
+
+  const copy = async () => {
+    const ok = await onCopyWorklog();
+    setCopyState(ok ? "copied" : "failed");
+    window.setTimeout(() => setCopyState("idle"), 2000);
+  };
 
   return (
     <section
       aria-labelledby="today-list-heading"
       className="flex min-w-0 flex-col gap-3"
     >
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3
           className="text-[13px] font-semibold text-[var(--bi-fg)]"
           id="today-list-heading"
         >
           오늘의 할 일
         </h3>
-        <span className="shrink-0 text-[11px] text-[var(--bi-muted)]">
-          {formatBoardDate(date)} · {doneCount}/{items.length} 완료
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-[11px] text-[var(--bi-muted)]">
+            {formatBoardDate(date)} · {doneCount}/{items.length} 완료
+          </span>
+          <Button
+            disabled={doneCount === 0}
+            onClick={copy}
+            size="sm"
+            title={
+              doneCount === 0
+                ? "체크한 항목이 있어야 복사할 수 있습니다"
+                : "체크한 항목을 작업내용으로 복사"
+            }
+            variant="secondary"
+          >
+            <HiOutlineClipboardCopy aria-hidden size={14} />
+            {copyState === "copied"
+              ? "복사됨"
+              : copyState === "failed"
+                ? "복사 실패"
+                : "작업내용 복사"}
+          </Button>
+        </div>
       </div>
 
       <div
