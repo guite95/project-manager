@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 접속 URL 은 prisma.config.ts 에 있다. Prisma 7 부터 스키마에 두지 않는다.
+datasource db {
+  provider = "postgresql"
+}
+
+/// 화면에서 직접 추가한 프로젝트만 담는다.
+/// 레지스트리(lib/flows/registry.ts) 프로젝트는 코드가 진실의 원천이므로 넣지 않는다.
+model CustomProject {
+  slug      String   @id
+  title     String
+  createdAt DateTime @map("created_at")
+
+  @@map("custom_project")
+}
+
+/// 이슈 하나가 행 하나. 이슈 풀과 오늘 목록을 나누지 않고 placement 로 구분해
+/// "한 항목은 한쪽에만 있다"는 기존 불변식을 컬럼으로 표현한다.
+model Issue {
+  id          String   @id
+  /// 레지스트리에도 커스텀에도 없는 값이면 화면에서 미분류로 묶인다. 외래키를 걸지 않는다.
+  projectSlug String   @map("project_slug")
+  title       String
+  createdAt   DateTime @map("created_at")
+  /// "pool" | "today"
+  placement   String
+  /// placement 가 "today" 일 때만 값이 있다. 로컬 기준 YYYY-MM-DD.
+  todayDate   String?  @map("today_date")
+  done        Boolean  @default(false)
+  /// 자신이 속한 목록 안에서의 순서.
+  position    Int
+
+  completions Completion[]
+
+  @@index([placement, position])
+  @@map("issue")
+}
+
+/// 완료 이력. 제목과 프로젝트를 복사해 두어 원본 이슈를 지워도 이력이 남는다.
+model Completion {
+  id          String   @id
+  issueId     String?  @map("issue_id")
+  issue       Issue?   @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  projectSlug String   @map("project_slug")
+  title       String
+  /// 완료한 날. 로컬 기준 YYYY-MM-DD.
+  completedOn String   @map("completed_on")
+  completedAt DateTime @map("completed_at")
+
+  @@index([completedOn])
+  @@map("completion")
+}
+
+model ProjectNote {
+  id          String   @id
+  projectSlug String   @map("project_slug")
+  content     String
+  /// "urgent" | "high" | "normal" | "low"
+  priority    String
+  position    Int
+  updatedAt   DateTime @map("updated_at")
+
+  @@index([projectSlug, position])
+  @@map("project_note")
+}
+
+/// 화면 상태를 담는 키-값 행. 현재 키는 "board" 하나이며
+/// { projectOrder: string[], collapsedProjects: string[] } 를 담는다.
+model AppSetting {
+  key   String @id
+  value Json
+
+  @@map("app_setting")
+}

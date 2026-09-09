@@ -15,7 +15,10 @@
 - **커밋 메시지에 `Co-Authored-By` 트레일러를 넣지 않는다.** 사용자 전역 규칙이다.
 - 사용자에게 보이는 문구는 전부 한국어다. 코드 식별자와 파일명은 영어다.
 - 색과 간격은 `app/globals.css` 에 이미 있는 `--bi-*` 토큰만 쓴다. 새 토큰을 추가하지 않는다.
-- 새 npm 의존성은 `prisma` 와 `@prisma/client` 둘뿐이다. 그 밖의 패키지를 추가하지 않는다. 비밀번호 해시와 서명은 런타임 내장 기능으로 한다.
+- 새 npm 의존성은 Prisma 한 묶음뿐이다: `@prisma/client`, `@prisma/adapter-pg`,
+  `pg` 와 개발용 `prisma`, `@types/pg`. Prisma 7 은 쿼리 컴파일러를 쓰므로
+  드라이버 어댑터가 필수다. 그 밖의 패키지를 추가하지 않는다. 비밀번호 해시와
+  서명은 런타임 내장 기능으로 한다.
 - 날짜 문자열은 로컬 시간 기준 `YYYY-MM-DD` 다. UTC 로 계산하지 않는다. 기존 `todayDateString` 을 그대로 쓴다.
 - 순수 함수는 입력을 변형하지 않고 새 값을 반환한다. `id` 와 `now` 는 호출부가 넘긴다. 테스트가 결정적이어야 한다.
 - 비밀번호와 서명 키를 코드에 적지 않는다. 환경변수로만 받는다.
@@ -39,7 +42,8 @@
 | 경로 | 책임 |
 | --- | --- |
 | `prisma/schema.prisma` | 테이블 정의 |
-| `lib/db.ts` | Prisma 클라이언트 싱글턴 |
+| `prisma.config.ts` | Prisma CLI 설정. 접속 URL 과 스키마 경로 |
+| `lib/db.ts` | Prisma 클라이언트 싱글턴 (pg 어댑터) |
 | `lib/session.ts` | 세션 토큰 생성·검증 (Web Crypto HMAC, 미들웨어에서도 동작) |
 | `lib/password.ts` | 비밀번호 해시·대조 (`node:crypto` scrypt) |
 | `lib/rollover.ts` | 롤오버 판정 순수 함수 |
@@ -88,22 +92,35 @@
 - [ ] **Step 1: 의존성 설치**
 
 ```bash
-pnpm add @prisma/client
-pnpm add -D prisma
+pnpm add @prisma/client@7.10.0 @prisma/adapter-pg@7.10.0 pg
+pnpm add -D prisma@7.10.0 @types/pg
+```
+
+**버전을 반드시 고정한다.** 태그만 쓰면 `prisma` 가 8 릴리스 후보로 잡혀
+`@prisma/client` 와 메이저가 어긋난다.
+
+`pnpm-workspace.yaml` 의 `allowBuilds` 에 다음을 넣어야 엔진이 설치된다.
+
+```yaml
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
 ```
 
 - [ ] **Step 2: 스키마 작성**
 
 `prisma/schema.prisma`:
 
+Prisma 7 은 `url` 을 스키마에 두지 않는다. `prisma.config.ts` 로 옮긴다.
+
 ```prisma
 generator client {
   provider = "prisma-client-js"
 }
 
+// 접속 URL 은 prisma.config.ts 에 있다. Prisma 7 부터 스키마에 두지 않는다.
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 /// 화면에서 직접 추가한 프로젝트만 담는다.
@@ -176,20 +193,62 @@ model AppSetting {
 }
 ```
 
-- [ ] **Step 3: Prisma 클라이언트 싱글턴**
+- [ ] **Step 3: Prisma CLI 설정**
+
+Prisma 7 은 `.env` 를 알아서 읽지 않는다. Node 내장 `process.loadEnvFile` 로 읽는다.
+
+`prisma.config.ts` (저장소 루트):
+
+```ts
+/**
+ * Prisma 7 부터 접속 URL 은 스키마가 아니라 여기에 둔다.
+ * 런타임 클라이언트는 `lib/db.ts` 에서 드라이버 어댑터로 따로 연결한다.
+ * 이 파일은 migrate·introspect 같은 CLI 명령이 쓴다.
+ */
+import { defineConfig, env } from "prisma/config";
+
+// Prisma 7 은 .env 를 알아서 읽지 않는다. Node 내장 기능으로 읽는다.
+// 컨테이너처럼 파일 없이 환경변수만 주는 곳도 있으므로 없으면 그냥 넘어간다.
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // 파일이 없으면 이미 환경에 들어있는 값을 쓴다.
+}
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  datasource: {
+    url: env("DATABASE_URL"),
+  },
+});
+```
+
+- [ ] **Step 3b: Prisma 클라이언트 싱글턴**
 
 `lib/db.ts`:
 
 ```ts
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 /**
+ * Prisma 7 은 쿼리 컴파일러를 쓰므로 Rust 엔진 대신 드라이버 어댑터로 붙는다.
+ * `pg` 는 순수 자바스크립트라 컨테이너 이미지에 네이티브 바이너리가 들어가지 않는다.
+ *
  * 개발 중 핫리로드가 연결을 계속 새로 열지 않도록 전역에 하나만 둔다.
  * 프로덕션은 프로세스가 하나뿐이라 전역에 붙이지 않는다.
  */
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+function createClient(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL 이 없습니다. .env 를 확인하세요.");
+  }
+  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+}
+
+export const prisma = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 ```
@@ -199,11 +258,17 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 `.env.example`:
 
 ```
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/project_management"
-TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/project_management_test"
+# 로컬 개발용. 사용자 이름과 비밀번호는 각자 환경에 맞춘다.
+DATABASE_URL="postgresql://USER@localhost:5432/project_management"
+TEST_DATABASE_URL="postgresql://USER@localhost:5432/project_management_test"
+# node scripts/hash-password.mjs 결과
 APP_PASSWORD_HASH=""
+# openssl rand -hex 32 결과
 SESSION_SECRET=""
 ```
+
+Homebrew 로 깐 PostgreSQL 은 기본 사용자가 OS 계정 이름이다. `whoami` 결과를
+`USER` 자리에 넣는다. 사용자를 빼면 `P1010: User was denied access` 가 난다.
 
 `.gitignore` 에 다음 줄이 없으면 더한다.
 
@@ -217,7 +282,7 @@ SESSION_SECRET=""
 `package.json` 의 `scripts` 에 더한다.
 
 ```json
-"test": "node --test \"lib/**/*.test.mjs\"",
+"test": "node --env-file-if-exists=.env --test \"lib/**/*.test.mjs\"",
 "db:migrate": "prisma migrate dev",
 "db:deploy": "prisma migrate deploy",
 "db:generate": "prisma generate"
@@ -248,7 +313,7 @@ Expected: 통과
 - [ ] **Step 8: 커밋**
 
 ```bash
-git add prisma lib/db.ts .env.example .gitignore package.json pnpm-lock.yaml
+git add prisma prisma.config.ts lib/db.ts .env.example .gitignore package.json pnpm-workspace.yaml pnpm-lock.yaml
 git commit -m "feat: Prisma 스키마와 클라이언트 싱글턴 추가"
 ```
 
@@ -3692,8 +3757,9 @@ ENV PORT=30001
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# 마이그레이션을 컨테이너 시작 때 적용하려면 prisma CLI 와 스키마가 필요하다.
+# 마이그레이션을 컨테이너 시작 때 적용하려면 prisma CLI 와 스키마, 설정이 필요하다.
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
