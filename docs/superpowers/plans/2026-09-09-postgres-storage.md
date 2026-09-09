@@ -33,7 +33,7 @@
 | `DATABASE_URL` | PostgreSQL 접속 문자열 | 앱 런타임, 마이그레이션 |
 | `TEST_DATABASE_URL` | 통합 테스트용 별도 데이터베이스 | 테스트만 |
 | `APP_PASSWORD_HASH` | `salt:hash` 형식의 scrypt 결과 | 로그인 라우트 |
-| `SESSION_SECRET` | 세션 쿠키 서명 키 | 로그인 라우트, 미들웨어 |
+| `SESSION_SECRET` | 세션 쿠키 서명 키 | 로그인 라우트, `proxy.ts` |
 
 ## File Structure
 
@@ -44,7 +44,7 @@
 | `prisma/schema.prisma` | 테이블 정의 |
 | `prisma.config.ts` | Prisma CLI 설정. 접속 URL 과 스키마 경로 |
 | `lib/db.ts` | Prisma 클라이언트 싱글턴 (pg 어댑터) |
-| `lib/session.ts` | 세션 토큰 생성·검증 (Web Crypto HMAC, 미들웨어에서도 동작) |
+| `lib/session.ts` | 세션 토큰 생성·검증. Web Crypto HMAC 이라 `proxy.ts` 에서도 돈다 |
 | `lib/password.ts` | 비밀번호 해시·대조 (`node:crypto` scrypt) |
 | `lib/rollover.ts` | 롤오버 판정 순수 함수 |
 | `lib/completions.ts` | 완료 이력 타입과 날짜별 묶기 순수 함수 |
@@ -52,7 +52,7 @@
 | `lib/server/notes-store.ts` | 명심할 점 DB 접근 |
 | `lib/server/history-store.ts` | 완료 이력 DB 접근 |
 | `lib/api-client.ts` | 화면이 쓰는 fetch 래퍼 |
-| `middleware.ts` | 세션 검사 |
+| `proxy.ts` | 세션 검사. Next 16 은 `middleware` 대신 `proxy` 규약을 쓴다 |
 | `scripts/hash-password.mjs` | 해시 생성 CLI |
 | `app/login/page.tsx` | 로그인 화면 |
 | `app/api/**` | 라우트 핸들러 |
@@ -338,7 +338,7 @@ git commit -m "feat: Prisma 스키마와 클라이언트 싱글턴 추가"
   - `SESSION_COOKIE_NAME: string` — `"pm_session"`
   - `SESSION_MAX_AGE_SECONDS: number` — 30일
 
-두 파일을 나누는 이유: 세션 검증은 미들웨어에서도 돌아야 해서 표준 Web Crypto 만 쓴다. 비밀번호 해시는 `node:crypto` 의 `scrypt` 를 쓰며 라우트 핸들러와 CLI 에서만 쓴다.
+두 파일을 나누는 이유: 세션 검증은 `proxy.ts` 에서도 돌아야 해서 표준 Web Crypto 만 쓴다. 비밀번호 해시는 `node:crypto` 의 `scrypt` 를 쓰며 라우트 핸들러와 CLI 에서만 쓴다.
 
 - [ ] **Step 1: 비밀번호 테스트를 먼저 쓴다**
 
@@ -486,7 +486,7 @@ Expected: FAIL — `./session.ts` 를 찾을 수 없다
 /**
  * 세션 토큰은 `만료시각.서명` 이다. 서명은 만료시각 문자열에 대한 HMAC-SHA256.
  *
- * 미들웨어에서도 그대로 돌아야 하므로 `node:crypto` 가 아니라 표준 Web Crypto 만
+ * `proxy.ts` 에서도 그대로 돌아야 하므로 `node:crypto` 가 아니라 표준 Web Crypto 만
  * 쓴다. 비밀번호 해시는 `lib/password.ts` 에 따로 있다.
  */
 
@@ -650,21 +650,22 @@ git commit -m "feat: 비밀번호 해시와 세션 토큰 유틸 추가"
 
 ---
 
-### Task 3: 로그인 화면과 미들웨어
+### Task 3: 로그인 화면과 세션 검사
 
 **Files:**
 - Create: `app/api/login/route.ts`
 - Create: `app/api/logout/route.ts`
 - Create: `app/login/page.tsx`
 - Create: `app/login/login-form.tsx`
-- Create: `middleware.ts`
+- Create: `proxy.ts`
+- Modify: `next.config.ts`
 
 **Interfaces:**
 - Consumes: `SESSION_COOKIE_NAME`, `SESSION_MAX_AGE_SECONDS`, `createSessionToken`, `isSessionTokenValid` (Task 2), `verifyPassword` (Task 2)
 - Produces:
   - `POST /api/login` — 본문 `{ password: string }`, 성공 시 204 와 세션 쿠키, 실패 시 401
   - `POST /api/logout` — 204 와 만료된 쿠키
-  - 미들웨어가 `/login` 과 `/api/login` 을 뺀 모든 경로를 막는다
+  - `proxy.ts` 가 `/login` 과 `/api/login` 을 뺀 모든 경로를 막는다
 
 - [ ] **Step 1: 로그인 라우트**
 
@@ -742,18 +743,28 @@ export async function POST() {
 }
 ```
 
-- [ ] **Step 3: 미들웨어**
+- [ ] **Step 3: 세션 검사 프록시**
 
-`middleware.ts` (저장소 루트):
+Next 16 은 `middleware` 파일 규약을 폐기했다. `proxy.ts` 에 `proxy` 함수를 둔다.
+`middleware.ts` 로 만들면 시작할 때마다 폐기 경고가 뜬다.
+
+`proxy.ts` (저장소 루트):
 
 ```ts
 import { NextResponse, type NextRequest } from "next/server";
 import { isSessionTokenValid, SESSION_COOKIE_NAME } from "@/lib/session";
 
+/**
+ * 세션 검사. Next 16 부터 `middleware` 대신 `proxy` 규약을 쓴다.
+ *
+ * 비밀번호 해시가 아니라 서명만 검사하므로 Web Crypto 만 쓰는 `lib/session.ts` 를
+ * 부른다. DB 는 건드리지 않는다.
+ */
+
 /** 세션 없이도 열려야 하는 경로. */
 const PUBLIC_PATHS = new Set(["/login", "/api/login"]);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
 
@@ -885,30 +896,66 @@ export default function LoginPage() {
 감싸고 사이드바를 넣지 않는다. 사이드바(`AppShell`)는 `app/today/layout.tsx` 처럼
 구역별 레이아웃에만 있으므로 로그인 화면은 자연히 사이드바 없이 나온다.
 
-- [ ] **Step 6: 수동 확인**
+- [ ] **Step 6: 검증용 두 번째 dev 서버를 띄울 수 있게 한다**
 
-`.env` 에 `APP_PASSWORD_HASH` 와 `SESSION_SECRET` 을 채운다. `SESSION_SECRET` 은 `openssl rand -hex 32` 로 만든다.
+Next 는 `.next/dev` 에 잠금을 건다. 그래서 이미 dev 서버가 떠 있으면 두 번째를
+띄울 수 없고, `proxy.ts` 같은 새 루트 파일과 새 환경변수는 재시작해야 반영된다.
+남의 서버를 끄지 않고 확인하려면 빌드 디렉터리를 나눠야 한다.
 
-```bash
-pnpm dev
+`next.config.ts` 의 `nextConfig` 에 더한다.
+
+```ts
+  // 같은 저장소에서 dev 서버를 두 개 띄우려면 빌드 디렉터리를 나눠야 한다.
+  // Next 가 .next/dev 를 잠그기 때문이다. 평소에는 기본값을 쓴다.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 ```
 
-확인할 것:
-1. `http://localhost:30001/today` 로 가면 `/login` 으로 넘어간다.
-2. 틀린 비밀번호는 "비밀번호가 맞지 않습니다." 를 보여준다.
-3. 맞는 비밀번호로 들어가면 `/today` 가 열린다.
-4. 새로고침해도 로그인 상태가 유지된다.
+`.gitignore` 에 더한다.
 
-- [ ] **Step 7: 타입 검사**
+```
+# 검증용 두 번째 dev 서버의 빌드 산출물
+.next-*/
+```
+
+- [ ] **Step 7: 수동 확인**
+
+`.env` 에 `APP_PASSWORD_HASH` 와 `SESSION_SECRET` 을 채운다.
+
+```bash
+node scripts/hash-password.mjs   # APP_PASSWORD_HASH
+openssl rand -hex 32             # SESSION_SECRET
+```
+
+서버를 띄운다. 30001 이 이미 쓰이고 있으면 아래처럼 다른 포트와 디렉터리를 쓴다.
+
+```bash
+NEXT_DIST_DIR=.next-verify pnpm exec next dev -p 30099
+```
+
+```bash
+B=http://localhost:30099
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" $B/today
+curl -s -X POST $B/api/login -H 'Content-Type: application/json' -d '{"password":"틀린값"}'
+curl -s -c /tmp/jar.txt -X POST $B/api/login -H 'Content-Type: application/json' -d '{"password":"<진짜값>"}'
+curl -s -b /tmp/jar.txt -o /dev/null -w "%{http_code}\n" $B/today
+```
+
+Expected: 차례로 `307` 과 `/login`, "비밀번호가 맞지 않습니다.", 아무 출력 없음(204),
+`200`.
+
+확인이 끝나면 띄운 서버를 끈다. Next 가 `tsconfig.json` 의 `include` 에
+`.next-verify` 경로를 넣어 두므로 `git checkout tsconfig.json` 으로 되돌린다.
+
+- [ ] **Step 8: 타입 검사**
 
 Run: `pnpm typecheck`
 Expected: 통과
 
-- [ ] **Step 8: 커밋**
+- [ ] **Step 9: 커밋**
 
 ```bash
-git add app/login app/api/login app/api/logout middleware.ts
-git commit -m "feat: 비밀번호 한 겹 로그인과 세션 미들웨어 추가"
+git add app/login app/api/login app/api/logout proxy.ts next.config.ts .gitignore
+git commit -m "feat: 비밀번호 한 겹 로그인과 세션 검사 추가"
 ```
 
 ---
@@ -2062,7 +2109,7 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
       : init?.headers,
   });
   if (!response.ok) {
-    // 세션이 끊기면 미들웨어가 401 을 준다. 로그인 화면으로 보낸다.
+    // 세션이 끊기면 proxy 가 401 을 준다. 로그인 화면으로 보낸다.
     if (response.status === 401 && typeof window !== "undefined") {
       window.location.href = "/login";
     }
