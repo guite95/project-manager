@@ -29,8 +29,6 @@ export type CustomProject = {
 };
 
 export type TodayBoard = {
-  /** 로컬 기준 YYYY-MM-DD. 이 값이 오늘과 다르면 롤오버 대상이다. */
-  date: string;
   issues: Issue[];
   today: TodayItem[];
   customProjects: CustomProject[];
@@ -78,9 +76,8 @@ export function todayDateString(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function createBoard(date: string): TodayBoard {
+export function createBoard(): TodayBoard {
   return {
-    date,
     issues: [],
     today: [],
     customProjects: [],
@@ -137,18 +134,11 @@ function isCustomProject(value: unknown): value is CustomProject {
   );
 }
 
-export function normalizeTodayBoard(
-  value: unknown,
-  fallbackDate: string,
-): TodayBoard {
+export function normalizeTodayBoard(value: unknown): TodayBoard {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return createBoard(fallbackDate);
+    return createBoard();
   }
   const raw = value as Record<string, unknown>;
-  const date =
-    typeof raw.date === "string" && DATE_PATTERN.test(raw.date)
-      ? raw.date
-      : fallbackDate;
 
   // today 를 먼저 훑는다. 두 목록에 같은 id 가 있으면 오늘의 할 일이 이긴다
   // (사용자가 마지막으로 손댄 쪽이라고 본다).
@@ -188,7 +178,6 @@ export function normalizeTodayBoard(
 
   // projectOrder 와 collapsedProjects 도 나중에 생긴 필드다.
   return {
-    date,
     issues,
     today,
     customProjects,
@@ -197,23 +186,11 @@ export function normalizeTodayBoard(
   };
 }
 
-/**
- * 날짜가 넘어갔으면 완료 항목은 버리고 미완료 항목은 풀 뒤로 되돌린다.
- * 과거 기록은 남기지 않는다 — 오늘의 할 일은 매일 빈 상태로 시작한다.
+/*
+ * 롤오버 판정은 `lib/rollover.ts` 의 `planRollover` 가 한다. 보드 전체에 날짜
+ * 하나를 두던 방식을 항목별 날짜로 바꾸면서 옮겼다. 판정은 서버가 보드를 읽을
+ * 때 수행한다.
  */
-export function rollOverBoard(
-  board: TodayBoard,
-  todayDate: string,
-): TodayBoard {
-  if (board.date === todayDate) return board;
-  const carried = board.today.filter((item) => !item.done).map(toIssue);
-  return {
-    ...board,
-    date: todayDate,
-    issues: [...board.issues, ...carried],
-    today: [],
-  };
-}
 
 export function addIssue(
   board: TodayBoard,
@@ -427,6 +404,7 @@ function formatMonthDay(date: string): string {
 export function formatWorklog(
   board: TodayBoard,
   registryProjects: { slug: string; title: string }[],
+  date: string,
 ): string {
   const done = board.today.filter((item) => item.done);
   if (done.length === 0) return "";
@@ -438,7 +416,7 @@ export function formatWorklog(
     board.projectOrder,
   );
 
-  const lines = [`${formatMonthDay(board.date)} 작업내용`];
+  const lines = [`${formatMonthDay(date)} 작업내용`];
   for (const group of groups) {
     if (group.issues.length === 0) continue;
     lines.push(`\`${group.title}\``);

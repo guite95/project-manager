@@ -962,6 +962,13 @@ git commit -m "feat: 비밀번호 한 겹 로그인과 세션 검사 추가"
 
 ### Task 4: 롤오버와 완료 이력 순수 함수
 
+> **lib 안에서 값을 가져올 때는 상대 경로에 `.ts` 확장자를 붙인다.**
+> `@/` 별칭은 tsconfig 만 아는 것이라 `node --test` 가 `.ts` 를 직접 읽을 때
+> 해석하지 못한다. 확장자를 붙이려면 `tsconfig.json` 에
+> `"allowImportingTsExtensions": true` 가 있어야 한다 (`noEmit` 이 켜져 있어야
+> 쓸 수 있고, 이 저장소는 켜져 있다). 타입만 가져올 때는 `import type` 이
+> 컴파일에서 지워지므로 `@/` 를 써도 된다.
+
 **Files:**
 - Create: `lib/rollover.ts`
 - Create: `lib/rollover.test.mjs`
@@ -969,6 +976,7 @@ git commit -m "feat: 비밀번호 한 겹 로그인과 세션 검사 추가"
 - Create: `lib/completions.test.mjs`
 - Modify: `lib/today-board.ts`
 - Modify: `lib/today-board.test.mjs`
+- Modify: `tsconfig.json` (`allowImportingTsExtensions`)
 
 **Interfaces:**
 - Consumes: `groupIssuesByProject`, `type Issue`, `type IssueGroup` (기존 `lib/today-board.ts`)
@@ -1192,12 +1200,14 @@ Expected: FAIL — `./completions.ts` 를 찾을 수 없다
  * `groupIssuesByProject` 를 그대로 쓴다.
  * ---------------------------------------------------------------------- */
 
+// lib 안에서는 상대 경로로 가져온다. `@/` 별칭은 tsconfig 만 아는 것이라
+// `node --test` 가 .ts 를 직접 읽을 때 값 import 를 해석하지 못한다.
 import {
   groupIssuesByProject,
   type CustomProject,
   type Issue,
   type IssueGroup,
-} from "@/lib/today-board";
+} from "./today-board.ts";
 
 export type Completion = {
   id: string;
