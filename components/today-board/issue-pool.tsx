@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  HiChevronRight,
   HiOutlineArrowLeft,
   HiOutlineChevronDown,
   HiOutlineChevronUp,
@@ -31,6 +32,8 @@ type IssuePoolProps = {
     position: "before" | "after",
   ) => void;
   onStepProject: (slug: string, delta: -1 | 1) => void;
+  collapsedSlugs: string[];
+  onToggleCollapsed: (slug: string) => void;
 };
 
 export function IssuePool({
@@ -43,6 +46,8 @@ export function IssuePool({
   isProjectTitleTaken,
   onMoveProject,
   onStepProject,
+  collapsedSlugs,
+  onToggleCollapsed,
 }: IssuePoolProps) {
   // 순서를 바꿀 수 있는 그룹만 센다 (미분류는 항상 마지막이라 제외).
   const movable = groups.filter((group) => group.slug !== null);
@@ -50,10 +55,10 @@ export function IssuePool({
   return (
     <section
       aria-labelledby="issue-pool-heading"
-      className="flex min-w-0 flex-col gap-3"
+      className="flex min-w-0 flex-col gap-3 lg:min-h-0"
     >
       <h3
-        className="text-[13px] font-semibold text-[var(--bi-fg)]"
+        className="shrink-0 text-[13px] font-semibold text-[var(--bi-fg)]"
         id="issue-pool-heading"
       >
         프로젝트 이슈
@@ -62,10 +67,14 @@ export function IssuePool({
         isProjectTitleTaken={isProjectTitleTaken}
         onAddProject={onAddProject}
       />
+      <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
       {groups.map((group) => {
         const index = movable.findIndex((entry) => entry.slug === group.slug);
         return (
           <ProjectGroup
+            collapsed={
+              group.slug !== null && collapsedSlugs.includes(group.slug)
+            }
             group={group}
             isFirst={index === 0}
             isLast={index === movable.length - 1}
@@ -76,9 +85,11 @@ export function IssuePool({
             onRemoveProject={onRemoveProject}
             onSendToToday={onSendToToday}
             onStepProject={onStepProject}
+            onToggleCollapsed={onToggleCollapsed}
           />
         );
       })}
+      </div>
     </section>
   );
 }
@@ -93,7 +104,7 @@ function AddProjectForm({
 
   return (
     <form
-      className="flex flex-wrap items-center gap-2 rounded-[4px] border border-dashed border-[var(--bi-border-strong)] px-3 py-2"
+      className="flex shrink-0 flex-wrap items-center gap-2 rounded-[4px] border border-dashed border-[var(--bi-border-strong)] px-3 py-2"
       onSubmit={(event) => {
         event.preventDefault();
         if (!trimmed || taken) return;
@@ -126,6 +137,7 @@ function AddProjectForm({
 }
 
 function ProjectGroup({
+  collapsed,
   group,
   isFirst,
   isLast,
@@ -135,7 +147,9 @@ function ProjectGroup({
   onRemoveProject,
   onSendToToday,
   onStepProject,
+  onToggleCollapsed,
 }: {
+  collapsed: boolean;
   group: IssueGroup;
   isFirst: boolean;
   isLast: boolean;
@@ -147,6 +161,7 @@ function ProjectGroup({
   | "onRemoveProject"
   | "onSendToToday"
   | "onStepProject"
+  | "onToggleCollapsed"
 >) {
   const [draft, setDraft] = useState("");
   const [dropEdge, setDropEdge] = useState<"before" | "after" | null>(null);
@@ -168,7 +183,7 @@ function ProjectGroup({
 
   return (
     <div
-      className={`overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] ${
+      className={`shrink-0 overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] ${
         dropEdge === "before"
           ? "border-t-2 border-t-[var(--bi-accent)]"
           : dropEdge === "after"
@@ -211,7 +226,27 @@ function ProjectGroup({
         if (draggedSlug) onMoveProject(draggedSlug, group.slug, edge);
       }}
     >
-      <div className="flex items-center gap-2 border-b border-[var(--bi-border)] bg-[var(--bi-table-header)] px-3 py-2">
+      <div
+        className={`flex items-center gap-2 bg-[var(--bi-table-header)] px-3 py-2 ${
+          collapsed ? "" : "border-b border-[var(--bi-border)]"
+        }`}
+      >
+        {movable && group.slug ? (
+          <button
+            aria-controls={`project-body-${group.slug}`}
+            aria-expanded={!collapsed}
+            aria-label={`${group.title} ${collapsed ? "펼치기" : "접기"}`}
+            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[3px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-accent-light)] hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
+            onClick={() => onToggleCollapsed(group.slug as string)}
+            type="button"
+          >
+            <HiChevronRight
+              aria-hidden
+              className={`transition-transform ${collapsed ? "" : "rotate-90"}`}
+              size={12}
+            />
+          </button>
+        ) : null}
         {movable && group.slug ? (
           <>
             <span
@@ -264,7 +299,10 @@ function ProjectGroup({
         ) : null}
       </div>
 
-      <ul className="m-0 list-none p-0">
+      {/* 접으면 헤더 한 줄만 남는다. */}
+      <div hidden={collapsed} id={group.slug ? `project-body-${group.slug}` : undefined}>
+      {/* 이슈가 5개를 넘으면 그룹 안에서 스크롤한다 (한 행 45px × 5). */}
+      <ul className="m-0 max-h-[225px] list-none overflow-y-auto p-0">
         {group.issues.length === 0 ? (
           <li className="px-3 py-4 text-center text-[11px] text-[var(--bi-muted)]">
             쌓인 이슈가 없습니다.
@@ -338,6 +376,7 @@ function ProjectGroup({
           </Button>
         </form>
       ) : null}
+      </div>
     </div>
   );
 }

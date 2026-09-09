@@ -40,6 +40,8 @@ export type TodayBoard = {
    * 새로 생겨도 목록에서 사라지지 않는다. 미분류는 담지 않고 항상 마지막이다.
    */
   projectOrder: string[];
+  /** 헤더만 남기고 접어둔 프로젝트의 slug 목록. 미분류는 담지 않는다. */
+  collapsedProjects: string[];
 };
 
 export type IssueGroup = {
@@ -77,7 +79,24 @@ export function todayDateString(date: Date): string {
 }
 
 export function createBoard(date: string): TodayBoard {
-  return { date, issues: [], today: [], customProjects: [], projectOrder: [] };
+  return {
+    date,
+    issues: [],
+    today: [],
+    customProjects: [],
+    projectOrder: [],
+    collapsedProjects: [],
+  };
+}
+
+/** 문자열만 남기고 빈 값·중복을 지운다. projectOrder 와 collapsedProjects 공용. */
+function normalizeSlugList(value: unknown): string[] {
+  const seen = new Set<string>();
+  return (Array.isArray(value) ? value : []).filter((slug): slug is string => {
+    if (typeof slug !== "string" || !slug || seen.has(slug)) return false;
+    seen.add(slug);
+    return true;
+  });
 }
 
 /** 여분 필드를 떨어뜨린다. today → issues 로 옮길 때 done 이 따라가지 않게 한다. */
@@ -167,17 +186,15 @@ export function normalizeTodayBoard(
       createdAt: item.createdAt,
     }));
 
-  // projectOrder 도 나중에 생긴 필드다.
-  const orderSeen = new Set<string>();
-  const projectOrder: string[] = (
-    Array.isArray(raw.projectOrder) ? raw.projectOrder : []
-  ).filter((slug): slug is string => {
-    if (typeof slug !== "string" || !slug || orderSeen.has(slug)) return false;
-    orderSeen.add(slug);
-    return true;
-  });
-
-  return { date, issues, today, customProjects, projectOrder };
+  // projectOrder 와 collapsedProjects 도 나중에 생긴 필드다.
+  return {
+    date,
+    issues,
+    today,
+    customProjects,
+    projectOrder: normalizeSlugList(raw.projectOrder),
+    collapsedProjects: normalizeSlugList(raw.collapsedProjects),
+  };
 }
 
 /**
@@ -285,6 +302,19 @@ export function removeProject(board: TodayBoard, slug: string): TodayBoard {
     customProjects: board.customProjects.filter(
       (project) => project.slug !== slug,
     ),
+  };
+}
+
+export function toggleProjectCollapsed(
+  board: TodayBoard,
+  slug: string,
+): TodayBoard {
+  const collapsed = board.collapsedProjects.includes(slug);
+  return {
+    ...board,
+    collapsedProjects: collapsed
+      ? board.collapsedProjects.filter((entry) => entry !== slug)
+      : [...board.collapsedProjects, slug],
   };
 }
 

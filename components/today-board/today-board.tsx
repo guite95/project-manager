@@ -20,6 +20,7 @@ import {
   sendToToday,
   todayDateString,
   toggleDone,
+  toggleProjectCollapsed,
   TODAY_BOARD_STORAGE_KEY,
   type Issue,
   type IssueGroup,
@@ -209,6 +210,12 @@ export function TodayBoardView() {
     );
   }
 
+  const handleToggleCollapsed = (slug: string) => {
+    setBoard((current) =>
+      current ? toggleProjectCollapsed(current, slug) : current,
+    );
+  };
+
   const handleCopyWorklog = async (): Promise<boolean> => {
     const text = formatWorklog(board, projects);
     if (!text) return false;
@@ -232,8 +239,8 @@ export function TodayBoardView() {
   };
 
   return (
-    <div className="px-6 py-5">
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+    <div className="flex flex-col px-6 py-5 lg:min-h-0 lg:flex-1">
+      <div className="grid grid-cols-1 items-start gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch">
         <TodayList
           date={board.date}
           items={board.today}
@@ -244,6 +251,7 @@ export function TodayBoardView() {
           projectTitles={projectTitles}
         />
         <IssuePool
+          collapsedSlugs={board.collapsedProjects}
           groups={groups}
           isProjectTitleTaken={(title) =>
             isProjectTitleTaken(board, title, projects)
@@ -255,6 +263,7 @@ export function TodayBoardView() {
           onRemoveProject={handleRemoveProject}
           onSendToToday={handleSendToToday}
           onStepProject={handleStepProject}
+          onToggleCollapsed={handleToggleCollapsed}
         />
       </div>
 

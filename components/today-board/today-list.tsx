@@ -55,9 +55,9 @@ export function TodayList({
   return (
     <section
       aria-labelledby="today-list-heading"
-      className="flex min-w-0 flex-col gap-3"
+      className="flex min-w-0 flex-col gap-3 lg:min-h-0"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <h3
           className="text-[13px] font-semibold text-[var(--bi-fg)]"
           id="today-list-heading"
@@ -90,7 +90,7 @@ export function TodayList({
       </div>
 
       <div
-        className={`rounded-[4px] border transition ${
+        className={`rounded-[4px] border transition lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${
           dragOver
             ? "border-dashed border-[var(--bi-accent)] bg-[var(--bi-accent-light)]"
             : "border-[var(--bi-border)] bg-[var(--bi-card-bg)]"
