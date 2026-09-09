@@ -1,0 +1,10 @@
+node_modules
+.next
+.next-*
+.git
+.env
+.env.local
+docs
+*.md
+tsconfig.tsbuildinfo
+.playwright-mcp

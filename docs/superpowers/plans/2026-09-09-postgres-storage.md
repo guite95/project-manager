@@ -241,17 +241,36 @@ import { PrismaClient } from "@prisma/client";
  */
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function createClient(): PrismaClient {
+let client: PrismaClient | undefined;
+
+function getClient(): PrismaClient {
+  const cached = globalForPrisma.prisma ?? client;
+  if (cached) return cached;
+
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL 이 없습니다. .env 를 확인하세요.");
   }
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+
+  client = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = client;
+  return client;
 }
 
-export const prisma = globalForPrisma.prisma ?? createClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+/**
+ * 처음 실제로 쓸 때 연결한다.
+ *
+ * 모듈을 읽는 것만으로 연결하면 `next build` 가 깨진다. 빌드는 라우트 모듈을
+ * 불러 정보를 모으는데, 그때는 DATABASE_URL 이 없다 (도커 빌드 단계에는 .env 가
+ * 없다). 그래서 프록시로 감싸 첫 접근까지 미룬다.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const real = getClient() as unknown as Record<string | symbol, unknown>;
+    const value = real[property];
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});
 ```
 
 - [ ] **Step 4: 환경변수 예시와 무시 규칙**
@@ -3845,7 +3864,7 @@ tsconfig.tsbuildinfo
 ```dockerfile
 # syntax=docker/dockerfile:1
 
-FROM node:26-alpine AS base
+FROM node:24-alpine AS base
 RUN corepack enable
 WORKDIR /app
 
@@ -4020,7 +4039,29 @@ pnpm test         # node --test
 Run: `pnpm build`
 Expected: 빌드 성공. `.next/standalone/server.js` 가 생긴다.
 
-- [ ] **Step 8: 이미지 빌드 확인**
+- [ ] **Step 8: 빌드가 DB 접속 정보 없이도 되는지 확인**
+
+도커 빌드 단계에는 `.env` 가 없다. `next build` 가 라우트 모듈을 불러 정보를
+모을 때 `lib/db.ts` 가 그 자리에서 연결하면 빌드가 깨진다. 그래서 `prisma` 를
+프록시로 감싸 첫 접근까지 연결을 미룬다 (Task 1 Step 3b).
+
+```bash
+mv .env .env.bak && NEXT_DIST_DIR=.next-nodb pnpm build; mv .env.bak .env
+```
+
+Expected: 빌드 성공. 실패하면 `lib/db.ts` 가 모듈을 읽을 때 연결하고 있다는 뜻이다.
+
+컨테이너 시작 명령도 `.env` 없이 환경변수만으로 돌아야 한다.
+
+```bash
+mv .env .env.bak
+DATABASE_URL="<접속 문자열>" pnpm exec prisma migrate deploy
+mv .env.bak .env
+```
+
+Expected: `No pending migrations to apply.`
+
+- [ ] **Step 8b: 이미지 빌드 확인**
 
 Run: `docker build -t project-management .`
 Expected: 빌드 성공. Docker 가 없는 환경이면 이 단계를 건너뛰고 OCI 에서 확인한다.

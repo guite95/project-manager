@@ -10,14 +10,33 @@ import { PrismaClient } from "@prisma/client";
  */
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function createClient(): PrismaClient {
+let client: PrismaClient | undefined;
+
+function getClient(): PrismaClient {
+  const cached = globalForPrisma.prisma ?? client;
+  if (cached) return cached;
+
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL 이 없습니다. .env 를 확인하세요.");
   }
-  return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+
+  client = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = client;
+  return client;
 }
 
-export const prisma = globalForPrisma.prisma ?? createClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+/**
+ * 처음 실제로 쓸 때 연결한다.
+ *
+ * 모듈을 읽는 것만으로 연결하면 `next build` 가 깨진다. 빌드는 라우트 모듈을
+ * 불러 정보를 모으는데, 그때는 DATABASE_URL 이 없다 (도커 빌드 단계에는 .env 가
+ * 없다). 그래서 프록시로 감싸 첫 접근까지 미룬다.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property) {
+    const real = getClient() as unknown as Record<string | symbol, unknown>;
+    const value = real[property];
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});
