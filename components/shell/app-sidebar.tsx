@@ -14,9 +14,13 @@ import {
   externalProjects,
   filterExternalProjects,
 } from "@/lib/navigation/external-projects";
+import {
+  projectNotesHref,
+  projectNotesProjectSlug,
+} from "@/lib/project-notes";
 
 /* -------------------------------------------------------------------------
- * 3단 트리 사이드바 — 프로젝트 → 카테고리 → 차트.
+ * 프로젝트 트리 사이드바 — 프로젝트 → 명심할 점 또는 카테고리 → 차트.
  *
  * 접힘 상태: 사용자가 토글한 적 있으면 localStorage 값, 없으면 활성 차트의
  * 조상만 펼친다. 검색 중에는 접힘을 무시하고 매칭된 차트만 전부 펼쳐 보인다.
@@ -91,8 +95,19 @@ export function AppSidebar() {
     });
   };
 
-  // 현재 보고 있는 위치 — 서버 페이지와 같은 폴백 규칙(resolveChart)으로 판정.
+  // 현재 보고 있는 위치 — 명심할 점 페이지 또는 차트 폴백 규칙으로 판정.
   const active = useMemo(() => {
+    const notesProjectSlug = projectNotesProjectSlug(pathname);
+    if (notesProjectSlug) {
+      const project = flowProjects.find((p) => p.slug === notesProjectSlug);
+      if (!project) return null;
+      return {
+        project: project.slug,
+        category: null,
+        chart: null,
+        view: "notes" as const,
+      };
+    }
     const m = pathname.match(/^\/flows\/([^/]+)$/);
     if (!m) return null;
     const project = flowProjects.find((p) => p.slug === m[1]);
@@ -107,6 +122,7 @@ export function AppSidebar() {
       project: project.slug,
       category: resolved.category.slug,
       chart: resolved.chart.slug,
+      view: "chart" as const,
     };
   }, [pathname, searchParams]);
 
@@ -116,12 +132,14 @@ export function AppSidebar() {
   useEffect(() => {
     if (!active) return;
     const pKey = projectKey(active.project);
-    const cKey = categoryKey(active.project, active.category);
+    const cKey = active.category
+      ? categoryKey(active.project, active.category)
+      : null;
     setUserOverrides((prev) => {
-      if (!prev[pKey] && !prev[cKey]) return prev;
+      if (!prev[pKey] && (!cKey || !prev[cKey])) return prev;
       const next = { ...prev };
       delete next[pKey];
-      delete next[cKey];
+      if (cKey) delete next[cKey];
       persist(next);
       return next;
     });
@@ -132,25 +150,30 @@ export function AppSidebar() {
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
 
-  // 검색 중이면 매칭 차트만 남긴 프로젝트 목록, 아니면 원본.
+  // 검색 중이면 프로젝트명·명심할 점·차트 중 매칭되는 메뉴만 남긴다.
   const visibleProjects = useMemo(() => {
     if (!searching) {
       return flowProjects.map((p) => ({
         project: p,
         categories: p.categories,
+        showNotes: true,
       }));
     }
     return flowProjects
-      .map((p) => ({
-        project: p,
-        categories: p.categories
-          .map((c) => ({
-            ...c,
-            charts: c.charts.filter((ch) => chartMatches(ch, q)),
-          }))
-          .filter((c) => c.charts.length > 0),
-      }))
-      .filter((p) => p.categories.length > 0);
+      .map((p) => {
+        const projectMatches = p.title.toLowerCase().includes(q);
+        const showNotes = projectMatches || "명심할 점 주의사항 우선순위".includes(q);
+        const categories = projectMatches
+          ? p.categories
+          : p.categories
+              .map((c) => ({
+                ...c,
+                charts: c.charts.filter((ch) => chartMatches(ch, q)),
+              }))
+              .filter((c) => c.charts.length > 0);
+        return { project: p, categories, showNotes };
+      })
+      .filter((p) => p.showNotes || p.categories.length > 0);
   }, [searching, q]);
 
   const visibleExternalProjects = useMemo(
@@ -160,7 +183,13 @@ export function AppSidebar() {
 
   return (
     <nav className="flex h-full flex-col gap-2 overflow-y-auto py-3">
-      <Link href="/flows" className={`${linkCls(pathname === "/flows")} pl-2`}>
+      <Link href="/today" className={`${linkCls(pathname === "/today")} pl-2`}>
+        오늘의 할 일
+      </Link>
+      <Link
+        href="/flows"
+        className={`-mt-1 ${linkCls(pathname === "/flows")} pl-2`}
+      >
         전체 프로젝트
       </Link>
       <Link
@@ -190,7 +219,7 @@ export function AppSidebar() {
         </p>
       ) : null}
 
-      {visibleProjects.map(({ project, categories }) => {
+      {visibleProjects.map(({ project, categories, showNotes }) => {
         const pKey = projectKey(project.slug);
         const projectActive = active?.project === project.slug;
         const pCollapsed = searching
@@ -220,8 +249,27 @@ export function AppSidebar() {
               </span>
             </button>
 
-            {!pCollapsed
-              ? categories.map((category) => {
+            {!pCollapsed ? (
+              <>
+                {showNotes ? (
+                  <Link
+                    aria-label={`${project.title} 명심할 점`}
+                    aria-current={
+                      projectActive && active?.view === "notes"
+                        ? "page"
+                        : undefined
+                    }
+                    className={`${linkCls(projectActive && active?.view === "notes")} pl-5`}
+                    href={projectNotesHref(project.slug)}
+                  >
+                    <span
+                      aria-hidden
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--bi-warning)]"
+                    />
+                    <span className="truncate">명심할 점</span>
+                  </Link>
+                ) : null}
+                {categories.map((category) => {
                   const cKey = categoryKey(project.slug, category.slug);
                   const categoryActive =
                     projectActive && active?.category === category.slug;
@@ -271,8 +319,9 @@ export function AppSidebar() {
                         : null}
                     </div>
                   );
-                })
-              : null}
+                })}
+              </>
+            ) : null}
           </div>
         );
       })}
