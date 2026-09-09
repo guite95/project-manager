@@ -1,8 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi";
 import { Badge } from "@/components/erp/badge";
-import { UNGROUPED_TITLE, type TodayItem } from "@/lib/today-board";
+import {
+  ISSUE_DRAG_TYPE,
+  UNGROUPED_TITLE,
+  type TodayItem,
+} from "@/lib/today-board";
 
 type TodayListProps = {
   date: string;
@@ -10,6 +15,7 @@ type TodayListProps = {
   projectTitles: Record<string, string>;
   onToggle: (item: TodayItem) => void;
   onReturn: (item: TodayItem) => void;
+  onDropIssue: (issueId: string) => void;
 };
 
 /** "2026-09-09" → "9월 9일 (수)". 클라이언트에서만 렌더하므로 하이드레이션 걱정이 없다. */
@@ -29,7 +35,9 @@ export function TodayList({
   projectTitles,
   onToggle,
   onReturn,
+  onDropIssue,
 }: TodayListProps) {
+  const [dragOver, setDragOver] = useState(false);
   const doneCount = items.filter((item) => item.done).length;
 
   return (
@@ -49,7 +57,31 @@ export function TodayList({
         </span>
       </div>
 
-      <div className="rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
+      <div
+        className={`rounded-[4px] border transition ${
+          dragOver
+            ? "border-dashed border-[var(--bi-accent)] bg-[var(--bi-accent-light)]"
+            : "border-[var(--bi-border)] bg-[var(--bi-card-bg)]"
+        }`}
+        onDragLeave={(event) => {
+          // 자식 위로 옮겨갈 때도 dragleave 가 뜬다. 영역 밖으로 나간 것만 센다.
+          if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+          setDragOver(false);
+        }}
+        onDragOver={(event) => {
+          if (!event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = "move";
+          setDragOver(true);
+        }}
+        onDrop={(event) => {
+          if (!event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) return;
+          event.preventDefault();
+          setDragOver(false);
+          const issueId = event.dataTransfer.getData(ISSUE_DRAG_TYPE);
+          if (issueId) onDropIssue(issueId);
+        }}
+      >
         {items.length === 0 ? (
           <p className="m-0 px-3 py-10 text-center text-[11px] text-[var(--bi-muted)]">
             왼쪽 이슈를 끌어다 놓으세요.

@@ -7,7 +7,7 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi";
 import { Button } from "@/components/erp/button";
-import type { Issue, IssueGroup } from "@/lib/today-board";
+import { ISSUE_DRAG_TYPE, type Issue, type IssueGroup } from "@/lib/today-board";
 
 type IssuePoolProps = {
   groups: IssueGroup[];
@@ -79,8 +79,16 @@ function ProjectGroup({
         ) : (
           group.issues.map((issue) => (
             <li
-              className="flex items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0"
+              className="flex cursor-grab items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0 active:cursor-grabbing"
+              draggable
               key={issue.id}
+              onDragStart={(event) => {
+                event.dataTransfer.setData(ISSUE_DRAG_TYPE, issue.id);
+                // text/plain 도 함께 넣는다. 표준 타입이 없으면 드래그 이미지를
+                // 만들지 않는 브라우저가 있다.
+                event.dataTransfer.setData("text/plain", issue.title);
+                event.dataTransfer.effectAllowed = "move";
+              }}
             >
               <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--bi-fg)]">
                 {issue.title}

@@ -132,6 +132,14 @@ export function TodayBoardView() {
     );
   }
 
+  // 드롭은 id 만 넘어온다. 안내 문구를 만들려면 현재 보드에서 항목을 찾아야 하는데,
+  // setBoard 업데이터는 순수해야 하므로 여기 밖에서 찾는다.
+  const handleDropIssue = (issueId: string) => {
+    const issue = board.issues.find((item) => item.id === issueId);
+    if (!issue) return;
+    handleSendToToday(issue);
+  };
+
   return (
     <div className="px-6 py-5">
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
@@ -144,6 +152,7 @@ export function TodayBoardView() {
         <TodayList
           date={board.date}
           items={board.today}
+          onDropIssue={handleDropIssue}
           onReturn={handleReturn}
           onToggle={handleToggle}
           projectTitles={projectTitles}
