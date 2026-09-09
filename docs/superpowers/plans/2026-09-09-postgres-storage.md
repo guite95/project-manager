@@ -3480,8 +3480,8 @@ Expected: FAIL — `./history-store.ts` 를 찾을 수 없다
 `lib/server/history-store.ts`:
 
 ```ts
-import type { Completion } from "@/lib/completions";
-import { prisma } from "@/lib/db";
+import type { Completion } from "../completions.ts";
+import { prisma } from "../db.ts";
 
 /** from 과 to 를 모두 포함한다. 둘 다 로컬 기준 YYYY-MM-DD. */
 export async function listCompletions(

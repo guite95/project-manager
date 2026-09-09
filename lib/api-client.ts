@@ -4,6 +4,7 @@
  * 받아 덮어쓴다.
  * ---------------------------------------------------------------------- */
 
+import type { Completion } from "@/lib/completions";
 import type { LegacyPayload } from "@/lib/import-legacy";
 import type { ProjectNote } from "@/lib/project-notes";
 import type { CustomProject, Issue, TodayBoard } from "@/lib/today-board";
@@ -136,4 +137,22 @@ export async function postImport(payload: LegacyPayload): Promise<void> {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/* ------------------------------------------------------------- 완료 이력 */
+
+export type HistoryResponse = {
+  completions: Completion[];
+  customProjects: CustomProject[];
+  projectOrder: string[];
+};
+
+export async function fetchHistory(
+  from: string,
+  to: string,
+): Promise<HistoryResponse> {
+  const response = await request(
+    `/api/history?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  );
+  return response.json();
 }
