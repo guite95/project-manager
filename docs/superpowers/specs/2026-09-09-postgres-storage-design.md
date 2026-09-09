@@ -212,7 +212,12 @@ Prisma 클라이언트는 `lib/db.ts` 에서 전역 싱글턴으로 만든다. �
 1. `/login` 화면에서 비밀번호를 받는다.
 2. `POST /api/login` 이 해시를 대조한다.
 3. 성공하면 서명한 HttpOnly·SameSite=Lax 쿠키를 내린다. 만료는 30일이다.
-4. `middleware.ts` 가 `/login` 과 `/api/login` 만 열어 두고 나머지를 막는다.
+4. `proxy.ts` 가 `/login` 과 `/api/login` 만 열어 두고 나머지를 막는다.
+   Next 16 은 `middleware` 대신 `proxy` 파일 규약을 쓴다.
+
+**개발 환경에서는 비밀번호를 묻지 않는다.** 매번 로그인하는 것이 개발에 방해되기
+때문이다. 프로덕션 빌드에서는 항상 막는다. 로그인 흐름 자체를 확인해야 하면
+`REQUIRE_LOGIN=1` 로 개발 환경에서도 켤 수 있다.
 
 `proxy.ts` 에 API 토큰 검사 자리를 함께 남긴다. 외부 연동을 붙일 때 `Authorization`
 헤더를 보는 분기만 채우면 되게 한다. 이번 범위에서는 토큰을 발급하지 않는다.
