@@ -34,6 +34,12 @@ export type TodayBoard = {
   issues: Issue[];
   today: TodayItem[];
   customProjects: CustomProject[];
+  /**
+   * 사용자가 순서를 건드린 프로젝트의 slug 목록. 여기 없는 프로젝트는 기본
+   * 순서(레지스트리 → 직접 추가)로 뒤에 붙는다 — 그래야 레지스트리에 프로젝트가
+   * 새로 생겨도 목록에서 사라지지 않는다. 미분류는 담지 않고 항상 마지막이다.
+   */
+  projectOrder: string[];
 };
 
 export type IssueGroup = {
@@ -52,6 +58,9 @@ export const TODAY_BOARD_STORAGE_KEY = "project-management.today-board.v1";
 /** dataTransfer 종류. 이슈 카드가 아닌 것을 끌어와도 드롭 영역이 반응하지 않게 한다. */
 export const ISSUE_DRAG_TYPE = "application/x-today-issue";
 
+/** 프로젝트 그룹 드래그. 이슈 드래그와 섞이지 않도록 종류를 나눈다. */
+export const PROJECT_DRAG_TYPE = "application/x-today-project";
+
 export const UNGROUPED_TITLE = "미분류";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -68,7 +77,7 @@ export function todayDateString(date: Date): string {
 }
 
 export function createBoard(date: string): TodayBoard {
-  return { date, issues: [], today: [], customProjects: [] };
+  return { date, issues: [], today: [], customProjects: [], projectOrder: [] };
 }
 
 /** 여분 필드를 떨어뜨린다. today → issues 로 옮길 때 done 이 따라가지 않게 한다. */
@@ -158,7 +167,17 @@ export function normalizeTodayBoard(
       createdAt: item.createdAt,
     }));
 
-  return { date, issues, today, customProjects };
+  // projectOrder 도 나중에 생긴 필드다.
+  const orderSeen = new Set<string>();
+  const projectOrder: string[] = (
+    Array.isArray(raw.projectOrder) ? raw.projectOrder : []
+  ).filter((slug): slug is string => {
+    if (typeof slug !== "string" || !slug || orderSeen.has(slug)) return false;
+    orderSeen.add(slug);
+    return true;
+  });
+
+  return { date, issues, today, customProjects, projectOrder };
 }
 
 /**
@@ -287,14 +306,41 @@ export function isProjectTitleTaken(
 }
 
 /**
- * 레지스트리 → 직접 추가한 프로젝트 → 미분류 순서로 묶는다. 어느 쪽에도 없는
- * 프로젝트의 이슈는 지우지 않고 미분류로 몬다 — 데이터를 잃는 것보다 낫다.
+ * `projectOrder` 를 반영해 프로젝트를 늘어놓는다. 순서에 없는 프로젝트는 기본
+ * 순서(레지스트리 → 직접 추가)로 뒤에 붙고, 순서에 남은 사라진 slug 는 무시한다.
+ */
+export function moveProject(
+  board: TodayBoard,
+  currentOrder: string[],
+  slug: string,
+  targetSlug: string,
+  position: "before" | "after" = "before",
+): TodayBoard {
+  if (slug === targetSlug) return board;
+  if (!currentOrder.includes(slug) || !currentOrder.includes(targetSlug)) {
+    return board;
+  }
+
+  const next = currentOrder.filter((entry) => entry !== slug);
+  const at = next.indexOf(targetSlug);
+  next.splice(position === "before" ? at : at + 1, 0, slug);
+
+  // 결과가 지금과 같으면 (바로 옆으로 옮긴 경우) 보드를 그대로 돌려준다.
+  if (next.every((entry, index) => entry === currentOrder[index])) return board;
+
+  return { ...board, projectOrder: next };
+}
+
+/**
+ * 저장된 순서 → 나머지는 기본 순서 → 미분류 순으로 묶는다. 어느 프로젝트에도
+ * 속하지 않는 이슈는 지우지 않고 미분류로 몬다 — 데이터를 잃는 것보다 낫다.
  * 미분류 그룹에는 새 이슈를 넣을 수 없다 (꺼내 쓰거나 지우기 위한 자리다).
  */
 export function groupIssuesByProject(
   issues: Issue[],
   registryProjects: { slug: string; title: string }[],
   customProjects: CustomProject[] = [],
+  projectOrder: string[] = [],
 ): IssueGroup[] {
   const groupFor = (
     project: { slug: string; title: string },
@@ -307,10 +353,16 @@ export function groupIssuesByProject(
     issues: issues.filter((issue) => issue.projectSlug === project.slug),
   });
 
-  const groups: IssueGroup[] = [
+  const byDefault: IssueGroup[] = [
     ...registryProjects.map((project) => groupFor(project, false)),
     ...customProjects.map((project) => groupFor(project, true)),
   ];
+
+  const ordered = projectOrder
+    .map((slug) => byDefault.find((group) => group.slug === slug))
+    .filter((group): group is IssueGroup => group !== undefined);
+  const rest = byDefault.filter((group) => !projectOrder.includes(group.slug!));
+  const groups: IssueGroup[] = [...ordered, ...rest];
 
   const known = new Set([
     ...registryProjects.map((project) => project.slug),

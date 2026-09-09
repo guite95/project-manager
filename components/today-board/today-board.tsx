@@ -10,6 +10,7 @@ import {
   createBoard,
   groupIssuesByProject,
   isProjectTitleTaken,
+  moveProject,
   normalizeTodayBoard,
   removeIssue,
   removeProject,
@@ -88,8 +89,23 @@ export function TodayBoardView() {
   }, [projects, customProjects]);
 
   const groups = useMemo(
-    () => groupIssuesByProject(board?.issues ?? [], projects, customProjects),
-    [board?.issues, projects, customProjects],
+    () =>
+      groupIssuesByProject(
+        board?.issues ?? [],
+        projects,
+        customProjects,
+        board?.projectOrder ?? [],
+      ),
+    [board?.issues, board?.projectOrder, projects, customProjects],
+  );
+
+  // 미분류는 순서를 바꿀 수 없어 제외한다. moveProject 가 기준으로 삼는 현재 순서다.
+  const orderedSlugs = useMemo(
+    () =>
+      groups
+        .map((group) => group.slug)
+        .filter((slug): slug is string => slug !== null),
+    [groups],
   );
 
   const handleAdd = (projectSlug: string, title: string) => {
@@ -118,6 +134,31 @@ export function TodayBoardView() {
         : current,
     );
     setAnnouncement(`${title.trim()} 프로젝트를 추가했습니다.`);
+  };
+
+  const handleMoveProject = (
+    slug: string,
+    targetSlug: string,
+    position: "before" | "after",
+  ) => {
+    setBoard((current) =>
+      current
+        ? moveProject(current, orderedSlugs, slug, targetSlug, position)
+        : current,
+    );
+  };
+
+  /** 위/아래 버튼 — 한 칸 옮기기를 이웃 기준 이동으로 옮겨 적는다. */
+  const handleStepProject = (slug: string, delta: -1 | 1) => {
+    const from = orderedSlugs.indexOf(slug);
+    const neighbour = orderedSlugs[from + delta];
+    if (from === -1 || !neighbour) return;
+    handleMoveProject(slug, neighbour, delta === -1 ? "before" : "after");
+    setAnnouncement(
+      `${projectTitles[slug] ?? slug} 프로젝트를 ${
+        delta === -1 ? "위로" : "아래로"
+      } 옮겼습니다.`,
+    );
   };
 
   const handleRemoveProject = (group: IssueGroup) => {
@@ -193,9 +234,11 @@ export function TodayBoardView() {
           }
           onAdd={handleAdd}
           onAddProject={handleAddProject}
+          onMoveProject={handleMoveProject}
           onRemove={handleRemove}
           onRemoveProject={handleRemoveProject}
           onSendToToday={handleSendToToday}
+          onStepProject={handleStepProject}
         />
       </div>
 

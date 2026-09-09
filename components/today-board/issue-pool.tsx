@@ -3,11 +3,19 @@
 import { useState } from "react";
 import {
   HiOutlineArrowLeft,
+  HiOutlineChevronDown,
+  HiOutlineChevronUp,
   HiOutlinePlus,
+  HiOutlineSelector,
   HiOutlineTrash,
 } from "react-icons/hi";
 import { Button } from "@/components/erp/button";
-import { ISSUE_DRAG_TYPE, type Issue, type IssueGroup } from "@/lib/today-board";
+import {
+  ISSUE_DRAG_TYPE,
+  PROJECT_DRAG_TYPE,
+  type Issue,
+  type IssueGroup,
+} from "@/lib/today-board";
 
 type IssuePoolProps = {
   groups: IssueGroup[];
@@ -17,6 +25,12 @@ type IssuePoolProps = {
   onAddProject: (title: string) => void;
   onRemoveProject: (group: IssueGroup) => void;
   isProjectTitleTaken: (title: string) => boolean;
+  onMoveProject: (
+    slug: string,
+    targetSlug: string,
+    position: "before" | "after",
+  ) => void;
+  onStepProject: (slug: string, delta: -1 | 1) => void;
 };
 
 export function IssuePool({
@@ -27,7 +41,12 @@ export function IssuePool({
   onAddProject,
   onRemoveProject,
   isProjectTitleTaken,
+  onMoveProject,
+  onStepProject,
 }: IssuePoolProps) {
+  // 순서를 바꿀 수 있는 그룹만 센다 (미분류는 항상 마지막이라 제외).
+  const movable = groups.filter((group) => group.slug !== null);
+
   return (
     <section
       aria-labelledby="issue-pool-heading"
@@ -43,16 +62,23 @@ export function IssuePool({
         isProjectTitleTaken={isProjectTitleTaken}
         onAddProject={onAddProject}
       />
-      {groups.map((group) => (
-        <ProjectGroup
-          group={group}
-          key={group.slug ?? "__ungrouped__"}
-          onAdd={onAdd}
-          onRemove={onRemove}
-          onRemoveProject={onRemoveProject}
-          onSendToToday={onSendToToday}
-        />
-      ))}
+      {groups.map((group) => {
+        const index = movable.findIndex((entry) => entry.slug === group.slug);
+        return (
+          <ProjectGroup
+            group={group}
+            isFirst={index === 0}
+            isLast={index === movable.length - 1}
+            key={group.slug ?? "__ungrouped__"}
+            onAdd={onAdd}
+            onMoveProject={onMoveProject}
+            onRemove={onRemove}
+            onRemoveProject={onRemoveProject}
+            onSendToToday={onSendToToday}
+            onStepProject={onStepProject}
+          />
+        );
+      })}
     </section>
   );
 }
@@ -101,15 +127,33 @@ function AddProjectForm({
 
 function ProjectGroup({
   group,
+  isFirst,
+  isLast,
   onAdd,
+  onMoveProject,
   onRemove,
   onRemoveProject,
   onSendToToday,
-}: { group: IssueGroup } & Pick<
+  onStepProject,
+}: {
+  group: IssueGroup;
+  isFirst: boolean;
+  isLast: boolean;
+} & Pick<
   IssuePoolProps,
-  "onAdd" | "onRemove" | "onRemoveProject" | "onSendToToday"
+  | "onAdd"
+  | "onMoveProject"
+  | "onRemove"
+  | "onRemoveProject"
+  | "onSendToToday"
+  | "onStepProject"
 >) {
   const [draft, setDraft] = useState("");
+  const [dropEdge, setDropEdge] = useState<"before" | "after" | null>(null);
+  // 핸들을 잡았을 때만 그룹이 끌린다. 안쪽 이슈 카드 드래그와 섞이지 않게 한다.
+  const [handleHeld, setHandleHeld] = useState(false);
+
+  const movable = group.slug !== null;
 
   const submit = () => {
     if (!group.slug || !draft.trim()) return;
@@ -117,9 +161,90 @@ function ProjectGroup({
     setDraft("");
   };
 
+  const edgeFor = (event: { clientY: number; currentTarget: HTMLElement }) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+  };
+
   return (
-    <div className="overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--bi-border)] bg-[var(--bi-table-header)] px-3 py-2">
+    <div
+      className={`overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] ${
+        dropEdge === "before"
+          ? "border-t-2 border-t-[var(--bi-accent)]"
+          : dropEdge === "after"
+            ? "border-b-2 border-b-[var(--bi-accent)]"
+            : ""
+      }`}
+      draggable={handleHeld}
+      onDragEnd={() => {
+        setHandleHeld(false);
+        setDropEdge(null);
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+        setDropEdge(null);
+      }}
+      onDragOver={(event) => {
+        if (!movable) return;
+        if (!event.dataTransfer.types.includes(PROJECT_DRAG_TYPE)) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        setDropEdge(edgeFor(event));
+      }}
+      onDragStart={(event) => {
+        // 안쪽 이슈 카드의 dragstart 가 여기까지 버블링된다. 그룹 자신이
+        // 시작한 드래그가 아니면 손대지 않는다 — 그러지 않으면 이슈를 끄는
+        // 동안에도 그룹 드롭이 반응한다.
+        if (event.target !== event.currentTarget) return;
+        if (!group.slug) return;
+        event.dataTransfer.setData(PROJECT_DRAG_TYPE, group.slug);
+        event.dataTransfer.setData("text/plain", group.title);
+        event.dataTransfer.effectAllowed = "move";
+      }}
+      onDrop={(event) => {
+        if (!movable || !group.slug) return;
+        if (!event.dataTransfer.types.includes(PROJECT_DRAG_TYPE)) return;
+        event.preventDefault();
+        const edge = edgeFor(event);
+        setDropEdge(null);
+        const draggedSlug = event.dataTransfer.getData(PROJECT_DRAG_TYPE);
+        if (draggedSlug) onMoveProject(draggedSlug, group.slug, edge);
+      }}
+    >
+      <div className="flex items-center gap-2 border-b border-[var(--bi-border)] bg-[var(--bi-table-header)] px-3 py-2">
+        {movable && group.slug ? (
+          <>
+            <span
+              aria-hidden
+              className="shrink-0 cursor-grab text-[var(--bi-muted)] active:cursor-grabbing"
+              onMouseDown={() => setHandleHeld(true)}
+              onMouseUp={() => setHandleHeld(false)}
+              title="끌어서 순서 변경"
+            >
+              <HiOutlineSelector size={14} />
+            </span>
+            <span className="flex shrink-0 flex-col">
+              <button
+                aria-label={`${group.title} 위로 옮기기`}
+                className="inline-flex h-3.5 w-4 items-center justify-center rounded-[2px] text-[var(--bi-muted)] outline-none transition hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)] disabled:opacity-30 disabled:hover:text-[var(--bi-muted)]"
+                disabled={isFirst}
+                onClick={() => onStepProject(group.slug as string, -1)}
+                type="button"
+              >
+                <HiOutlineChevronUp aria-hidden size={11} />
+              </button>
+              <button
+                aria-label={`${group.title} 아래로 옮기기`}
+                className="inline-flex h-3.5 w-4 items-center justify-center rounded-[2px] text-[var(--bi-muted)] outline-none transition hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)] disabled:opacity-30 disabled:hover:text-[var(--bi-muted)]"
+                disabled={isLast}
+                onClick={() => onStepProject(group.slug as string, 1)}
+                type="button"
+              >
+                <HiOutlineChevronDown aria-hidden size={11} />
+              </button>
+            </span>
+          </>
+        ) : null}
         <span className="truncate text-[12px] font-semibold text-[var(--bi-fg)]">
           {group.title}
         </span>
@@ -151,6 +276,8 @@ function ProjectGroup({
               draggable
               key={issue.id}
               onDragStart={(event) => {
+                // 그룹 드래그와 섞이지 않게 여기서 끊는다.
+                event.stopPropagation();
                 event.dataTransfer.setData(ISSUE_DRAG_TYPE, issue.id);
                 // text/plain 도 함께 넣는다. 표준 타입이 없으면 드래그 이미지를
                 // 만들지 않는 브라우저가 있다.
