@@ -4,6 +4,7 @@
  * 받아 덮어쓴다.
  * ---------------------------------------------------------------------- */
 
+import type { ProjectNote } from "@/lib/project-notes";
 import type { CustomProject, Issue, TodayBoard } from "@/lib/today-board";
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
@@ -80,5 +81,48 @@ export async function putSettings(settings: {
   await request("/api/settings", {
     method: "PUT",
     body: JSON.stringify(settings),
+  });
+}
+
+/* ---------------------------------------------------------------- 명심할 점 */
+
+export async function fetchNotes(projectSlug: string): Promise<ProjectNote[]> {
+  const response = await request(
+    `/api/notes/${encodeURIComponent(projectSlug)}`,
+  );
+  return response.json();
+}
+
+export async function postNote(projectSlug: string): Promise<ProjectNote> {
+  const response = await request(
+    `/api/notes/${encodeURIComponent(projectSlug)}`,
+    { method: "POST" },
+  );
+  return response.json();
+}
+
+export async function patchNote(
+  id: string,
+  patch: { content?: string; priority?: string },
+): Promise<void> {
+  await request(`/api/notes/item/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function deleteNoteRequest(id: string): Promise<void> {
+  await request(`/api/notes/item/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function putNoteOrder(
+  projectSlug: string,
+  ids: string[],
+): Promise<void> {
+  await request(`/api/notes/${encodeURIComponent(projectSlug)}/order`, {
+    method: "PUT",
+    body: JSON.stringify({ ids }),
   });
 }
