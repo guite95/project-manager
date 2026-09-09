@@ -205,6 +205,7 @@ Prisma 클라이언트는 `lib/db.ts` 에서 전역 싱글턴으로 만든다. �
 | `DATABASE_URL` | PostgreSQL 접속 문자열 |
 | `APP_PASSWORD_HASH` | `salt:hash` 형식의 scrypt 결과 |
 | `SESSION_SECRET` | 세션 쿠키 서명 키 |
+| `REQUIRE_LOGIN` | 개발 환경에서도 로그인을 강제할 때 `1`. 선택 |
 
 흐름은 이렇다.
 

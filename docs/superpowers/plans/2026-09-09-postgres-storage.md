@@ -34,6 +34,7 @@
 | `TEST_DATABASE_URL` | 통합 테스트용 별도 데이터베이스 | 테스트만 |
 | `APP_PASSWORD_HASH` | `salt:hash` 형식의 scrypt 결과 | 로그인 라우트 |
 | `SESSION_SECRET` | 세션 쿠키 서명 키 | 로그인 라우트, `proxy.ts` |
+| `REQUIRE_LOGIN` | 개발 환경에서도 로그인을 강제할 때 `1`. 선택 | `proxy.ts` |
 
 ## File Structure
 
@@ -764,7 +765,16 @@ import { isSessionTokenValid, SESSION_COOKIE_NAME } from "@/lib/session";
 /** 세션 없이도 열려야 하는 경로. */
 const PUBLIC_PATHS = new Set(["/login", "/api/login"]);
 
+/**
+ * 개발 환경에서는 비밀번호를 묻지 않는다. 로그인 흐름 자체를 확인하고 싶으면
+ * `REQUIRE_LOGIN=1` 로 켠다. 프로덕션 빌드에서는 이 스위치와 무관하게 항상 막는다.
+ */
+const REQUIRE_LOGIN =
+  process.env.NODE_ENV === "production" || process.env.REQUIRE_LOGIN === "1";
+
 export async function proxy(request: NextRequest) {
+  if (!REQUIRE_LOGIN) return NextResponse.next();
+
   const { pathname } = request.nextUrl;
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
 
@@ -928,8 +938,11 @@ openssl rand -hex 32             # SESSION_SECRET
 
 서버를 띄운다. 30001 이 이미 쓰이고 있으면 아래처럼 다른 포트와 디렉터리를 쓴다.
 
+개발 환경은 기본으로 비밀번호를 묻지 않는다. 로그인 흐름을 확인하려면
+`REQUIRE_LOGIN=1` 을 붙인다.
+
 ```bash
-NEXT_DIST_DIR=.next-verify pnpm exec next dev -p 30099
+REQUIRE_LOGIN=1 NEXT_DIST_DIR=.next-verify pnpm exec next dev -p 30099
 ```
 
 ```bash
@@ -4027,7 +4040,8 @@ git commit -m "feat: OCI 배포용 Docker 구성과 문서 추가"
 - [ ] `pnpm test` 통과
 - [ ] `pnpm typecheck` 통과
 - [ ] `pnpm build` 통과
-- [ ] 로그인하지 않으면 `/today` 가 `/login` 으로 넘어간다
+- [ ] 프로덕션 빌드에서 로그인하지 않으면 `/today` 가 `/login` 으로 넘어간다
+- [ ] 개발 환경에서는 비밀번호 없이 바로 열린다
 - [ ] 두 브라우저에서 같은 할 일과 명심할 점이 보인다
 - [ ] 브라우저에 있던 옛 데이터가 첫 접속에 한 번 올라가고 중복되지 않는다
 - [ ] 체크한 항목이 `/today/history` 에 날짜별로 보인다

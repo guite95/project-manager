@@ -11,7 +11,16 @@ import { isSessionTokenValid, SESSION_COOKIE_NAME } from "@/lib/session";
 /** 세션 없이도 열려야 하는 경로. */
 const PUBLIC_PATHS = new Set(["/login", "/api/login"]);
 
+/**
+ * 개발 환경에서는 비밀번호를 묻지 않는다. 로그인 흐름 자체를 확인하고 싶으면
+ * `REQUIRE_LOGIN=1` 로 켠다. 프로덕션 빌드에서는 이 스위치와 무관하게 항상 막는다.
+ */
+const REQUIRE_LOGIN =
+  process.env.NODE_ENV === "production" || process.env.REQUIRE_LOGIN === "1";
+
 export async function proxy(request: NextRequest) {
+  if (!REQUIRE_LOGIN) return NextResponse.next();
+
   const { pathname } = request.nextUrl;
   if (PUBLIC_PATHS.has(pathname)) return NextResponse.next();
 
