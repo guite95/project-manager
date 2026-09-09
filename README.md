@@ -46,6 +46,24 @@ pnpm typecheck    # tsc --noEmit
 pnpm test         # node --test
 ```
 
+### 데이터베이스를 다룰 때
+
+**`project_management` 는 실제 데이터가 들어 있는 개발 DB 다. 비우지 않는다.**
+백업도 WAL 아카이브도 켜져 있지 않아 되살릴 방법이 없다. 브라우저 localStorage
+사본도 첫 이관 때 지워진다.
+
+테스트 데이터를 정리할 때는 이것만 쓴다. 개발 DB 를 가리키면 멈춘다.
+
+```bash
+pnpm db:reset-test
+```
+
+작업 전에 백업해 두면 마음이 편하다.
+
+```bash
+pg_dump project_management | gzip > backup-$(date +%F).sql.gz
+```
+
 **개발 환경에서는 비밀번호를 묻지 않는다.** 프로덕션 빌드에서는 항상 묻는다.
 로그인 흐름 자체를 확인하려면 `REQUIRE_LOGIN=1 pnpm dev` 로 켠다.
 

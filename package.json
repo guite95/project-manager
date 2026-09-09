@@ -11,7 +11,8 @@
     "test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"lib/**/*.test.mjs\"",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "db:reset-test": "node --env-file=.env scripts/reset-test-db.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
