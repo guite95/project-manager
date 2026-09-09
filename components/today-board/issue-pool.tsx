@@ -57,8 +57,10 @@ export function IssuePool({
       aria-labelledby="issue-pool-heading"
       className="flex min-w-0 flex-col gap-3 lg:min-h-0"
     >
+      {/* 왼쪽 "오늘의 할 일" 머리글(제목 + 복사 버튼 26px)과 높이를 맞춰야
+          아래 박스들의 윗선이 두 칼럼에서 나란히 놓인다. */}
       <h3
-        className="shrink-0 text-[13px] font-semibold text-[var(--bi-fg)]"
+        className="flex h-[26px] shrink-0 items-center text-[13px] font-semibold text-[var(--bi-fg)]"
         id="issue-pool-heading"
       >
         프로젝트 이슈

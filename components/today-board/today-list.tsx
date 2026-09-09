@@ -57,7 +57,7 @@ export function TodayList({
       aria-labelledby="today-list-heading"
       className="flex min-w-0 flex-col gap-3 lg:min-h-0"
     >
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex min-h-[26px] shrink-0 flex-wrap items-center justify-between gap-2">
         <h3
           className="text-[13px] font-semibold text-[var(--bi-fg)]"
           id="today-list-heading"
