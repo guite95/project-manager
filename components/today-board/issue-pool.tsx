@@ -10,6 +10,7 @@ import {
   HiOutlineSelector,
   HiOutlineTrash,
 } from "react-icons/hi";
+import { EditButton, InlineEdit } from "@/components/inline-edit";
 import { Button } from "@/components/erp/button";
 import {
   ISSUE_DRAG_TYPE,
@@ -22,6 +23,7 @@ type IssuePoolProps = {
   groups: IssueGroup[];
   onAdd: (projectSlug: string, title: string) => void;
   onRemove: (issue: Issue) => void;
+  onRename: (issue: Issue, title: string) => void;
   onSendToToday: (issue: Issue) => void;
   onAddProject: (title: string) => void;
   onRemoveProject: (group: IssueGroup) => void;
@@ -40,6 +42,7 @@ export function IssuePool({
   groups,
   onAdd,
   onRemove,
+  onRename,
   onSendToToday,
   onAddProject,
   onRemoveProject,
@@ -85,6 +88,7 @@ export function IssuePool({
             onMoveProject={onMoveProject}
             onRemove={onRemove}
             onRemoveProject={onRemoveProject}
+            onRename={onRename}
             onSendToToday={onSendToToday}
             onStepProject={onStepProject}
             onToggleCollapsed={onToggleCollapsed}
@@ -147,6 +151,7 @@ function ProjectGroup({
   onMoveProject,
   onRemove,
   onRemoveProject,
+  onRename,
   onSendToToday,
   onStepProject,
   onToggleCollapsed,
@@ -161,11 +166,14 @@ function ProjectGroup({
   | "onMoveProject"
   | "onRemove"
   | "onRemoveProject"
+  | "onRename"
   | "onSendToToday"
   | "onStepProject"
   | "onToggleCollapsed"
 >) {
   const [draft, setDraft] = useState("");
+  // 한 번에 한 항목만 편집한다. 그룹 단위로 들고 있으면 충분하다.
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [dropEdge, setDropEdge] = useState<"before" | "after" | null>(null);
   // 핸들을 잡았을 때만 그룹이 끌린다. 안쪽 이슈 카드 드래그와 섞이지 않게 한다.
   const [handleHeld, setHandleHeld] = useState(false);
@@ -312,8 +320,11 @@ function ProjectGroup({
         ) : (
           group.issues.map((issue) => (
             <li
-              className="flex cursor-grab items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0 active:cursor-grabbing"
-              draggable
+              className="flex items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0 data-[grabbable=true]:cursor-grab data-[grabbable=true]:active:cursor-grabbing"
+              data-grabbable={editingId !== issue.id}
+              // 편집 중에는 끌 수 없다. 입력칸 안에서 글자를 고르려 드래그하면
+              // 행이 끌려가 버리기 때문이다.
+              draggable={editingId !== issue.id}
               key={issue.id}
               onDragStart={(event) => {
                 // 그룹 드래그와 섞이지 않게 여기서 끊는다.
@@ -325,9 +336,21 @@ function ProjectGroup({
                 event.dataTransfer.effectAllowed = "move";
               }}
             >
-              <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--bi-fg)]">
-                {issue.title}
-              </span>
+              <InlineEdit
+                editing={editingId === issue.id}
+                inputClassName="min-w-0 flex-1 rounded-[3px] border border-[var(--bi-accent)] bg-[var(--bi-bg)] px-1.5 py-0.5 text-[12px] text-[var(--bi-fg)] outline-none"
+                label="이슈 제목"
+                onCancel={() => setEditingId(null)}
+                onCommit={(next) => {
+                  setEditingId(null);
+                  onRename(issue, next);
+                }}
+                value={issue.title}
+              >
+                <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--bi-fg)]">
+                  {issue.title}
+                </span>
+              </InlineEdit>
               <button
                 aria-label={`${issue.title} 오늘의 할 일로 보내기`}
                 className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-accent-light)] hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
@@ -337,6 +360,10 @@ function ProjectGroup({
               >
                 <HiOutlineArrowLeft aria-hidden size={15} />
               </button>
+              <EditButton
+                label={`${issue.title} 수정`}
+                onClick={() => setEditingId(issue.id)}
+              />
               <button
                 aria-label={`${issue.title} 삭제`}
                 className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-error)]/10 hover:text-[var(--bi-error)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"

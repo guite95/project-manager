@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   HiOutlineChevronDown,
   HiOutlineChevronUp,
@@ -9,6 +9,7 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi";
 import { Button } from "@/components/erp/button";
+import { EditButton, InlineEdit } from "@/components/inline-edit";
 import {
   deleteNoteRequest,
   fetchNotes,
@@ -90,8 +91,8 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     id: string;
     edge: "before" | "after";
   } | null>(null);
-  const pendingFocusIdRef = useRef<string | null>(null);
-  const inputRefs = useRef(new Map<string, HTMLInputElement>());
+  // 한 번에 한 항목만 편집한다. 새 행은 열린 채로 시작한다.
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -128,45 +129,12 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     [reload],
   );
 
-  /**
-   * 내용 입력은 글자마다 바뀐다. 타건마다 요청을 보내지 않도록 마지막 입력에서
-   * 500밀리초 뒤에 한 번만 보낸다. 우선순위·삭제·순서는 즉시 보낸다.
-   */
-  const contentTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-
-  useEffect(() => {
-    const timers = contentTimers.current;
-    return () => {
-      for (const timer of timers.values()) clearTimeout(timer);
-      timers.clear();
-    };
-  }, []);
-
-  const queueContentSave = (id: string, content: string) => {
-    const timers = contentTimers.current;
-    const existing = timers.get(id);
-    if (existing) clearTimeout(existing);
-    timers.set(
-      id,
-      setTimeout(() => {
-        timers.delete(id);
-        void sync(() => patchNote(id, { content }));
-      }, 500),
-    );
-  };
-
-  useEffect(() => {
-    const pendingId = pendingFocusIdRef.current;
-    if (!pendingId) return;
-    inputRefs.current.get(pendingId)?.focus();
-    pendingFocusIdRef.current = null;
-  }, [notes]);
-
   const addNote = () => {
     void sync(async () => {
       const note = await postNote(projectSlug);
-      pendingFocusIdRef.current = note.id;
       setNotes((current) => [note, ...current]);
+      // 새 행은 비어 있다. 추가하자마자 타이핑하는 흐름이 끊기지 않게 연다.
+      setEditingId(note.id);
     });
   };
 
@@ -177,7 +145,10 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     setNotes((current) =>
       updateProjectNote(current, id, patch, new Date().toISOString()),
     );
-    if (patch.content !== undefined) queueContentSave(id, patch.content);
+    if (patch.content !== undefined) {
+      const content = patch.content;
+      void sync(() => patchNote(id, { content }));
+    }
     if (patch.priority !== undefined) {
       const priority = patch.priority;
       void sync(() => patchNote(id, { priority }));
@@ -186,13 +157,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
 
   const removeNote = (note: ProjectNote) => {
     if (!window.confirm(`“${noteLabel(note)}” 항목을 삭제할까요?`)) return;
-    inputRefs.current.delete(note.id);
-    // 예약된 내용 저장이 있으면 취소한다. 지운 항목에 PATCH 를 보내면 실패한다.
-    const timer = contentTimers.current.get(note.id);
-    if (timer) {
-      clearTimeout(timer);
-      contentTimers.current.delete(note.id);
-    }
+    if (editingId === note.id) setEditingId(null);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     void sync(() => deleteNoteRequest(note.id));
   };
@@ -420,25 +385,38 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                     </select>
                   </td>
                   <td className="border-b border-[var(--bi-border)] px-4 py-2.5">
-                    <input
-                      aria-label={`${index + 1}번째 명심할 점`}
-                      className="h-[30px] w-full rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)] hover:border-[var(--bi-border-strong)] focus:border-[var(--bi-accent)]"
+                    <InlineEdit
+                      editing={editingId === note.id}
+                      inputClassName="h-[30px] w-full rounded-[4px] border border-[var(--bi-accent)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)]"
+                      label={`${index + 1}번째 명심할 점`}
                       maxLength={500}
-                      onChange={(event) =>
-                        editNote(note.id, { content: event.target.value })
-                      }
-                      placeholder="예: 고객 확인 전 범위를 확정하지 않기"
-                      ref={(element) => {
-                        if (element) inputRefs.current.set(note.id, element);
-                        else inputRefs.current.delete(note.id);
+                      onCancel={() => setEditingId(null)}
+                      onCommit={(next) => {
+                        setEditingId(null);
+                        editNote(note.id, { content: next });
                       }}
+                      placeholder="예: 고객 확인 전 범위를 확정하지 않기"
                       value={note.content}
-                    />
+                    >
+                      <span
+                        className={`block truncate text-[12px] ${
+                          note.content
+                            ? "text-[var(--bi-fg)]"
+                            : "text-[var(--bi-muted)]"
+                        }`}
+                      >
+                        {note.content || "내용 없음"}
+                      </span>
+                    </InlineEdit>
                   </td>
                   <td className="whitespace-nowrap border-b border-[var(--bi-border)] px-4 py-2.5 text-[11px] text-[var(--bi-muted)]">
                     {formatUpdatedAt(note.updatedAt)}
                   </td>
-                  <td className="border-b border-[var(--bi-border)] px-4 py-2.5 text-right">
+                  <td className="whitespace-nowrap border-b border-[var(--bi-border)] px-4 py-2.5 text-right">
+                    <EditButton
+                      label={`${index + 1}번째 항목 수정`}
+                      onClick={() => setEditingId(note.id)}
+                    />
                     <button
                       aria-label={`${index + 1}번째 항목 삭제`}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none hover:bg-[var(--bi-error)]/10 hover:text-[var(--bi-error)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
@@ -461,7 +439,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
       </p>
 
       <div className="flex min-h-9 items-center justify-between gap-3 border-t border-[var(--bi-border)] px-4 py-2 text-[11px] text-[var(--bi-muted)]">
-        <span>내용과 우선순위는 서버에 프로젝트별로 자동 저장됩니다.</span>
+        <span>연필을 눌러 고칩니다. 바뀐 내용은 서버에 자동 저장됩니다.</span>
         <span aria-live="polite" className={storageError ? "text-[var(--bi-error)]" : ""}>
           {storageError ?? (loaded ? `${notes.length}개 항목 저장됨` : "불러오는 중")}
         </span>

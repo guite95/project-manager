@@ -26,6 +26,7 @@ import {
   moveProject,
   removeIssue,
   removeProject,
+  renameIssue,
   returnToPool,
   sendToToday,
   todayDateString,
@@ -247,6 +248,15 @@ export function TodayBoardView() {
     void sync(() => patchIssue(item.id, { placement: "pool" }));
   };
 
+  /** 제목만 바꾼다. 풀에 있든 오늘 목록에 있든 같은 경로를 쓴다. */
+  const handleRename = (item: Issue, title: string) => {
+    setBoard((current) =>
+      current ? renameIssue(current, item.id, title) : current,
+    );
+    setAnnouncement(`${item.title} 항목의 제목을 바꿨습니다.`);
+    void sync(() => patchIssue(item.id, { title }));
+  };
+
   const handleToggle = (item: TodayItem) => {
     setBoard((current) => (current ? toggleDone(current, item.id) : current));
     setAnnouncement(
@@ -307,6 +317,7 @@ export function TodayBoardView() {
           items={board.today}
           onCopyWorklog={handleCopyWorklog}
           onDropIssue={handleDropIssue}
+          onRename={handleRename}
           onReturn={handleReturn}
           onToggle={handleToggle}
           projectTitles={projectTitles}
@@ -322,6 +333,7 @@ export function TodayBoardView() {
           onMoveProject={handleMoveProject}
           onRemove={handleRemove}
           onRemoveProject={handleRemoveProject}
+          onRename={handleRename}
           onSendToToday={handleSendToToday}
           onStepProject={handleStepProject}
           onToggleCollapsed={handleToggleCollapsed}

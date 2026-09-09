@@ -15,6 +15,7 @@ import {
   filterExternalProjects,
 } from "@/lib/navigation/external-projects";
 import {
+  hasProjectNotes,
   projectNotesHref,
   projectNotesProjectSlug,
 } from "@/lib/project-notes";
@@ -156,13 +157,15 @@ export function AppSidebar() {
       return flowProjects.map((p) => ({
         project: p,
         categories: p.categories,
-        showNotes: true,
+        showNotes: hasProjectNotes(p.slug),
       }));
     }
     return flowProjects
       .map((p) => {
         const projectMatches = p.title.toLowerCase().includes(q);
-        const showNotes = projectMatches || "명심할 점 주의사항 우선순위".includes(q);
+        const showNotes =
+          hasProjectNotes(p.slug) &&
+          (projectMatches || "명심할 점 주의사항 우선순위".includes(q));
         const categories = projectMatches
           ? p.categories
           : p.categories

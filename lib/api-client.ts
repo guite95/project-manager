@@ -43,7 +43,7 @@ export async function postIssue(
 
 export async function patchIssue(
   id: string,
-  patch: { placement?: "pool" | "today"; done?: boolean },
+  patch: { placement?: "pool" | "today"; done?: boolean; title?: string },
 ): Promise<void> {
   await request(`/api/issues/${encodeURIComponent(id)}`, {
     method: "PATCH",
