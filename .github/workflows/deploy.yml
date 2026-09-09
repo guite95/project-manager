@@ -124,9 +124,11 @@ jobs:
           set -euo pipefail
           response=$(curl --silent --show-error --output /dev/null --max-time 20 \
             --write-out '%{http_code} %{redirect_url}' https://project.dev-uk.shop/today)
-          [[ "$response" == '307 https://project.dev-uk.shop/login' ]]
           login_status=$(curl --silent --show-error --output /dev/null --max-time 20 \
             --write-out '%{http_code}' https://project.dev-uk.shop/login)
+          # 실패해도 실제 응답을 남겨 원인(차단/오류)을 바로 알 수 있게 한다.
+          printf 'today=[%s] login=[%s]\n' "$response" "$login_status"
+          [[ "$response" == '307 https://project.dev-uk.shop/login' ]]
           [[ "$login_status" == '200' ]]
 
       - name: Clean up runner credentials
