@@ -733,7 +733,7 @@ export function TodayList({
       <div className="rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
         {items.length === 0 ? (
           <p className="m-0 px-3 py-10 text-center text-[11px] text-[var(--bi-muted)]">
-            왼쪽 이슈를 끌어다 놓으세요.
+            오른쪽 이슈를 끌어다 놓으세요.
           </p>
         ) : (
           <ul className="m-0 list-none p-0">

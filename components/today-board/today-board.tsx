@@ -143,12 +143,6 @@ export function TodayBoardView() {
   return (
     <div className="px-6 py-5">
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-        <IssuePool
-          groups={groups}
-          onAdd={handleAdd}
-          onRemove={handleRemove}
-          onSendToToday={handleSendToToday}
-        />
         <TodayList
           date={board.date}
           items={board.today}
@@ -156,6 +150,12 @@ export function TodayBoardView() {
           onReturn={handleReturn}
           onToggle={handleToggle}
           projectTitles={projectTitles}
+        />
+        <IssuePool
+          groups={groups}
+          onAdd={handleAdd}
+          onRemove={handleRemove}
+          onSendToToday={handleSendToToday}
         />
       </div>
 

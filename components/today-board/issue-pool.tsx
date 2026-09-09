@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  HiOutlineArrowRight,
+  HiOutlineArrowLeft,
   HiOutlinePlus,
   HiOutlineTrash,
 } from "react-icons/hi";
@@ -100,7 +100,7 @@ function ProjectGroup({
                 title="오늘의 할 일로"
                 type="button"
               >
-                <HiOutlineArrowRight aria-hidden size={15} />
+                <HiOutlineArrowLeft aria-hidden size={15} />
               </button>
               <button
                 aria-label={`${issue.title} 삭제`}
