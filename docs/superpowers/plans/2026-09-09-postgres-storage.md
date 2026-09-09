@@ -975,8 +975,9 @@ curl -s -b /tmp/jar.txt -o /dev/null -w "%{http_code}\n" $B/today
 Expected: 차례로 `307` 과 `/login`, "비밀번호가 맞지 않습니다.", 아무 출력 없음(204),
 `200`.
 
-확인이 끝나면 띄운 서버를 끈다. Next 가 `tsconfig.json` 의 `include` 에
-`.next-verify` 경로를 넣어 두므로 `git checkout tsconfig.json` 으로 되돌린다.
+확인이 끝나면 띄운 서버를 끈다. Next 는 `NEXT_DIST_DIR` 을 쓸 때마다 그 경로를
+`tsconfig.json` 의 `include` 에 덧붙인다. 지워진 디렉터리를 가리키므로 작업이
+끝나면 `.next-` 로 시작하는 항목을 걷어낸다.
 
 - [ ] **Step 8: 타입 검사**
 
