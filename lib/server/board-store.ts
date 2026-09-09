@@ -7,6 +7,7 @@
  * ---------------------------------------------------------------------- */
 
 import { prisma } from "../db.ts";
+import type { ProjectNote } from "../project-notes.ts";
 import { planRollover } from "../rollover.ts";
 import type {
   CustomProject,
@@ -259,5 +260,106 @@ export async function saveSettings(settings: {
     where: { key: BOARD_SETTING_KEY },
     create: { key: BOARD_SETTING_KEY, value: settings },
     update: { value: settings },
+  });
+}
+
+/* ------------------------------------------------------------------ 이관 */
+
+/** 이슈·프로젝트·명심할 점이 모두 없을 때만 비어 있다고 본다. */
+export async function isBoardEmpty(): Promise<boolean> {
+  const [issues, projects, notes] = await Promise.all([
+    prisma.issue.count(),
+    prisma.customProject.count(),
+    prisma.projectNote.count(),
+  ]);
+  return issues === 0 && projects === 0 && notes === 0;
+}
+
+/**
+ * 브라우저에서 올라온 값을 한 트랜잭션에 넣는다. 완료 이력은 저장된 적이 없어
+ * 이관 대상이 아니다. 오늘 목록은 넘어온 순서대로 오늘 날짜를 달아 넣는다.
+ */
+export async function importLegacy(payload: {
+  board: TodayBoard | null;
+  notes: { projectSlug: string; notes: ProjectNote[] }[];
+  today: string;
+  now: string;
+}): Promise<void> {
+  const board = payload.board;
+
+  await prisma.$transaction(async (tx) => {
+    if (board) {
+      for (const project of board.customProjects) {
+        await tx.customProject.create({
+          data: {
+            slug: project.slug,
+            title: project.title,
+            createdAt: new Date(project.createdAt || payload.now),
+          },
+        });
+      }
+
+      for (const [index, issue] of board.issues.entries()) {
+        await tx.issue.create({
+          data: {
+            id: issue.id,
+            projectSlug: issue.projectSlug,
+            title: issue.title,
+            createdAt: new Date(issue.createdAt || payload.now),
+            placement: "pool",
+            todayDate: null,
+            done: false,
+            position: index,
+          },
+        });
+      }
+
+      for (const [index, item] of board.today.entries()) {
+        await tx.issue.create({
+          data: {
+            id: item.id,
+            projectSlug: item.projectSlug,
+            title: item.title,
+            createdAt: new Date(item.createdAt || payload.now),
+            placement: "today",
+            todayDate: payload.today,
+            done: item.done,
+            position: index,
+          },
+        });
+      }
+
+      await tx.appSetting.upsert({
+        where: { key: BOARD_SETTING_KEY },
+        create: {
+          key: BOARD_SETTING_KEY,
+          value: {
+            projectOrder: board.projectOrder,
+            collapsedProjects: board.collapsedProjects,
+          },
+        },
+        update: {
+          value: {
+            projectOrder: board.projectOrder,
+            collapsedProjects: board.collapsedProjects,
+          },
+        },
+      });
+    }
+
+    for (const entry of payload.notes) {
+      for (const [index, note] of entry.notes.entries()) {
+        await tx.projectNote.create({
+          data: {
+            id: note.id,
+            projectSlug: entry.projectSlug,
+            content: note.content,
+            priority: note.priority,
+            position: index,
+            updatedAt: new Date(note.updatedAt || payload.now),
+          },
+        });
+      }
+    }
   });
 }

@@ -8,11 +8,17 @@ import {
   deleteProjectRequest,
   fetchBoard,
   patchIssue,
+  postImport,
   postIssue,
   postProject,
   putSettings,
 } from "@/lib/api-client";
 import { flowProjects } from "@/lib/flows/registry";
+import {
+  clearLegacyData,
+  hasLegacyData,
+  readLegacyData,
+} from "@/lib/import-legacy";
 import {
   formatWorklog,
   groupIssuesByProject,
@@ -51,9 +57,54 @@ export function TodayBoardView() {
     }
   }, []);
 
+  /** 이관 대상 키를 찾을 때 쓴다. 레지스트리 프로젝트만 명심할 점을 가진다. */
+  const projectSlugs = useMemo(
+    () => flowProjects.map((project) => project.slug),
+    [],
+  );
+
+  // 첫 로드. 서버가 비어 있을 때만 브라우저에 남은 옛 데이터를 한 번 올린다.
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+
+    const start = async () => {
+      let loaded: TodayBoard;
+      try {
+        loaded = await fetchBoard();
+      } catch {
+        if (!cancelled) setStorageError("서버에서 내용을 불러오지 못했습니다.");
+        return;
+      }
+
+      const serverEmpty =
+        loaded.issues.length === 0 &&
+        loaded.today.length === 0 &&
+        loaded.customProjects.length === 0;
+
+      if (serverEmpty) {
+        try {
+          const payload = readLegacyData(window.localStorage, projectSlugs);
+          if (hasLegacyData(payload)) {
+            await postImport(payload);
+            clearLegacyData(window.localStorage, projectSlugs);
+            loaded = await fetchBoard();
+          }
+        } catch {
+          // 이관에 실패해도 앱은 열려야 한다. 브라우저 값은 지우지 않는다.
+        }
+      }
+
+      if (!cancelled) {
+        setBoard(loaded);
+        setStorageError(null);
+      }
+    };
+
+    void start();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectSlugs]);
 
   /**
    * 화면 상태를 먼저 바꾸고 서버에 반영한다. 실패하면 서버 상태를 다시 받아

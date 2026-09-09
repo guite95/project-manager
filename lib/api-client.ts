@@ -4,6 +4,7 @@
  * 받아 덮어쓴다.
  * ---------------------------------------------------------------------- */
 
+import type { LegacyPayload } from "@/lib/import-legacy";
 import type { ProjectNote } from "@/lib/project-notes";
 import type { CustomProject, Issue, TodayBoard } from "@/lib/today-board";
 
@@ -124,5 +125,15 @@ export async function putNoteOrder(
   await request(`/api/notes/${encodeURIComponent(projectSlug)}/order`, {
     method: "PUT",
     body: JSON.stringify({ ids }),
+  });
+}
+
+/* ------------------------------------------------------------------ 이관 */
+
+/** 서버가 비어 있지 않으면 409 로 거절되어 던진다. 호출부가 그것을 무시한다. */
+export async function postImport(payload: LegacyPayload): Promise<void> {
+  await request("/api/import", {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }
