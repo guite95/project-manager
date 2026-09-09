@@ -39,6 +39,10 @@ export function IssuePool({
       >
         프로젝트 이슈
       </h3>
+      <AddProjectForm
+        isProjectTitleTaken={isProjectTitleTaken}
+        onAddProject={onAddProject}
+      />
       {groups.map((group) => (
         <ProjectGroup
           group={group}
@@ -49,10 +53,6 @@ export function IssuePool({
           onSendToToday={onSendToToday}
         />
       ))}
-      <AddProjectForm
-        isProjectTitleTaken={isProjectTitleTaken}
-        onAddProject={onAddProject}
-      />
     </section>
   );
 }
