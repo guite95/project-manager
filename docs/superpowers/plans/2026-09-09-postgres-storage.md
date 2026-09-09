@@ -283,7 +283,7 @@ Homebrew 로 깐 PostgreSQL 은 기본 사용자가 OS 계정 이름이다. `who
 `package.json` 의 `scripts` 에 더한다.
 
 ```json
-"test": "node --env-file-if-exists=.env --test \"lib/**/*.test.mjs\"",
+"test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"lib/**/*.test.mjs\"",
 "db:migrate": "prisma migrate dev",
 "db:deploy": "prisma migrate deploy",
 "db:generate": "prisma generate"
@@ -1356,6 +1356,10 @@ Expected: `All migrations have been successfully applied.`
 /**
  * 통합 테스트용 헬퍼. TEST_DATABASE_URL 이 가리키는 별도 데이터베이스를 쓰고,
  * 각 테스트 앞에서 테이블을 비운다.
+ *
+ * 이 헬퍼를 쓰는 테스트 파일은 **반드시 순차로 돌아야 한다**. 여러 파일이 같은
+ * 데이터베이스를 동시에 비우면 서로의 데이터를 지운다. `package.json` 의 test
+ * 스크립트가 `--test-concurrency=1` 을 붙이는 이유다.
  *
  * Prisma 클라이언트는 import 시점에 DATABASE_URL 을 읽으므로 그 전에 덮어쓴다.
  */

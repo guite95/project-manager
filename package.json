@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --env-file-if-exists=.env --test \"lib/**/*.test.mjs\"",
+    "test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"lib/**/*.test.mjs\"",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate"
