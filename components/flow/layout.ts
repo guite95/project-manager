@@ -1,4 +1,5 @@
 import Dagre from "@dagrejs/dagre";
+import { ENTITY_HEADER, ENTITY_ROW, ENTITY_FOOTER } from "./entity-node";
 import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import {
   BADGE_H,
@@ -62,6 +63,7 @@ function wrapCount(text: string, boxWidth: number, fontSize: number): number {
 
 /** 카드 실제 렌더 높이 추정 — 이 값으로 Dagre 가 세로 간격을 잡는다. */
 function estimateHeight(data: FlowNodeData, width: number): number {
+  if (data.entity) return ENTITY_HEADER + ENTITY_ROW * data.entity.fields.length + ENTITY_FOOTER + 2;
   const style = KIND_STYLE[data.kind];
   if (style.compact) return MASTER_H;
 
@@ -529,9 +531,14 @@ export function layoutChart(chart: FlowChart): LayoutResult {
     nodes: [...groupNodes, ...flowNodes],
     edges: (() => {
       const off = fanOffsets(edges);
-      return edges.map((e) =>
-        buildEdge(e, loopOffset.get(e.id) ?? off.get(e.id), loopOffset.has(e.id))
-      );
+      return edges.map((e) => {
+        const edge = buildEdge(e, loopOffset.get(e.id) ?? off.get(e.id), loopOffset.has(e.id));
+        if (chart.erdDomain && e.source === e.target) {
+          return { ...edge, sourceHandle: "self-out", targetHandle: "self-in", pathOptions: { offset: 28 } };
+        }
+        if (chart.erdDomain) return { ...edge, sourceHandle: "out", targetHandle: "in" };
+        return edge;
+      });
     })(),
   };
 }

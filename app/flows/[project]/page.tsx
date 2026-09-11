@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FlowLegend } from "@/components/flow/flow-legend";
 import { ProcessFlow } from "@/components/flow/process-flow";
+import { ErdViewer } from "@/components/flow/erd-viewer";
 import { RichText } from "@/components/rich-text";
 import { flowProjects, getProject, resolveChart } from "@/lib/flows/registry";
 
@@ -86,11 +87,14 @@ export default async function ProjectFlowsPage({
         </p>
       ) : null}
 
-      <div className="mb-3">
-        <FlowLegend chart={chart} />
-      </div>
-
-      <ProcessFlow chart={chart} height={560} />
+      {chart.erdDomain ? (
+        <ErdViewer key={chart.erdDomain} domain={chart.erdDomain} />
+      ) : (
+        <>
+          <div className="mb-3"><FlowLegend chart={chart} /></div>
+          <ProcessFlow chart={chart} height={560} />
+        </>
+      )}
 
       {chart.howToRead?.length ? (
         <section className="mt-5">

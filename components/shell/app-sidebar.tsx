@@ -185,7 +185,7 @@ export function AppSidebar() {
   );
 
   return (
-    <nav className="flex h-full flex-col gap-2 overflow-y-auto py-3">
+    <nav className="flex h-full flex-col gap-2 overflow-y-auto py-3 [&>*]:shrink-0">
       <Link href="/today" className={`${linkCls(pathname === "/today")} pl-2`}>
         오늘의 할 일
       </Link>

@@ -58,6 +58,12 @@ export type NodeKind = MaturityKind | DomainKind;
 export type EdgeKind = "impl" | "ref" | "future" | "master" | "snapshot";
 
 export type FlowNodeData = {
+  entity?: {
+    domain: string;
+    external: boolean;
+    fieldCount: number;
+    fields: { name: string; type: string; optional: boolean; keys: string[] }[];
+  };
   /** 카드 제목 */
   label: string;
   /** 카드 본문. 배열이면 줄바꿈해서 여러 줄로 쌓는다. */
@@ -102,6 +108,7 @@ export type FlowDirection = "LR" | "TB";
 
 /** 플로우차트 한 장. */
 export type FlowChart = {
+  erdDomain?: string;
   /** `chart` 쿼리파람 값 — 같은 카테고리 안에서 유일해야 한다. */
   slug: string;
   /** 화면 제목 */

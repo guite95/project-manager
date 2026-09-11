@@ -4,7 +4,11 @@ import type {
   FlowProject,
 } from "@/components/flow/types";
 import { changeControl } from "./change-control";
+import { tnsErdCharts } from "../erd/tns";
 import { deliveryLifecycle } from "./delivery-lifecycle";
+import { financeOverall } from "./finance-overall";
+import { financeDetails } from "./finance-details";
+import { hrOverall } from "./hr-overall";
 import { pricelistHumanReview } from "./pricelist-human-review";
 import { pricelistOverall } from "./pricelist-overall";
 import { pricelistSummary } from "./pricelist-summary";
@@ -43,9 +47,9 @@ export const flowProjects: FlowProject[] = [
     slug: "tns",
     title: "티앤에스",
     intro:
-      "티앤에스 **가격표 자동 적재** 파이프라인입니다. " +
-      "**요약 → 사람 검토형 → 전체 → 워커 상세** 순서로, " +
-      "업무 검토 경계와 구현 상세를 단계적으로 확인합니다.",
+      "티앤에스의 **가격표 자동 적재**, **HR 통합 업무**, **회계·재무** 흐름과 **데이터베이스 ERD**입니다. " +
+      "각 카테고리에서 원천 데이터, 사람의 승인·검토 경계, " +
+      "후속 업무로 이어지는 확정 결과를 확인합니다.",
     categories: [
       {
         slug: "pricelist",
@@ -56,6 +60,21 @@ export const flowProjects: FlowProject[] = [
           pricelistOverall,
           pricelistWorker,
         ],
+      },
+      {
+        slug: "hr",
+        title: "HR",
+        charts: [hrOverall],
+      },
+      {
+        slug: "finance",
+        title: "회계·재무",
+        charts: [financeOverall, ...financeDetails],
+      },
+      {
+        slug: "erd",
+        title: "ERD",
+        charts: tnsErdCharts,
       },
     ],
   },

@@ -2,6 +2,7 @@
 
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { KIND_STYLE } from "./kind-style";
+import { EntityNode } from "./entity-node";
 import type { FlowDirection, FlowNodeData } from "./types";
 
 /**
@@ -32,6 +33,7 @@ export function toLines(sub: FlowNodeData["sub"]): string[] {
 }
 
 export function FlowNode({ data }: NodeProps<Node<FlowRenderData>>) {
+  if (data.entity) return <EntityNode data={data} />;
   const s = KIND_STYLE[data.kind];
   const horizontal = data.dir === "LR";
   const lines = toLines(data.sub);

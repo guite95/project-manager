@@ -32,7 +32,7 @@ const nodeTypes = { flow: FlowNode, flowGroup: GroupNode };
 
 const HINT = "두 손가락 스크롤=이동 · 핀치/Cmd+스크롤=확대";
 
-export function FlowCanvas({ chart }: { chart: FlowChart }) {
+export function FlowCanvas({ chart, onEntitySelect }: { chart: FlowChart; onEntitySelect?: (id: string) => void }) {
   const { nodes, edges } = useMemo(() => layoutChart(chart), [chart]);
 
   return (
@@ -40,11 +40,12 @@ export function FlowCanvas({ chart }: { chart: FlowChart }) {
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      onNodeClick={onEntitySelect ? (_, node) => onEntitySelect(node.id) : undefined}
       fitView
       fitViewOptions={{ padding: 0.15 }}
       // 넓은 차트도 fitView 가 전부 담을 수 있어야 한다. 0.3 이면 노드가 많은
       // LR 차트에서 클램프에 걸려 좌우가 잘린다.
-      minZoom={0.1}
+      minZoom={chart.erdDomain ? 0.02 : 0.1}
       maxZoom={2}
       nodesDraggable={false}
       nodesConnectable={false}
@@ -74,8 +75,10 @@ export function ProcessFlow({
   chart,
   height = 560,
   fill = false,
+  onEntitySelect,
 }: {
   chart: FlowChart;
+  onEntitySelect?: (id: string) => void;
   /** 인라인 임베드 시 캔버스 높이(px). `fill` 이 true 면 무시된다. */
   height?: number;
   /** true 면 부모 높이를 꽉 채운다 (전용 페이지용). 부모가 flex 컨테이너여야 한다. */
@@ -141,7 +144,7 @@ export function ProcessFlow({
             className={fill ? "min-h-0 flex-1" : undefined}
             style={fill ? undefined : { height }}
           >
-            <FlowCanvas chart={chart} />
+            <FlowCanvas chart={chart} onEntitySelect={onEntitySelect} />
           </div>
         </ReactFlowProvider>
       </figure>
@@ -174,7 +177,7 @@ export function ProcessFlow({
                 </button>
               </div>
               <div className="relative flex-1">
-                <FlowCanvas key={chart.slug} chart={chart} />
+                <FlowCanvas key={chart.slug} chart={chart} onEntitySelect={onEntitySelect} />
               </div>
             </div>,
             document.body
