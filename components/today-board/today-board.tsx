@@ -13,7 +13,6 @@ import {
   postProject,
   putSettings,
 } from "@/lib/api-client";
-import { flowProjects } from "@/lib/flows/registry";
 import {
   clearLegacyData,
   hasLegacyData,
@@ -38,7 +37,7 @@ import {
   type TodayItem,
 } from "@/lib/today-board";
 
-export function TodayBoardView() {
+export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;title:string}[] }) {
   // null 은 "아직 서버에서 안 받아옴". 서버 렌더와 어긋나지 않도록 첫 렌더에서는
   // 안내만 보여준다.
   const [board, setBoard] = useState<TodayBoard | null>(null);
@@ -61,7 +60,7 @@ export function TodayBoardView() {
   /** 이관 대상 키를 찾을 때 쓴다. 레지스트리 프로젝트만 명심할 점을 가진다. */
   const projectSlugs = useMemo(
     () => flowProjects.map((project) => project.slug),
-    [],
+    [flowProjects],
   );
 
   // 첫 로드. 서버가 비어 있을 때만 브라우저에 남은 옛 데이터를 한 번 올린다.
@@ -128,7 +127,7 @@ export function TodayBoardView() {
 
   const projects = useMemo(
     () => flowProjects.map(({ slug, title }) => ({ slug, title })),
-    [],
+    [flowProjects],
   );
 
   const customProjects = board?.customProjects ?? [];

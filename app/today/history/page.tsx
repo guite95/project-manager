@@ -1,3 +1,4 @@
+import { listFlowProjectNames } from "@/lib/server/flows-store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/erp/page-header";
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   description: "날짜별로 완료한 항목을 봅니다.",
 };
 
-export default function TodayHistoryPage() {
+export default async function TodayHistoryPage() {
   return (
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
@@ -26,7 +27,7 @@ export default function TodayHistoryPage() {
           <span aria-hidden>›</span>
           <span className="font-semibold text-[var(--bi-fg)]">완료 이력</span>
         </nav>
-        <CompletionHistory />
+        <CompletionHistory flowProjects={await listFlowProjectNames()} />
       </div>
     </div>
   );

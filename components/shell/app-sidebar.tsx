@@ -8,8 +8,8 @@ import {
   HiOutlineExternalLink,
   HiOutlineSearch,
 } from "react-icons/hi";
-import type { FlowChart } from "@/components/flow/types";
-import { chartHref, flowProjects, resolveChart } from "@/lib/flows/registry";
+import type { FlowChart, FlowProject } from "@/components/flow/types";
+import { chartHref, resolveChart } from "@/lib/flows/registry";
 import {
   externalProjects,
   filterExternalProjects,
@@ -57,7 +57,7 @@ const linkCls = (active: boolean) =>
       : "text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-active)]"
   }`;
 
-export function AppSidebar() {
+export function AppSidebar({ flowProjects }: { flowProjects: FlowProject[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
@@ -125,7 +125,7 @@ export function AppSidebar() {
       chart: resolved.chart.slug,
       view: "chart" as const,
     };
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, flowProjects]);
 
   // 다른 차트로 이동하면 그 조상의 접힘 override 를 지운다. 접어둔 프로젝트의
   // 차트로 갔을 때 정작 보고 있는 차트가 트리에서 사라지는 걸 막는다.
@@ -177,7 +177,7 @@ export function AppSidebar() {
         return { project: p, categories, showNotes };
       })
       .filter((p) => p.showNotes || p.categories.length > 0);
-  }, [searching, q]);
+  }, [searching, q, flowProjects]);
 
   const visibleExternalProjects = useMemo(
     () => filterExternalProjects(externalProjects, q),

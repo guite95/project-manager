@@ -2,21 +2,18 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/erp/page-header";
 import { ProjectNotesTable } from "@/components/project-notes/project-notes-table";
-import { getProject } from "@/lib/flows/registry";
-import { hasProjectNotes, NOTES_PROJECT_SLUG } from "@/lib/project-notes";
+import { getFlowProject } from "@/lib/server/flows-store";
+import { hasProjectNotes } from "@/lib/project-notes";
 
 type PageProps = {
   params: Promise<{ project: string }>;
 };
 
 /** 명심할 점은 공통 프로젝트에만 있다. 다른 slug 는 404 다. */
-export function generateStaticParams() {
-  return [{ project: NOTES_PROJECT_SLUG }];
-}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const slug = (await params).project;
-  const project = hasProjectNotes(slug) ? getProject(slug) : undefined;
+  const project = hasProjectNotes(slug) ? await getFlowProject(slug) : undefined;
   if (!project) return {};
   return {
     title: `명심할 점 — ${project.title} — 프로젝트 매니지먼트`,
@@ -27,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ProjectNotesPage({ params }: PageProps) {
   const { project: projectSlug } = await params;
   if (!hasProjectNotes(projectSlug)) notFound();
-  const project = getProject(projectSlug);
+  const project = await getFlowProject(projectSlug);
   if (!project) notFound();
 
   return (

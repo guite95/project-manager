@@ -40,7 +40,8 @@ pnpm install
 createdb project_management
 createdb project_management_test
 pnpm db:migrate   # 마이그레이션 적용
-pnpm dev          # http://localhost:30001
+pnpm dev          # SSH 터널로 서버 DB 공유 · http://127.0.0.1:30001
+pnpm dev:local    # 별도 로컬 DB를 사용하는 명시적 대안
 pnpm build        # 프로덕션 빌드
 pnpm typecheck    # tsc --noEmit
 pnpm test         # node --test
@@ -127,8 +128,10 @@ lib/
   session.ts             세션 서명 (Web Crypto, proxy 에서도 동작)
   server/                DB 접근 계층. 라우트 핸들러만 부른다
 lib/flows/
-  registry.ts            프로젝트 → 카테고리 → 차트 트리의 단일 소스
-  <slug>.ts              플로우차트 데이터 ← 새 차트는 여기만 작성
+  registry.ts            DB에서 읽은 트리의 URL·폴백 헬퍼
+  document.ts            저장 JSON의 형식·참조 검증
+  initial-catalog.ts     최초 이관 원본 (런타임에서 읽지 않음)
+lib/server/flows-store.ts  DB 차트 조회·revision 조건부 저장
 scripts/
   hash-password.mjs      APP_PASSWORD_HASH 만들기
 ```
@@ -137,10 +140,49 @@ scripts/
 tsconfig 만 아는 것이라 `node --test` 가 `.ts` 를 직접 읽을 때 해석하지 못한다.
 타입만 가져올 때는 컴파일에서 지워지므로 `@/` 를 써도 된다.
 
-## 새 플로우차트 추가
+## 플로우차트 JSON 저장
 
-1. `lib/flows/<slug>.ts` 에 `FlowChart` 선언 (기존 파일 복사 권장)
-2. `lib/flows/registry.ts` 의 `flowProjects` 에서 알맞은 프로젝트/카테고리에 등록
+현재 차트의 원천은 PostgreSQL이다. `flow_project`와 `flow_category`가 순서와 메뉴 정보를,
+`flow_document.document` JSONB가 차트 한 장의 `nodes`, `edges`, `groups`, 설명과 배치 방향을 담는다.
+`app_setting`의 `erd:tns` 값은 ERD 상세/드릴다운에 쓰는 전체 스키마 스냅샷이다.
+최초 이관 마이그레이션이 기존 28개 차트를 저장하며, 재배포 시 수정된 JSON을 덮어쓰지 않는다.
+기존 `lib/flows/*.ts`와 `lib/erd/tns-schema.json`은 이관·테스트용 원본으로만 남긴다.
 
-그 외 등록 절차는 없다. 사이드바·목록·라우트가 전부 레지스트리에서 파생된다.
-자세한 규약은 `/guide` 참고.
+로그인한 세션으로 다음 API를 사용한다. 캔버스 자체는 계속 읽기 전용이다.
+
+- `GET /api/flows`: DB의 프로젝트·카테고리·차트 목록.
+- `GET /api/flows/tns/hr-overall`: `{ chart, revision, projectSlug, categorySlug, updatedAt }`.
+- `PUT /api/flows/tns/hr-overall`: `Content-Type: application/json`으로 `{ chart, revision }`을 전송.
+  GET에서 받은 revision을 함께 보내며, 다른 곳에서 먼저 수정했으면 409로 거절한다.
+  성공 후 페이지를 새로고침하면 변경이 반영된다. JSON 데이터 수정은 재배포가 필요 없다.
+- ERD는 전체 스냅샷과 파생 차트를 함께 갱신해야 하므로 일반 차트 PUT으로 수정하지 않는다.
+
+프로젝트·카테고리 추가나 ERD 갱신은 현재 별도 관리 UI가 없으며 검증된 DB 변경으로 수행한다.
+JSON 규약과 예시는 `/guide`를 참고한다.
+
+## 로컬과 배포 환경의 DB 공유
+
+`pnpm dev`는 개인 SSH 키로 서버의 loopback PostgreSQL 포트에 터널을 열고 서버의
+`project_management` DB를 사용한다. 이슈·메모·완료 이력·설정·차트가 모두 공유된다.
+서버 앱의 기존 DB URL은 SSH로 읽어 자식 프로세스 환경변수에만 주입하며 파일에 복사하지 않는다.
+DB 이름과 앱 역할을 확인한 뒤 실행하고, 로그인도 강제한다. 로컬 로그인은 로컬 `.env`의
+`APP_PASSWORD_HASH`/`SESSION_SECRET`을 사용한다.
+
+`.env.example`의 `SHARED_DB_SSH_*` 메타데이터만 개인 환경에 맞춘다.
+서버 PostgreSQL은 `127.0.0.1:15432`, 터널 기본 포트는 로컬 `127.0.0.1:15435`다.
+서버 키 검증을 끄지 않는다. 최초 접속 시 서버 공개키를 신뢰할 수 있는 경로로 확인해 known_hosts에 등록한다.
+로컬 포트가 이미 사용 중이면 기존 프로세스를 건드리지 않고 중단한다.
+필요하면 `SHARED_DB_LOCAL_PORT`로 다른 포트를 지정한다.
+
+```bash
+pnpm dev                  # 터널 + localhost 개발 서버. Ctrl+C로 함께 종료
+pnpm db:shared:status     # 공유 DB 마이그레이션 상태
+pnpm db:shared:deploy     # 승인한 forward migration만 공유 DB에 적용
+pnpm db:shared -- node scripts/your-db-command.mjs
+```
+
+`DATABASE_URL`은 `dev:local` 및 로컬 Prisma 작업용으로 기존 값을 보관한다.
+`TEST_DATABASE_URL`은 로컬 `localhost:5432/project_management_test`만 허용한다.
+공유 DB에서 `migrate dev`, `db push`, reset과 통합 테스트를 실행하지 않는다.
+로컬 DB에만 남은 실제 업무 데이터는 자동으로 서버와 합치거나 삭제하지 않는다.
+공유 전환 전 데이터 차이를 확인하고 필요한 항목만 별도로 이관한다.

@@ -1,3 +1,4 @@
+import { listFlowProjectNames } from "@/lib/server/flows-store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeader } from "@/components/erp/page-header";
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   description: "프로젝트별로 쌓인 이슈를 오늘 할 일로 옮겨 체크합니다.",
 };
 
-export default function TodayPage() {
+export default async function TodayPage() {
   return (
     // lg 이상에서는 뷰포트 높이를 채워 두 칼럼이 각자 스크롤한다. 좁은 화면에서는
     // 칼럼이 세로로 쌓이므로 지금처럼 페이지 전체가 스크롤되게 둔다.
@@ -27,7 +28,7 @@ export default function TodayPage() {
           </Link>
         </div>
       </div>
-      <TodayBoardView />
+      <TodayBoardView flowProjects={await listFlowProjectNames()} />
     </div>
   );
 }

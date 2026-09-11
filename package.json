@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@11.13.0",
   "scripts": {
-    "dev": "next dev -p 30001",
+    "dev": "node scripts/with-shared-db.mjs -- pnpm exec next dev --hostname 127.0.0.1 -p 30001",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -12,7 +12,11 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "db:reset-test": "node --env-file=.env scripts/reset-test-db.mjs"
+    "db:reset-test": "node --env-file=.env scripts/reset-test-db.mjs",
+    "dev:local": "next dev -p 30001",
+    "db:shared": "node scripts/with-shared-db.mjs",
+    "db:shared:status": "node scripts/with-shared-db.mjs -- pnpm exec prisma migrate status",
+    "db:shared:deploy": "node scripts/with-shared-db.mjs -- pnpm exec prisma migrate deploy"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",

@@ -12,9 +12,11 @@
  */
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { assertTestDatabase } from '../lib/test-database.ts';
 
 const testUrl = process.env.TEST_DATABASE_URL;
 const devUrl = process.env.DATABASE_URL;
+assertTestDatabase(testUrl);
 
 if (!testUrl) {
   console.error("TEST_DATABASE_URL 이 없습니다. .env 를 확인하세요.");
@@ -38,8 +40,9 @@ const prisma = new PrismaClient({
 });
 
 await prisma.$executeRawUnsafe(
-  'TRUNCATE TABLE "completion", "issue", "project_note", "custom_project", "app_setting" RESTART IDENTITY CASCADE',
+  'TRUNCATE TABLE "completion", "issue", "project_note", "custom_project" RESTART IDENTITY CASCADE',
 );
+await prisma.appSetting.deleteMany({ where: { key: "board" } });
 await prisma.$disconnect();
 
 console.log("테스트 DB 를 비웠습니다.");

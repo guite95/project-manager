@@ -4,3 +4,5 @@ import { AppShell } from "@/components/shell/app-shell";
 export default function TodayLayout({ children }: { children: ReactNode }) {
   return <AppShell>{children}</AppShell>;
 }
+
+export const dynamic = "force-dynamic";

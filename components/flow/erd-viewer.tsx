@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from 'react';
-import { domainOf, fieldKeys, makeErdChart, tnsSchema } from '../../lib/erd/tns';
+import { domainOf, fieldKeys, makeErdChart, type ErdSnapshot } from '../../lib/erd/chart';
 import { ProcessFlow } from './process-flow';
 
-export function ErdViewer({ domain }: { domain: string }) {
+export function ErdViewer({ domain, snapshot: tnsSchema }: { domain: string; snapshot: ErdSnapshot }) {
   const [selected, setSelected] = useState('');
   const [query, setQuery] = useState('');
-  const chart = useMemo(() => makeErdChart(domain, selected || undefined), [domain, selected]);
+  const chart = useMemo(() => makeErdChart(tnsSchema, domain, selected || undefined), [tnsSchema, domain, selected]);
   const model = tnsSchema.models.find(m => m.name === selected);
   const options = tnsSchema.models.filter(m => !query.trim()
     ? chart.nodes.some(n => n.id === m.name)
@@ -46,7 +46,7 @@ export function ErdViewer({ domain }: { domain: string }) {
             <table className="w-full border-collapse text-left">
               <thead className="sticky top-0 bg-[var(--bi-sidebar-bg)]"><tr>{['키', '컬럼명', '자료형', 'NULL'].map(label => <th key={label} className="px-3 py-2 font-semibold">{label}</th>)}</tr></thead>
               <tbody>{model.fields.map(field => <tr key={field.name} className="border-t border-[var(--bi-border)]">
-                <td className="px-3 py-1.5 text-[var(--bi-accent)]">{fieldKeys(model, field).join(' · ') || '—'}</td>
+                <td className="px-3 py-1.5 text-[var(--bi-accent)]">{fieldKeys(tnsSchema, model, field).join(' · ') || '—'}</td>
                 <td className="px-3 py-1.5 font-mono">{field.column}{field.column !== field.name ? <span className="ml-2 text-[var(--bi-muted)]">({field.name})</span> : null}</td>
                 <td className="px-3 py-1.5">{field.type}</td><td className="px-3 py-1.5">{field.optional ? '허용' : '불가'}</td>
               </tr>)}</tbody>

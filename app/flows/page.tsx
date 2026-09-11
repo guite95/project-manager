@@ -1,8 +1,9 @@
+import { listFlowProjects } from "@/lib/server/flows-store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RichText } from "@/components/rich-text";
 import { UiReferenceGallery } from "@/components/ui-reference/ui-reference-gallery";
-import { chartHref, flowProjects } from "@/lib/flows/registry";
+import { chartHref } from "@/lib/flows/registry";
 import {
   resolveFlowsView,
   type FlowsView,
@@ -44,7 +45,8 @@ function ViewTabs({ view }: { view: FlowsView }) {
   );
 }
 
-function ProjectsOverview() {
+async function ProjectsOverview() {
+  const flowProjects = await listFlowProjects();
   return (
     <>
       {flowProjects.map((project) => (

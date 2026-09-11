@@ -8,3 +8,5 @@ export default function GuideLayout({ children }: { children: ReactNode }) {
     </AppShell>
   );
 }
+
+export const dynamic = "force-dynamic";

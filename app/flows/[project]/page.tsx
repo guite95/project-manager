@@ -4,7 +4,8 @@ import { FlowLegend } from "@/components/flow/flow-legend";
 import { ProcessFlow } from "@/components/flow/process-flow";
 import { ErdViewer } from "@/components/flow/erd-viewer";
 import { RichText } from "@/components/rich-text";
-import { flowProjects, getProject, resolveChart } from "@/lib/flows/registry";
+import { resolveChart } from "@/lib/flows/registry";
+import { getFlowProject, getTnsErdSnapshot } from "@/lib/server/flows-store";
 
 type PageProps = {
   params: Promise<{ project: string }>;
@@ -20,16 +21,13 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export function generateStaticParams() {
-  return flowProjects.map((p) => ({ project: p.slug }));
-}
 
 export async function generateMetadata({
   params,
   searchParams,
 }: PageProps): Promise<Metadata> {
   const { project: projectSlug } = await params;
-  const project = getProject(projectSlug);
+  const project = await getFlowProject(projectSlug);
   if (!project) return {};
   const sp = await searchParams;
   const resolved = resolveChart(project, first(sp.cat), first(sp.chart));
@@ -45,7 +43,7 @@ export default async function ProjectFlowsPage({
   searchParams,
 }: PageProps) {
   const { project: projectSlug } = await params;
-  const project = getProject(projectSlug);
+  const project = await getFlowProject(projectSlug);
   if (!project) notFound();
   const sp = await searchParams;
   // 잘못된 cat/chart 는 첫 카테고리·첫 차트로 폴백한다 (404 아님).
@@ -88,7 +86,7 @@ export default async function ProjectFlowsPage({
       ) : null}
 
       {chart.erdDomain ? (
-        <ErdViewer key={chart.erdDomain} domain={chart.erdDomain} />
+        <ErdViewer key={chart.erdDomain} domain={chart.erdDomain} snapshot={await getTnsErdSnapshot()} />
       ) : (
         <>
           <div className="mb-3"><FlowLegend chart={chart} /></div>

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchHistory, type HistoryResponse } from "@/lib/api-client";
 import { groupCompletionsByDate } from "@/lib/completions";
-import { flowProjects } from "@/lib/flows/registry";
 import { todayDateString } from "@/lib/today-board";
 
 /** 한 번에 불러오는 기간. 더 보기를 누를 때마다 이만큼 과거로 넓힌다. */
@@ -21,7 +20,7 @@ function formatDate(date: string): string {
   return `${year}년 ${Number(month)}월 ${Number(day)}일`;
 }
 
-export function CompletionHistory() {
+export function CompletionHistory({ flowProjects }: { flowProjects: {slug:string;title:string}[] }) {
   const today = useMemo(() => todayDateString(new Date()), []);
   const [days, setDays] = useState(WINDOW_DAYS);
   const [data, setData] = useState<HistoryResponse | null>(null);
@@ -30,7 +29,7 @@ export function CompletionHistory() {
 
   const projects = useMemo(
     () => flowProjects.map(({ slug, title }) => ({ slug, title })),
-    [],
+    [flowProjects],
   );
 
   const load = useCallback(async () => {
