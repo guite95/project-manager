@@ -6,6 +6,7 @@ import {
   type DataTableColumn,
 } from "@/components/erp/data-table";
 import { DetailSection } from "@/components/erp/detail-section";
+import { DateRangeFilter } from "@/components/erp/date-picker";
 import { FilterBar } from "@/components/erp/filter-bar";
 import { Select } from "@/components/erp/select";
 import { hangulIncludes } from "@/components/erp/hangul-match";
@@ -16,21 +17,23 @@ type Row = {
   name: string;
   qty: number;
   status: "ACTIVE" | "INACTIVE";
+  registeredOn: string;
 };
 
 const ROWS: Row[] = [
-  { id: 1, code: "A-001", name: "품목 가", qty: 120, status: "ACTIVE" },
-  { id: 2, code: "A-002", name: "품목 나", qty: 8, status: "INACTIVE" },
+  { id: 1, code: "A-001", name: "품목 가", qty: 120, status: "ACTIVE", registeredOn: "2026-08-13" },
+  { id: 2, code: "A-002", name: "품목 나", qty: 8, status: "INACTIVE", registeredOn: "2026-08-14" },
 ];
 
 const COLUMNS: DataTableColumn<Row>[] = [
-  { key: "code", header: "코드", render: (row) => row.code },
-  { key: "name", header: "이름", render: (row) => row.name },
   {
     key: "status",
     header: "상태",
     render: (row) => (row.status === "ACTIVE" ? "사용중" : "비활성"),
   },
+  { key: "code", header: "코드", render: (row) => row.code },
+  { key: "name", header: "이름", render: (row) => row.name },
+  { key: "registeredOn", header: "등록일", render: (row) => row.registeredOn },
   {
     key: "qty",
     header: "수량",
@@ -42,19 +45,23 @@ const COLUMNS: DataTableColumn<Row>[] = [
 export function TableFilterSection() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const filteredRows = useMemo(
     () =>
       ROWS.filter(
         (row) =>
           (hangulIncludes(row.code, search) ||
             hangulIncludes(row.name, search)) &&
-          (!status || row.status === status)
+          (!status || row.status === status) &&
+          (!from || row.registeredOn >= from) &&
+          (!to || row.registeredOn <= to)
       ),
-    [search, status]
+    [search, status, from, to]
   );
 
   return (
-    <DetailSection title="6. 필터와 기본 테이블">
+    <DetailSection title="7. 필터와 기본 테이블">
       <FilterBar onSearchChange={setSearch} search={search}>
         <Select
           ariaLabel="상태 필터"
@@ -65,6 +72,14 @@ export function TableFilterSection() {
             { value: "INACTIVE", label: "비활성" },
           ]}
           value={status}
+        />
+        <DateRangeFilter
+          ariaLabel="조회 기간"
+          from={from}
+          onFromChange={setFrom}
+          onToChange={setTo}
+          quickToggle
+          to={to}
         />
       </FilterBar>
       <DataTable

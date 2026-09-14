@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   HiChevronRight,
   HiOutlineExternalLink,
   HiOutlineSearch,
 } from "react-icons/hi";
+import { putSidebarOrder } from "@/lib/api-client";
+import { defaultSidebarOrder, normalizeSidebarOrder, moveSidebarProject } from "@/lib/navigation/sidebar-order";
+import { SidebarProject } from "./sidebar-project";
 import type { FlowChart, FlowProject } from "@/components/flow/types";
 import { chartHref, resolveChart } from "@/lib/flows/registry";
 import {
@@ -57,10 +60,57 @@ const linkCls = (active: boolean) =>
       : "text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-active)]"
   }`;
 
-export function AppSidebar({ flowProjects }: { flowProjects: FlowProject[] }) {
+export function AppSidebar({ flowProjects, initialProjectOrder }: {
+  flowProjects: FlowProject[];
+  initialProjectOrder: string[];
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
+  const [projectOrder, setProjectOrder] = useState(initialProjectOrder);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [announcement, setAnnouncement] = useState("");
+  const savingOrderRef = useRef(false);
+  const order = normalizeSidebarOrder(
+    defaultSidebarOrder(flowProjects.map((p) => p.slug), externalProjects.map((p) => p.slug)),
+    projectOrder,
+  );
+
+  useEffect(() => {
+    if (!savingOrderRef.current) setProjectOrder(initialProjectOrder);
+  }, [initialProjectOrder]);
+
+  const saveOrder = async (next: string[]) => {
+    if (savingOrderRef.current || next === order) return;
+    savingOrderRef.current = true;
+    const previous = order;
+    setProjectOrder(next);
+    setSavingOrder(true);
+    setOrderError("");
+    setAnnouncement("프로젝트 순서를 저장하는 중입니다.");
+    try {
+      setProjectOrder(await putSidebarOrder(next));
+      setAnnouncement("프로젝트 순서를 저장했습니다.");
+    } catch {
+      setProjectOrder(previous);
+      setOrderError("순서를 저장하지 못해 이전 순서로 되돌렸습니다. 다시 시도해 주세요.");
+      setAnnouncement("");
+    } finally {
+      savingOrderRef.current = false;
+      setSavingOrder(false);
+    }
+  };
+
+  const moveProject = (slug: string, target: string, edge: "before" | "after") => {
+    if (query.trim()) return;
+    void saveOrder(moveSidebarProject(order, slug, target, edge));
+  };
+  const stepProject = (slug: string, step: -1 | 1) => {
+    const target = order[order.indexOf(slug) + step];
+    if (target) moveProject(slug, target, step < 0 ? "before" : "after");
+  };
   const [userOverrides, setUserOverrides] = useState<Record<string, boolean>>(
     {}
   );
@@ -176,13 +226,164 @@ export function AppSidebar({ flowProjects }: { flowProjects: FlowProject[] }) {
               .filter((c) => c.charts.length > 0);
         return { project: p, categories, showNotes };
       })
-      .filter((p) => p.showNotes || p.categories.length > 0);
+      .filter(
+        (p) =>
+          p.project.title.toLowerCase().includes(q) ||
+          p.showNotes ||
+          p.categories.length > 0
+      );
   }, [searching, q, flowProjects]);
 
   const visibleExternalProjects = useMemo(
     () => filterExternalProjects(externalProjects, q),
     [q]
   );
+
+  const renderProject = (entry: (typeof visibleProjects)[number]) => {
+    const { project, categories, showNotes } = entry;
+    const pKey = projectKey(project.slug);
+    const projectActive = active?.project === project.slug;
+    const pCollapsed = searching
+      ? false
+      : pKey in userOverrides
+        ? userOverrides[pKey]
+        : !projectActive;
+
+    return (
+      <SidebarProject
+        key={project.slug}
+        slug={project.slug}
+        title={project.title}
+        count={categories.reduce((n, c) => n + c.charts.length, 0)}
+        collapsed={pCollapsed}
+        onToggle={() => toggle(pKey, pCollapsed)}
+        movable={!searching && !savingOrder}
+        dragging={dragging}
+        onDragChange={setDragging}
+        onMove={moveProject}
+        onStep={stepProject}
+      >
+        {!pCollapsed ? (
+          <>
+            {showNotes ? (
+              <Link
+                aria-label={`${project.title} 명심할 점`}
+                aria-current={
+                  projectActive && active?.view === "notes"
+                    ? "page"
+                    : undefined
+                }
+                className={`${linkCls(projectActive && active?.view === "notes")} pl-5`}
+                href={projectNotesHref(project.slug)}
+              >
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--bi-warning)]"
+                />
+                <span className="truncate">명심할 점</span>
+              </Link>
+            ) : null}
+            {categories.map((category) => {
+              const cKey = categoryKey(project.slug, category.slug);
+              const categoryActive =
+                projectActive && active?.category === category.slug;
+              const cCollapsed = searching
+                ? false
+                : cKey in userOverrides
+                  ? userOverrides[cKey]
+                  : !categoryActive;
+
+              return (
+                <div key={category.slug}>
+                  <button
+                    type="button"
+                    aria-expanded={!cCollapsed}
+                    onClick={() => toggle(cKey, cCollapsed)}
+                    className={`${ROW_BTN} pl-5 font-medium text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]`}
+                  >
+                    <HiChevronRight
+                      size={10}
+                      className={`shrink-0 transition-transform ${
+                        cCollapsed ? "rotate-0" : "rotate-90"
+                      }`}
+                    />
+                    <span className="truncate">{category.title}</span>
+                    <span className="ml-auto">{category.charts.length}</span>
+                  </button>
+
+                  {!cCollapsed
+                    ? category.charts.map((chart) => {
+                        const isActive =
+                          categoryActive && active?.chart === chart.slug;
+                        return (
+                          <Link
+                            key={chart.slug}
+                            href={chartHref(
+                              project.slug,
+                              category.slug,
+                              chart.slug
+                            )}
+                            aria-current={isActive ? "page" : undefined}
+                            className={`${linkCls(isActive)} pl-12`}
+                          >
+                            <span className="truncate">{chart.title}</span>
+                          </Link>
+                        );
+                      })
+                    : null}
+                </div>
+              );
+            })}
+          </>
+        ) : null}
+      </SidebarProject>
+    );
+  };
+
+  const renderExternalProject = (project: (typeof externalProjects)[number]) => {
+    const pKey = projectKey(project.slug);
+    const pCollapsed = searching
+      ? false
+      : pKey in userOverrides
+        ? userOverrides[pKey]
+        : false;
+
+    return (
+      <SidebarProject
+        key={project.slug}
+        slug={project.slug}
+        title={project.title}
+        count={project.links.length}
+        collapsed={pCollapsed}
+        onToggle={() => toggle(pKey, pCollapsed)}
+        movable={!searching && !savingOrder}
+        dragging={dragging}
+        onDragChange={setDragging}
+        onMove={moveProject}
+        onStep={stepProject}
+      >
+        {!pCollapsed
+          ? project.links.map((externalLink) => (
+              <a
+                key={externalLink.href}
+                href={externalLink.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${linkCls(false)} pl-12`}
+              >
+                <span className="truncate">{externalLink.title}</span>
+                <HiOutlineExternalLink
+                  size={13}
+                  aria-hidden
+                  className="ml-auto shrink-0 text-[var(--bi-muted)]"
+                />
+                <span className="sr-only">(새 탭에서 열림)</span>
+              </a>
+            ))
+          : null}
+      </SidebarProject>
+    );
+  };
 
   return (
     <nav className="flex h-full flex-col gap-2 overflow-y-auto py-3 [&>*]:shrink-0">
@@ -222,162 +423,16 @@ export function AppSidebar({ flowProjects }: { flowProjects: FlowProject[] }) {
         </p>
       ) : null}
 
-      {visibleProjects.map(({ project, categories, showNotes }) => {
-        const pKey = projectKey(project.slug);
-        const projectActive = active?.project === project.slug;
-        const pCollapsed = searching
-          ? false
-          : pKey in userOverrides
-            ? userOverrides[pKey]
-            : !projectActive;
-
-        return (
-          <div key={project.slug}>
-            <button
-              type="button"
-              aria-expanded={!pCollapsed}
-              onClick={() => toggle(pKey, pCollapsed)}
-              className={`${ROW_BTN} pl-2 font-semibold text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-active)]`}
-            >
-              <HiChevronRight
-                size={10}
-                className={`shrink-0 transition-transform ${
-                  pCollapsed ? "rotate-0" : "rotate-90"
-                }`}
-              />
-              <span className="truncate">{project.title}</span>
-              {/* 검색 중에는 필터링된 개수 — 카테고리 배지와 셈법이 같아야 한다 */}
-              <span className="ml-auto font-normal text-[var(--bi-muted)]">
-                {categories.reduce((n, c) => n + c.charts.length, 0)}
-              </span>
-            </button>
-
-            {!pCollapsed ? (
-              <>
-                {showNotes ? (
-                  <Link
-                    aria-label={`${project.title} 명심할 점`}
-                    aria-current={
-                      projectActive && active?.view === "notes"
-                        ? "page"
-                        : undefined
-                    }
-                    className={`${linkCls(projectActive && active?.view === "notes")} pl-5`}
-                    href={projectNotesHref(project.slug)}
-                  >
-                    <span
-                      aria-hidden
-                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--bi-warning)]"
-                    />
-                    <span className="truncate">명심할 점</span>
-                  </Link>
-                ) : null}
-                {categories.map((category) => {
-                  const cKey = categoryKey(project.slug, category.slug);
-                  const categoryActive =
-                    projectActive && active?.category === category.slug;
-                  const cCollapsed = searching
-                    ? false
-                    : cKey in userOverrides
-                      ? userOverrides[cKey]
-                      : !categoryActive;
-
-                  return (
-                    <div key={category.slug}>
-                      <button
-                        type="button"
-                        aria-expanded={!cCollapsed}
-                        onClick={() => toggle(cKey, cCollapsed)}
-                        className={`${ROW_BTN} pl-5 font-medium text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]`}
-                      >
-                        <HiChevronRight
-                          size={10}
-                          className={`shrink-0 transition-transform ${
-                            cCollapsed ? "rotate-0" : "rotate-90"
-                          }`}
-                        />
-                        <span className="truncate">{category.title}</span>
-                        <span className="ml-auto">{category.charts.length}</span>
-                      </button>
-
-                      {!cCollapsed
-                        ? category.charts.map((chart) => {
-                            const isActive =
-                              categoryActive && active?.chart === chart.slug;
-                            return (
-                              <Link
-                                key={chart.slug}
-                                href={chartHref(
-                                  project.slug,
-                                  category.slug,
-                                  chart.slug
-                                )}
-                                aria-current={isActive ? "page" : undefined}
-                                className={`${linkCls(isActive)} pl-12`}
-                              >
-                                <span className="truncate">{chart.title}</span>
-                              </Link>
-                            );
-                          })
-                        : null}
-                    </div>
-                  );
-                })}
-              </>
-            ) : null}
-          </div>
-        );
-      })}
-
-      {visibleExternalProjects.map((project) => {
-        const pKey = projectKey(project.slug);
-        const pCollapsed = searching
-          ? false
-          : pKey in userOverrides
-            ? userOverrides[pKey]
-            : false;
-
-        return (
-          <div key={project.slug}>
-            <button
-              type="button"
-              aria-expanded={!pCollapsed}
-              onClick={() => toggle(pKey, pCollapsed)}
-              className={`${ROW_BTN} pl-2 font-semibold text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-active)]`}
-            >
-              <HiChevronRight
-                size={10}
-                className={`shrink-0 transition-transform ${
-                  pCollapsed ? "rotate-0" : "rotate-90"
-                }`}
-              />
-              <span className="truncate">{project.title}</span>
-              <span className="ml-auto font-normal text-[var(--bi-muted)]">
-                {project.links.length}
-              </span>
-            </button>
-
-            {!pCollapsed
-              ? project.links.map((externalLink) => (
-                  <a
-                    key={externalLink.href}
-                    href={externalLink.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${linkCls(false)} pl-12`}
-                  >
-                    <span className="truncate">{externalLink.title}</span>
-                    <HiOutlineExternalLink
-                      size={13}
-                      aria-hidden
-                      className="ml-auto shrink-0 text-[var(--bi-muted)]"
-                    />
-                    <span className="sr-only">(새 탭에서 열림)</span>
-                  </a>
-                ))
-              : null}
-          </div>
-        );
+      <span id="sidebar-order-help" className="sr-only">
+        손잡이를 드래그하거나 위·아래 방향키로 프로젝트 순서를 바꿀 수 있습니다. 검색 중에는 순서를 변경할 수 없습니다.
+      </span>
+      <span role="status" className="sr-only">{announcement}</span>
+      {orderError ? <p role="alert" className="mx-4 text-[11px] text-[var(--bi-error)]">{orderError}</p> : null}
+      {order.map((slug) => {
+        const flow = visibleProjects.find((entry) => entry.project.slug === slug);
+        if (flow) return renderProject(flow);
+        const external = visibleExternalProjects.find((project) => project.slug === slug);
+        return external ? renderExternalProject(external) : null;
       })}
     </nav>
   );

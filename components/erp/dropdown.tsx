@@ -21,6 +21,7 @@ export function Dropdown({
   options,
   ariaLabel,
   searchable = false,
+  searchPlaceholder = "검색",
   disabled = false,
   error = false,
   autoFocus = false,
@@ -30,6 +31,7 @@ export function Dropdown({
   options: DropdownOption[];
   ariaLabel: string;
   searchable?: boolean;
+  searchPlaceholder?: string;
   disabled?: boolean;
   error?: boolean;
   autoFocus?: boolean;
@@ -157,7 +159,7 @@ export function Dropdown({
                   setQuery(event.target.value);
                   setActiveIndex(0);
                 }}
-                placeholder="검색"
+                placeholder={searchPlaceholder}
                 ref={searchRef}
                 role="combobox"
                 value={query}

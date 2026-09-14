@@ -50,6 +50,7 @@ export function TodayList({
     "idle",
   );
   const doneCount = items.filter((item) => item.done).length;
+  const canCopyWorklog = items.some((item) => item.done && item.projectSlug !== "common");
 
   const copy = async () => {
     const ok = await onCopyWorklog();
@@ -74,13 +75,13 @@ export function TodayList({
             {formatBoardDate(date)} · {doneCount}/{items.length} 완료
           </span>
           <Button
-            disabled={doneCount === 0}
+            disabled={!canCopyWorklog}
             onClick={copy}
             size="sm"
             title={
-              doneCount === 0
-                ? "체크한 항목이 있어야 복사할 수 있습니다"
-                : "체크한 항목을 작업내용으로 복사"
+              !canCopyWorklog
+                ? "공통 외 프로젝트에 체크한 항목이 있어야 복사할 수 있습니다"
+                : "공통을 제외한 체크 항목을 작업내용으로 복사"
             }
             variant="secondary"
           >

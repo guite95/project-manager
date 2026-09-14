@@ -425,16 +425,16 @@ function formatMonthDay(date: string): string {
 }
 
 /**
- * 완료한 항목만 프로젝트별로 묶어 붙여넣기용 작업내용 텍스트를 만든다.
+ * 공통을 제외한 완료 항목만 프로젝트별로 묶어 붙여넣기용 작업내용 텍스트를 만든다.
  * 순서와 미분류 처리는 화면과 같게 `groupIssuesByProject` 를 그대로 쓴다.
- * 완료한 항목이 하나도 없으면 빈 문자열.
+ * 복사할 항목이 하나도 없으면 빈 문자열.
  */
 export function formatWorklog(
   board: TodayBoard,
   registryProjects: { slug: string; title: string }[],
   date: string,
 ): string {
-  const done = board.today.filter((item) => item.done);
+  const done = board.today.filter((item) => item.done && item.projectSlug !== "common");
   if (done.length === 0) return "";
 
   const groups = groupIssuesByProject(

@@ -1,10 +1,17 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { HiOutlineShare } from "react-icons/hi";
+import type { FlowProject } from "@/components/flow/types";
 import { listFlowProjects } from "@/lib/server/flows-store";
+import { loadSidebarOrder } from "@/lib/server/sidebar-store";
 import { AppSidebar } from "./app-sidebar";
 
 export const APP_BRAND = "프로젝트 매니지먼트";
+
+async function Sidebar({ flowProjects }: { flowProjects: FlowProject[] }) {
+  const projectOrder = await loadSidebarOrder(flowProjects.map((project) => project.slug));
+  return <AppSidebar flowProjects={flowProjects} initialProjectOrder={projectOrder} />;
+}
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const flowProjects = await listFlowProjects();
@@ -23,7 +30,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-0 flex-1">
         <aside className="w-[240px] shrink-0 border-r border-[var(--bi-border)] bg-[var(--bi-sidebar-bg)]">
           <Suspense fallback={null}>
-            <AppSidebar flowProjects={flowProjects} />
+            <Sidebar flowProjects={flowProjects} />
           </Suspense>
         </aside>
 

@@ -86,6 +86,14 @@ export async function putSettings(settings: {
   });
 }
 
+export async function putSidebarOrder(projectOrder: string[]): Promise<string[]> {
+  const response = await request("/api/sidebar/order", {
+    method: "PUT",
+    body: JSON.stringify({projectOrder}),
+  });
+  return ((await response.json()) as {projectOrder:string[]}).projectOrder;
+}
+
 /* ---------------------------------------------------------------- 명심할 점 */
 
 export async function fetchNotes(projectSlug: string): Promise<ProjectNote[]> {

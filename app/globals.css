@@ -34,6 +34,15 @@
   --bi-success: #10b981;
   --bi-warning: #f5a623;
   --bi-error: #ee0000;
+  --bi-ai: #7c5cff;
+  --bi-ai-light: #f1edff;
+  --bi-demand: #0f766e;
+  --bi-demand-light: #e6f4f2;
+  --bi-stock-warn: #b45309;
+  --bi-stock-warn-light: #fdf1e3;
+  --bi-motion-fast: 120ms;
+  --bi-motion-base: 180ms;
+  --bi-ease: cubic-bezier(0.2, 0, 0.2, 1);
   --bi-priority-urgent-bg: #fff1f2;
   --bi-priority-urgent-line: #be123c;
   --bi-priority-high-bg: #fff7ed;
@@ -102,4 +111,20 @@ a {
 
 ::selection {
   background: var(--bi-accent-light);
+}
+
+@keyframes bi-overlay-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bi-overlay-in {
+  animation: bi-overlay-in var(--bi-motion-base) var(--bi-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --bi-motion-fast: 0ms;
+    --bi-motion-base: 0ms;
+  }
 }

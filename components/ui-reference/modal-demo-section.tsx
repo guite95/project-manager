@@ -66,7 +66,7 @@ export function ModalDemoSection() {
   const [team, setTeam] = useState("미배정");
 
   return (
-    <DetailSection title="8. 상세 모달">
+    <DetailSection title="10. 상세 모달">
       <div className="px-6 py-4">
         <Button onClick={() => setOpen(true)}>상세 모달 열기</Button>
         <DetailModal

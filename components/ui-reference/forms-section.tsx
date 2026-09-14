@@ -5,6 +5,7 @@ import { Button } from "@/components/erp/button";
 import { DetailSection } from "@/components/erp/detail-section";
 import {
   CheckboxField,
+  DateField,
   SelectField,
   TextField,
 } from "@/components/erp/form-field";
@@ -32,6 +33,8 @@ export function FormsSection() {
   const [text, setText] = useState(INITIAL.text);
   const [select, setSelect] = useState(INITIAL.select);
   const [country, setCountry] = useState(INITIAL.country);
+  const [date, setDate] = useState("");
+  const [requiredDate, setRequiredDate] = useState("");
   const [checked, setChecked] = useState(INITIAL.checked);
   const [message, setMessage] = useState("");
 
@@ -59,6 +62,28 @@ export function FormsSection() {
             value={country}
           />
         </div>
+        {/* 날짜 필드 — native input[type=date] 대신 공통 DatePicker 를 쓴다.
+            TextField type="date" 도 내부적으로 같은 DateField 로 연결된다. */}
+        <div className="mt-4">
+          <FormGrid>
+            <DateField label="날짜 필드" onChange={setDate} value={date} />
+            <TextField
+              label='날짜 필드 (TextField type="date")'
+              onChange={setRequiredDate}
+              required
+              type="date"
+              value={requiredDate}
+            />
+          </FormGrid>
+        </div>
+        <div className="mt-4">
+          <DateField
+            error={date && date < "2026-01-01" ? "2026년 이후 날짜를 선택하세요." : undefined}
+            label="날짜 필드 (에러 상태)"
+            onChange={setDate}
+            value={date}
+          />
+        </div>
         <div className="mt-4">
           <CheckboxField
             checked={checked}
@@ -78,6 +103,8 @@ export function FormsSection() {
               setSelect(INITIAL.select);
               setCountry(INITIAL.country);
               setChecked(INITIAL.checked);
+              setDate("");
+              setRequiredDate("");
               setMessage("초기값으로 되돌렸습니다.");
             }}
             variant="secondary"

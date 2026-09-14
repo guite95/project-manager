@@ -121,7 +121,7 @@ export function ManagedTableSection() {
           prefs={prefs}
         />
       }
-      title="7. 관리형 테이블"
+      title="9. 관리형 테이블 · 컬럼 표시·순서·너비"
     >
       <div className="overflow-x-auto">
         <DataTable
