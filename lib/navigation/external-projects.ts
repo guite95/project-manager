@@ -9,18 +9,7 @@ export type ExternalProject = {
   links: ExternalProjectLink[];
 };
 
-export const externalProjects: ExternalProject[] = [
-  {
-    slug: "focus-ai",
-    title: "포커스에이아이",
-    links: [
-      {
-        title: "NotebookLM",
-        href: "https://notebook.google.com/notebook/a17b9008-778c-407a-8ca0-08bd2e8a0f2e?authuser=2",
-      },
-    ],
-  },
-];
+export const externalProjects: ExternalProject[] = [];
 
 export function filterExternalProjects(
   projects: ExternalProject[],

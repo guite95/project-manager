@@ -1,4 +1,4 @@
-import { listFlowProjects } from "@/lib/server/flows-store";
+import { getFlowCatalog } from "@/lib/server/flow-catalog-store";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RichText } from "@/components/rich-text";
@@ -46,7 +46,7 @@ function ViewTabs({ view }: { view: FlowsView }) {
 }
 
 async function ProjectsOverview() {
-  const flowProjects = await listFlowProjects();
+  const flowProjects = await getFlowCatalog();
   return (
     <>
       {flowProjects.map((project) => (
@@ -84,7 +84,7 @@ async function ProjectsOverview() {
                       </span>
                     ) : null}
                     <span className="mt-1 text-[11px] text-[var(--bi-muted)]">
-                      노드 {chart.nodes.length} · 연결 {chart.edges.length}
+                      노드 {chart.nodeCount} · 연결 {chart.edgeCount}
                     </span>
                   </Link>
                 ))}

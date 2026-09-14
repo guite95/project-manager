@@ -1,7 +1,7 @@
-import type { FlowProject } from "@/components/flow/types";
+import type { FlowNavigationProject } from "./flow-navigation.ts";
 import { hasProjectNotes } from "../project-notes.ts";
 
-export function searchSidebarProjects(projects: FlowProject[], query: string) {
+export function searchSidebarProjects(projects: FlowNavigationProject[], query: string) {
   const q = query.trim().toLowerCase();
   return projects.flatMap(project => {
     const projectMatches = !q || project.title.toLowerCase().includes(q);

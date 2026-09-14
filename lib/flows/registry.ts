@@ -1,5 +1,3 @@
-import type { FlowCategory, FlowChart, FlowProject } from "@/components/flow/types";
-
 /**
  * 쿼리파람(cat/chart) → 실제 카테고리·차트. 못 찾으면 첫 카테고리·첫 차트로
  * 폴백한다 (404 아님 — 스펙의 폴백 규칙). cat 이 틀리면 chart 는 폴백된
@@ -9,11 +7,11 @@ import type { FlowCategory, FlowChart, FlowProject } from "@/components/flow/typ
  * (뼈대만 먼저 등록한 경우 등) 호출부는 404 로 처리한다 — 여기서 그냥
  * `[0]` 을 쓰면 서버 렌더가 500 으로 터진다.
  */
-export function resolveChart(
-  project: FlowProject,
+export function resolveChart<Category extends { slug: string; charts: { slug: string }[] }>(
+  project: { categories: Category[] },
   catSlug?: string,
   chartSlug?: string
-): { category: FlowCategory; chart: FlowChart } | null {
+): { category: Category; chart: Category["charts"][number] } | null {
   const category =
     project.categories.find((c) => c.slug === catSlug) ?? project.categories[0];
   if (!category) return null;

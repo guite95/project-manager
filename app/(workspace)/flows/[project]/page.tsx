@@ -5,8 +5,8 @@ import { ProcessFlow } from "@/components/flow/process-flow";
 import { ErdViewer } from "@/components/flow/erd-viewer";
 import { ChartSelector } from "@/components/flow/chart-selector";
 import { RichText } from "@/components/rich-text";
-import { resolveChart } from "@/lib/flows/registry";
-import { getFlowProject, getTnsErdSnapshot } from "@/lib/server/flows-store";
+import { getTnsErdSnapshot } from "@/lib/server/flows-store";
+import { getChartPage } from "@/lib/server/flow-catalog-store";
 
 type PageProps = {
   params: Promise<{ project: string }>;
@@ -28,11 +28,10 @@ export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
   const { project: projectSlug } = await params;
-  const project = await getFlowProject(projectSlug);
-  if (!project) return {};
   const sp = await searchParams;
-  const resolved = resolveChart(project, first(sp.cat), first(sp.chart));
+  const resolved = await getChartPage(projectSlug, first(sp.cat), first(sp.chart));
   if (!resolved) return {};
+  const { project } = resolved;
   return {
     title: `${resolved.chart.title} — ${project.title} — 프로젝트 매니지먼트`,
     description: resolved.chart.description,
@@ -44,14 +43,11 @@ export default async function ProjectFlowsPage({
   searchParams,
 }: PageProps) {
   const { project: projectSlug } = await params;
-  const project = await getFlowProject(projectSlug);
-  if (!project) notFound();
   const sp = await searchParams;
-  // 잘못된 cat/chart 는 첫 카테고리·첫 차트로 폴백한다 (404 아님).
-  // 차트가 하나도 없는 프로젝트만 404 로 떨어진다.
-  const resolved = resolveChart(project, first(sp.cat), first(sp.chart));
+  // 잘못된 cat/chart는 첫 차트로 폴백하며, 그래프 본문은 선택한 한 장만 읽는다.
+  const resolved = await getChartPage(projectSlug, first(sp.cat), first(sp.chart));
   if (!resolved) notFound();
-  const { category, chart } = resolved;
+  const { project, category, chart } = resolved;
 
   return (
     <>

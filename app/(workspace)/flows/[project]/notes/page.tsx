@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/erp/page-header";
 import { ProjectNotesTable } from "@/components/project-notes/project-notes-table";
-import { getFlowProject } from "@/lib/server/flows-store";
+import { getFlowProjectIdentity } from "@/lib/server/flow-catalog-store";
 import { hasProjectNotes } from "@/lib/project-notes";
 
 type PageProps = {
@@ -13,7 +13,7 @@ type PageProps = {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const slug = (await params).project;
-  const project = hasProjectNotes(slug) ? await getFlowProject(slug) : undefined;
+  const project = hasProjectNotes(slug) ? await getFlowProjectIdentity(slug) : undefined;
   if (!project) return {};
   return {
     title: `명심할 점 — ${project.title} — 프로젝트 매니지먼트`,
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ProjectNotesPage({ params }: PageProps) {
   const { project: projectSlug } = await params;
   if (!hasProjectNotes(projectSlug)) notFound();
-  const project = await getFlowProject(projectSlug);
+  const project = await getFlowProjectIdentity(projectSlug);
   if (!project) notFound();
 
   return (

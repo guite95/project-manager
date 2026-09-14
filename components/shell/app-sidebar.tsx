@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   HiOutlineExternalLink,
   HiOutlineSearch,
@@ -10,7 +10,7 @@ import {
 import { putSidebarOrder } from "@/lib/api-client";
 import { defaultSidebarOrder, normalizeSidebarOrder, moveSidebarProject } from "@/lib/navigation/sidebar-order";
 import { SidebarProject } from "./sidebar-project";
-import type { FlowProject } from "@/components/flow/types";
+import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { chartHref, resolveChart } from "@/lib/flows/registry";
 import {
   externalProjects,
@@ -22,25 +22,23 @@ import {
 } from "@/lib/project-notes";
 
 import { searchSidebarProjects } from "@/lib/navigation/sidebar-search";
-import type { UiPreferenceValues } from "@/lib/ui-preferences";
 
-const projectKey = (slug: string) => `project:${slug}`;
 const ROW = "mx-2 flex min-h-11 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
 const linkCls = (active: boolean) => `${ROW} ${active
   ? "bg-[var(--bi-accent)] font-semibold text-white"
   : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
 
-export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onPreferenceChange, preferencesReady }: {
-  flowProjects: FlowProject[];
-  initialProjectOrder: string[];
-  preferences: UiPreferenceValues;
-  onPreferenceChange: (changes: UiPreferenceValues) => void;
-  preferencesReady: boolean;
+export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, inline = false }: {
+  flowProjects: FlowNavigationProject[];
+  projectOrder: string[];
+  onProjectOrderChange: (order: string[]) => void;
+  inline?: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
-  const [projectOrder, setProjectOrder] = useState(initialProjectOrder);
+  const setProjectOrder = onProjectOrderChange;
+  const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [orderError, setOrderError] = useState("");
@@ -50,10 +48,6 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
     defaultSidebarOrder(flowProjects.map((p) => p.slug), externalProjects.map((p) => p.slug)),
     projectOrder,
   );
-
-  useEffect(() => {
-    if (!savingOrderRef.current) setProjectOrder(initialProjectOrder);
-  }, [initialProjectOrder]);
 
   const saveOrder = async (next: string[]) => {
     if (savingOrderRef.current || next === order) return;
@@ -84,9 +78,7 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
     const target = order[order.indexOf(slug) + step];
     if (target) moveProject(slug, target, step < 0 ? "before" : "after");
   };
-  const toggle = (key: string, collapsed: boolean) => {
-    onPreferenceChange({ [key]: !collapsed });
-  };
+  const toggle = (slug: string) => setExpandedProject(current => current === slug ? null : slug);
 
   // 현재 보고 있는 위치 — 명심할 점 페이지 또는 차트 폴백 규칙으로 판정.
   const active = useMemo(() => {
@@ -130,13 +122,8 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
 
   const renderProject = (entry: (typeof visibleProjects)[number]) => {
     const { project, categories, showNotes } = entry;
-    const pKey = projectKey(project.slug);
     const projectActive = active?.project === project.slug;
-    const pCollapsed = searching
-      ? false
-      : typeof preferences[pKey] === "boolean"
-        ? preferences[pKey] as boolean
-        : !projectActive;
+    const pCollapsed = expandedProject !== project.slug;
 
     return (
       <SidebarProject
@@ -145,8 +132,7 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
         title={project.title}
         count={categories.reduce((n, c) => n + c.charts.length, 0)}
         collapsed={pCollapsed}
-        onToggle={() => toggle(pKey, pCollapsed)}
-        toggleDisabled={!preferencesReady}
+        onToggle={() => toggle(project.slug)}
         movable={!searching && !savingOrder}
         dragging={dragging}
         onDragChange={setDragging}
@@ -211,12 +197,7 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
   };
 
   const renderExternalProject = (project: (typeof externalProjects)[number]) => {
-    const pKey = projectKey(project.slug);
-    const pCollapsed = searching
-      ? false
-      : typeof preferences[pKey] === "boolean"
-        ? preferences[pKey] as boolean
-        : false;
+    const pCollapsed = expandedProject !== project.slug;
 
     return (
       <SidebarProject
@@ -225,8 +206,7 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
         title={project.title}
         count={project.links.length}
         collapsed={pCollapsed}
-        onToggle={() => toggle(pKey, pCollapsed)}
-        toggleDisabled={!preferencesReady}
+        onToggle={() => toggle(project.slug)}
         movable={!searching && !savingOrder}
         dragging={dragging}
         onDragChange={setDragging}
@@ -257,7 +237,7 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
   };
 
   return (
-    <nav aria-label="프로젝트 상세 메뉴" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <nav aria-label="프로젝트 상세 메뉴" className={inline ? "flex flex-col" : "flex min-h-0 flex-1 flex-col overflow-hidden"}>
       <div className="shrink-0 border-b border-[var(--bi-border)] p-3">
         <label className="flex items-center gap-2 rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2.5 focus-within:border-[var(--bi-accent)]">
           <HiOutlineSearch size={14} aria-hidden className="shrink-0 text-[var(--bi-muted)]" />
@@ -267,7 +247,7 @@ export function AppSidebar({ flowProjects, initialProjectOrder, preferences, onP
             className="h-9 min-w-0 w-full bg-transparent text-[12px] outline-none placeholder:text-[var(--bi-muted)]" />
         </label>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto py-2">
+      <div className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
         {!searching ? <Link href="/flows" aria-current={pathname === "/flows" && searchParams.get("view") !== "components" ? "page" : undefined}
           className={linkCls(pathname === "/flows" && searchParams.get("view") !== "components")}>전체 프로젝트</Link> : null}
       {searching &&

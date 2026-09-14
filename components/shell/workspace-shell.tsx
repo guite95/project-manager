@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
-import type { FlowProject } from "@/components/flow/types";
+import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
-import { legacyNavigationPreferences, type UiPreferences } from "@/lib/ui-preferences";
+import { type UiPreferences } from "@/lib/ui-preferences";
 import { AppSidebar } from "./app-sidebar";
 
 const sections = [
@@ -22,11 +22,13 @@ const panelLink = (active: boolean) => `mx-2 flex min-h-11 items-center rounded-
 
 export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initialPreferences, children }: {
   brand: string;
-  flowProjects: FlowProject[];
+  flowProjects: FlowNavigationProject[];
   initialProjectOrder: string[];
   initialPreferences: UiPreferences;
   children: ReactNode;
 }) {
+  const [projectOrder, setProjectOrder] = useState(initialProjectOrder);
+  const [navigationProjects, setNavigationProjects] = useState(flowProjects);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentSection: Section = pathname.startsWith("/today") ? "today" : pathname.startsWith("/guide") ? "guide" : "projects";
@@ -34,9 +36,37 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const [mobileSection, setMobileSection] = useState<Section | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
-  const prefs = useSharedPreferences("navigation", initialPreferences, legacyNavigationPreferences);
+  const prefs = useSharedPreferences("navigation", initialPreferences);
   const collapsed = prefs.values.panelCollapsed === true;
-  const section = sections.find(item => item.id === (mobileOpen ? mobileSection : currentSection));
+  const section = sections.find(item => item.id === currentSection)!;
+
+  useEffect(() => { setProjectOrder(initialProjectOrder); }, [initialProjectOrder]);
+  useEffect(() => { setNavigationProjects(flowProjects); }, [flowProjects]);
+  useEffect(() => {
+    let cancelled = false;
+    let loading = false;
+    const refresh = async () => {
+      if (loading || document.hidden) return;
+      loading = true;
+      try {
+        const response = await fetch("/api/flows/navigation", { cache: "no-store" });
+        if (response.ok) {
+          const projects = await response.json() as FlowNavigationProject[];
+          if (!cancelled) setNavigationProjects(projects);
+        }
+      } catch { /* 기존 메뉴를 유지하고 다음 갱신 때 다시 조회한다. */ }
+      finally { loading = false; }
+    };
+    const interval = setInterval(() => void refresh(), 15_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
 
   useEffect(() => { setMobileOpen(false); }, [pathname, searchParams]);
 
@@ -74,6 +104,21 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   }, [mobileOpen]);
 
   const togglePanel = () => prefs.update({ panelCollapsed: !collapsed });
+  const renderSectionMenu = (id: Section, inline = false) => {
+    if (id === "projects") return (
+      <AppSidebar flowProjects={navigationProjects} projectOrder={projectOrder}
+        onProjectOrderChange={setProjectOrder} inline={inline} />
+    );
+    const title = sections.find(item => item.id === id)!.title;
+    return (
+      <nav aria-label={`${title} 상세 메뉴`} className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
+        {id === "today" ? <>
+          <Link href="/today" aria-current={pathname === "/today" ? "page" : undefined} className={panelLink(pathname === "/today")}>오늘의 할 일</Link>
+          <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className={panelLink(pathname === "/today/history")}>완료 이력</Link>
+        </> : <Link href="/guide" aria-current={pathname === "/guide" ? "page" : undefined} className={panelLink(pathname === "/guide")}>JSON 작성 가이드</Link>}
+      </nav>
+    );
+  };
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--bi-bg)] text-[var(--bi-fg)] md:flex-row">
       <header inert={mobileOpen} className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 md:hidden">
@@ -118,11 +163,31 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
           </button>
           <span className="truncate font-bold">{brand}</span>
         </div>
-        {mobileOpen ? <div className="flex min-h-11 shrink-0 items-center gap-1 border-b border-[var(--bi-border)] px-3 text-[12px] md:hidden">
-          <button type="button" onClick={() => setMobileSection(null)} className="min-h-10 px-1 font-semibold">전체 메뉴</button>
-          {section ? <><HiChevronRight size={14} aria-hidden /><span>{section.title}</span></> : null}
-        </div> : null}
-        {section ? <>
+        {mobileOpen ? <nav aria-label="전체 메뉴" className="min-h-0 flex-1 overflow-y-auto p-2">
+          {sections.map(item => {
+            const expanded = mobileSection === item.id;
+            const contentId = `mobile-section-${item.id}`;
+            const triggerId = `${contentId}-trigger`;
+            return (
+              <section key={item.id} className="border-b border-[var(--bi-border)] last:border-b-0">
+                <h2 className="m-0">
+                  <button id={triggerId} type="button" aria-expanded={expanded} aria-controls={contentId}
+                    onClick={() => setMobileSection(current => current === item.id ? null : item.id)}
+                    className={`flex min-h-16 w-full items-center gap-3 rounded px-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${expanded ? "bg-[var(--bi-sidebar-active)]" : "hover:bg-[var(--bi-sidebar-active)]"}`}>
+                    <item.icon size={20} aria-hidden className="shrink-0" />
+                    <span className="min-w-0 flex-1"><strong className="block text-[13px]">{item.title}</strong><span className="mt-1 block text-[11px] font-normal text-[var(--bi-muted)]">{item.description}</span></span>
+                    {currentSection === item.id ? <span className="text-[10px] font-normal text-[var(--bi-muted)]">현재</span> : null}
+                    <HiChevronRight size={16} aria-hidden className={`shrink-0 transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`} />
+                  </button>
+                </h2>
+                <div id={contentId} role="region" aria-labelledby={triggerId} hidden={!expanded}
+                  className="ml-3 border-l border-[var(--bi-border)] pl-1">
+                  {expanded ? renderSectionMenu(item.id, true) : null}
+                </div>
+              </section>
+            );
+          })}
+        </nav> : <>
           <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[var(--bi-border)] px-4">
             <div className="min-w-0 flex-1">
               <h2 className="m-0 truncate text-[13px] font-bold">{section.title}</h2>
@@ -133,23 +198,8 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
               <HiOutlineChevronDoubleLeft size={14} aria-hidden />
             </button>
           </header>
-          {section.id === "projects" ? <AppSidebar flowProjects={flowProjects} initialProjectOrder={initialProjectOrder}
-            preferences={prefs.values} onPreferenceChange={prefs.update} preferencesReady={prefs.ready} /> : (
-            <nav aria-label={`${section.title} 상세 메뉴`} className="min-h-0 flex-1 overflow-y-auto py-2">
-              {section.id === "today" ? <>
-                <Link href="/today" aria-current={pathname === "/today" ? "page" : undefined} className={panelLink(pathname === "/today")}>오늘의 할 일</Link>
-                <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className={panelLink(pathname === "/today/history")}>완료 이력</Link>
-              </> : <Link href="/guide" aria-current={pathname === "/guide" ? "page" : undefined} className={panelLink(pathname === "/guide")}>JSON 작성 가이드</Link>}
-            </nav>
-          )}
-        </> : <nav aria-label="전체 메뉴" className="min-h-0 flex-1 overflow-y-auto p-2">
-          {sections.map(item => <button key={item.id} type="button" onClick={() => setMobileSection(item.id)}
-            className="flex min-h-16 w-full items-center gap-3 rounded px-3 text-left hover:bg-[var(--bi-sidebar-active)]">
-            <item.icon size={20} aria-hidden />
-            <span className="flex-1"><strong className="block text-[13px]">{item.title}</strong><span className="mt-1 block text-[11px] text-[var(--bi-muted)]">{item.description}</span></span>
-            {currentSection === item.id ? <span className="text-[10px] text-[var(--bi-muted)]">현재</span> : null}<HiChevronRight size={16} aria-hidden />
-          </button>)}
-        </nav>}
+          {renderSectionMenu(section.id)}
+        </>}
       </aside>
 
       <main id="workspace-content" inert={mobileOpen} className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
