@@ -31,7 +31,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const searchParams = useSearchParams();
   const currentSection: Section = pathname.startsWith("/today") ? "today" : pathname.startsWith("/guide") ? "guide" : "projects";
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileSection, setMobileSection] = useState<Section | null>(currentSection);
+  const [mobileSection, setMobileSection] = useState<Section | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
   const prefs = useSharedPreferences("navigation", initialPreferences, legacyNavigationPreferences);
@@ -76,13 +76,13 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const togglePanel = () => prefs.update({ panelCollapsed: !collapsed });
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--bi-bg)] text-[var(--bi-fg)] md:flex-row">
-      <header inert={mobileOpen} className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 md:hidden">
-        <Link href="/flows" className="truncate text-[13px] font-bold">{brand}</Link>
+      <header inert={mobileOpen} className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 md:hidden">
         <button ref={menuButton} type="button" aria-expanded={mobileOpen} aria-controls="workspace-panel"
-          onClick={() => { setMobileSection(currentSection); setMobileOpen(true); }}
-          className="flex min-h-10 items-center gap-1.5 rounded px-2 focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">
+          onClick={() => { setMobileSection(null); setMobileOpen(true); }}
+          className="flex min-h-10 shrink-0 items-center gap-1.5 rounded px-2 focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">
           <HiOutlineMenu size={17} aria-hidden />메뉴
         </button>
+        <Link href="/flows" className="truncate text-[13px] font-bold">{brand}</Link>
       </header>
 
       <nav aria-label="주 메뉴" className="hidden w-[60px] shrink-0 flex-col bg-[var(--bi-rail-bg)] text-[var(--bi-rail-muted)] md:flex">
@@ -112,11 +112,11 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         onClick={event => {
           if (mobileOpen && event.target instanceof Element && event.target.closest("a[href]")) setMobileOpen(false);
         }}>
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--bi-border)] px-3 md:hidden">
-          <span className="font-bold">{brand}</span>
-          <button type="button" aria-label="메뉴 닫기" onClick={() => setMobileOpen(false)} className="flex min-h-10 items-center gap-1 px-2">
+        <div className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--bi-border)] px-3 md:hidden">
+          <button type="button" aria-label="메뉴 닫기" onClick={() => setMobileOpen(false)} className="flex min-h-10 shrink-0 items-center gap-1.5 px-2">
             <HiOutlineX size={16} aria-hidden />닫기
           </button>
+          <span className="truncate font-bold">{brand}</span>
         </div>
         {mobileOpen ? <div className="flex min-h-11 shrink-0 items-center gap-1 border-b border-[var(--bi-border)] px-3 text-[12px] md:hidden">
           <button type="button" onClick={() => setMobileSection(null)} className="min-h-10 px-1 font-semibold">전체 메뉴</button>
