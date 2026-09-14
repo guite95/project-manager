@@ -5,9 +5,10 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
+import { useSharedPreferences } from "./use-shared-preferences";
+import type { UiPreferenceValues } from "@/lib/ui-preferences";
 import type { DataTableColumn } from "./data-table";
 import {
   normalizeTablePreferences,
@@ -38,37 +39,37 @@ export function useManagedColumns<Row>(
     () => normalizeTablePreferences(definitions, undefined),
     [definitions]
   );
-  const [prefs, setPrefs] = useState<TablePreferences>(defaults);
-  const [hydrated, setHydrated] = useState(false);
-  const resizeCleanupRef = useRef<(() => void) | null>(null);
-
-  useEffect(
-    () => () => {
-      resizeCleanupRef.current?.();
+  const legacy = useMemo(() => ({
+    key: storageKey,
+    read: (value: unknown): UiPreferenceValues => {
+      const normalized = normalizeTablePreferences(definitions, value);
+      return { order: normalized.order, hidden: normalized.hidden,
+        ...Object.fromEntries(Object.entries(normalized.widths).map(([key, width]) => [`width:${key}`, width])) };
     },
-    [],
-  );
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      const stored: unknown = raw ? JSON.parse(raw) : undefined;
-      setPrefs(normalizeTablePreferences(definitions, stored));
-    } catch {
-      setPrefs(defaults);
-    } finally {
-      setHydrated(true);
+  }), [storageKey, definitions]);
+  const shared = useSharedPreferences("reference-columns", undefined, legacy);
+  const prefs = useMemo(() => normalizeTablePreferences(definitions, {
+    order: shared.values.order,
+    hidden: shared.values.hidden,
+    widths: Object.fromEntries(Object.entries(shared.values).filter(([key]) => key.startsWith("width:")).map(([key, value]) => [key.slice(6), value])),
+  }), [definitions, shared.values]);
+  const prefsRef = useRef(prefs);
+  prefsRef.current = prefs;
+  const setPrefs = useCallback((change: TablePreferences | ((current: TablePreferences) => TablePreferences)) => {
+    if (!shared.ready) return;
+    const current = prefsRef.current;
+    const next = typeof change === "function" ? change(current) : change;
+    const changes: UiPreferenceValues = {};
+    if (JSON.stringify(current.order) !== JSON.stringify(next.order)) changes.order = next.order;
+    if (JSON.stringify(current.hidden) !== JSON.stringify(next.hidden)) changes.hidden = next.hidden;
+    for (const [key, width] of Object.entries(next.widths)) {
+      if (current.widths[key] !== width) changes[`width:${key}`] = width;
     }
-  }, [defaults, definitions, storageKey]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(prefs));
-    } catch {
-      // 저장이 차단돼도 현재 세션의 상태는 유지한다.
-    }
-  }, [hydrated, prefs, storageKey]);
+    prefsRef.current = next;
+    shared.update(changes);
+  }, [shared.ready, shared.update]);
+  const resizeCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => { resizeCleanupRef.current?.(); }, []);
 
   const toggle = useCallback((key: string) => {
     setPrefs((current) => {
@@ -84,7 +85,7 @@ export function useManagedColumns<Row>(
       }
       return { ...current, hidden: [...hidden] };
     });
-  }, []);
+  }, [setPrefs]);
 
   const move = useCallback((key: string, targetIndex: number) => {
     setPrefs((current) => {
@@ -100,7 +101,7 @@ export function useManagedColumns<Row>(
       order.splice(nextIndex, 0, key);
       return { ...current, order };
     });
-  }, []);
+  }, [setPrefs]);
 
   const setWidth = useCallback(
     (key: string, width: number) => {
@@ -111,7 +112,7 @@ export function useManagedColumns<Row>(
         })
       );
     },
-    [definitions]
+    [definitions, setPrefs]
   );
 
   const startResize = useCallback(
@@ -146,7 +147,7 @@ export function useManagedColumns<Row>(
     [prefs.widths, setWidth]
   );
 
-  const reset = useCallback(() => setPrefs(defaults), [defaults]);
+  const reset = useCallback(() => setPrefs(defaults), [defaults, setPrefs]);
   const byKey = useMemo(
     () => new Map(columns.map((column) => [column.key, column])),
     [columns]
@@ -171,5 +172,8 @@ export function useManagedColumns<Row>(
       setWidth(key, (prefs.widths[key] ?? 120) + delta),
     startResize,
     reset,
+    ready: shared.ready,
+    saving: shared.saving,
+    error: shared.error,
   };
 }

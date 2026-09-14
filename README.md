@@ -82,7 +82,38 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 | `/flows/common/notes` | 명심할 점 — 4단계 우선순위와 서버 자동 저장. 공통 프로젝트에만 있다 |
 | `/guide` | 플로우차트 작성 가이드 (MDX) |
 
-## 사이드바 프로젝트 순서
+## 2단 사이드바와 공유 화면 설정
+
+데스크톱에서는 60px 주 메뉴와 235px 상세 메뉴를 사용한다. 주 메뉴는 오늘의 할 일,
+프로젝트, 작성 가이드로 나뉜다. 상세 메뉴를 접어도 주 메뉴는 남으며, 모바일에서는
+상단 메뉴 버튼으로 전체 메뉴와 각 영역의 상세 메뉴를 탐색한다.
+
+프로젝트 상세 메뉴는 프로젝트 → 카테고리까지만 표시하고, 개별 차트는 본문 상단
+선택기에서 제목·설명·종류(차트/ERD)를 보고 선택한다. 검색 중에는 프로젝트명,
+카테고리명, 차트 제목·설명과 명심할 점·외부 링크까지 검색하며 차트로 바로 이동한다.
+
+화면 설정은 로컬·배포 앱이 사용하는 공유 PostgreSQL의 `app_setting`에 저장한다.
+
+| 키 | 저장 내용 |
+| --- | --- |
+| `sidebar:project-order` | 사이드바 프로젝트 순서 |
+| `ui:navigation` | 상세 메뉴 접힘, 프로젝트별 펼침·접힘 |
+| `ui:reference-columns` | UI 레퍼런스 표의 컬럼 표시·순서·너비 |
+| `board` | 기존 오늘의 할 일 보드 설정 |
+
+`GET/PATCH /api/ui-settings/navigation`, `GET/PATCH /api/ui-settings/reference-columns`는
+허용된 설정만 읽고 저장한다. PATCH는 `{ changes: { ... } }` 형식이며 변경한 항목만
+비교 후 갱신하여 다른 브라우저의 별도 설정 변경을 보존한다. 예를 들어
+`{ "changes": { "panelCollapsed": true, "project:tns": false } }`로 저장한다.
+조회는 DB를 변경하지 않고, 최초 변경 때 설정 키를 생성하므로 스키마 마이그레이션은 없다.
+
+새 UI 설정은 새로고침·창 복귀와 화면이 보이는 동안 15초 간격으로 동기화한다.
+저장 실패는 화면에 알리고 마지막으로 확인한 값으로 복구한다. 기존 브라우저의
+사이드바·컬럼 설정은 공유 키가 없을 때만 최초 이관하며, 공유 값이 있으면 우선한다.
+예전 localStorage 값은 보존하지만 이후 설정 저장에는 사용하지 않는다.
+검색어, 모바일 메뉴의 일시적인 열림, 현재 차트 URL은 영구 설정에 포함하지 않는다.
+
+### 사이드바 프로젝트 순서
 
 프로젝트 제목 오른쪽 손잡이를 드래그해 프로젝트 단위로 순서를 바꾼다.
 손잡이에 키보드 포커스를 두고 `↑`·`↓`를 눌러도 이동한다.
@@ -92,7 +123,7 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 순서는 `app_setting`의 `sidebar:project-order`에 저장한다.
 `GET/PUT /api/sidebar/order`와 앱 셸이 같은 값을 읽으므로, 이 기능이 배포된
 로컬·원격 앱은 새로고침 시 같은 순서를 표시한다. 오늘의 할 일 보드 순서와
-사이드바 펼침·접힘 설정은 별도로 유지한다.
+사이드바 펼침·접힘 설정은 각각의 DB 설정 키로 유지한다.
 
 ## UI 컴포넌트 레퍼런스
 
@@ -104,7 +135,7 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 예시는 `components/ui-reference`, 재사용 부품은 `components/erp`에 있다.
 원본의 `--demo-*` 색상·모션 토큰은 이 앱의 `--bi-*` 토큰에 대응시켰다.
 FocusAI 서버/API에 연결하지 않으며, 폼·필터·모달은 화면 상태만 변경하고
-컬럼 표시·순서·너비는 레퍼런스 전용 localStorage에 저장한다.
+컬럼 표시·순서·너비는 공유 DB의 `ui:reference-columns`에 저장한다.
 기본 테이블에서는 검색·상태·등록일 기간이 샘플 행에 실제로 적용된다.
 
 ## 디렉터리
@@ -138,7 +169,7 @@ components/
     process-flow.tsx     읽기 전용 캔버스 + 전체화면 모달
     flow-legend.tsx      차트별 색 범례
   mdx/                   Callout · Steps (MDX 컴포넌트)
-  shell/                 헤더 + 3단 트리 사이드바(검색)
+  shell/                 2단 사이드바 + 모바일 메뉴 + 프로젝트·카테고리 검색
   rich-text.tsx          `**강조**` 만 지원하는 초소형 리치텍스트
 lib/
   db.ts                  Prisma 클라이언트 (처음 쓸 때 연결한다)

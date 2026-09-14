@@ -7,7 +7,7 @@ const DRAG_TYPE = "application/x-project-management-sidebar";
 
 export function SidebarProject({
   slug, title, count, collapsed, onToggle, children,
-  movable, dragging, onDragChange, onMove, onStep,
+  movable, dragging, onDragChange, onMove, onStep, toggleDisabled = false,
 }: {
   slug: string;
   title: string;
@@ -16,6 +16,7 @@ export function SidebarProject({
   onToggle: () => void;
   children: ReactNode;
   movable: boolean;
+  toggleDisabled?: boolean;
   dragging: string | null;
   onDragChange: (slug: string | null) => void;
   onMove: (slug: string, target: string, edge: "before" | "after") => void;
@@ -55,12 +56,13 @@ export function SidebarProject({
       {dragging && dragging !== slug && edge ? (
         <span aria-hidden className={`pointer-events-none absolute inset-x-2 z-10 h-0.5 bg-[var(--bi-accent)] ${edge === "before" ? "top-0" : "bottom-0"}`} />
       ) : null}
-      <div className="group mx-2 flex h-8 items-center rounded-[3px] hover:bg-[var(--bi-sidebar-active)]">
+      <div className={`group mx-2 mt-1 flex min-h-11 items-center rounded-[3px] ${collapsed ? "hover:bg-[var(--bi-sidebar-active)]" : "bg-[var(--bi-sidebar-active)]"}`}>
         <button
           type="button"
           aria-expanded={!collapsed}
+          disabled={toggleDisabled}
           onClick={onToggle}
-          className="flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-[3px] pr-1 pl-2 text-[12px] font-semibold text-[var(--bi-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]"
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-1.5 rounded-[3px] pr-1 pl-2 text-[12px] font-semibold text-[var(--bi-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]"
         >
           <HiChevronRight size={10} aria-hidden className={`shrink-0 transition-transform ${collapsed ? "rotate-0" : "rotate-90"}`} />
           <span className="truncate">{title}</span>
@@ -91,7 +93,7 @@ export function SidebarProject({
           <HiOutlineSelector size={14} aria-hidden />
         </button>
       </div>
-      {!collapsed ? children : null}
+      {!collapsed ? <div className="ml-3 border-l border-[var(--bi-border)] py-0.5">{children}</div> : null}
     </div>
   );
 }

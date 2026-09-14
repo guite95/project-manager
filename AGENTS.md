@@ -7,6 +7,8 @@
 - ERD drill-down reads `app_setting` key `erd:tns`. Update this snapshot and its derived chart documents together; the ordinary chart PUT deliberately rejects ERD edits.
 - The user explicitly chose to share the entire project database between local and deployed apps. `pnpm dev` opens a personal SSH tunnel and uses the server DB. `pnpm dev:local` explicitly uses the preserved local DB.
 - Existing local-only business rows must not be silently merged, deleted, or overwritten when switching DB targets.
+- UI preferences use shared `app_setting` keys: `ui:navigation` (panel/project collapse), `ui:reference-columns` (column visibility/order/width), and the existing `sidebar:project-order` and `board`. Do not introduce localStorage writers for preferences. Legacy browser preferences import only when the shared key is absent; existing DB preferences take priority.
+- UI preference PATCH writes merge only changed fields with compare-and-swap retries. GET is read-only; keys are created on first change, without a schema migration. Navigation preferences and column preferences refresh on focus and every 15 seconds while visible.
 
 ## Database changes and security
 

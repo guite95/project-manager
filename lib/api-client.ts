@@ -8,6 +8,7 @@ import type { Completion } from "@/lib/completions";
 import type { LegacyPayload } from "@/lib/import-legacy";
 import type { ProjectNote } from "@/lib/project-notes";
 import type { CustomProject, Issue, TodayBoard } from "@/lib/today-board";
+import type { UiPreferenceScope, UiPreferenceValues, UiPreferences } from "@/lib/ui-preferences";
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, {
@@ -92,6 +93,16 @@ export async function putSidebarOrder(projectOrder: string[]): Promise<string[]>
     body: JSON.stringify({projectOrder}),
   });
   return ((await response.json()) as {projectOrder:string[]}).projectOrder;
+}
+
+export async function fetchUiPreferences(scope: UiPreferenceScope): Promise<UiPreferences> {
+  return (await request(`/api/ui-settings/${scope}`, { cache: "no-store" })).json();
+}
+
+export async function patchUiPreferences(scope: UiPreferenceScope, changes: UiPreferenceValues, onlyIfMissing = false): Promise<UiPreferences> {
+  return (await request(`/api/ui-settings/${scope}`, {
+    method: "PATCH", body: JSON.stringify({ changes, onlyIfMissing }), keepalive: true,
+  })).json();
 }
 
 /* ---------------------------------------------------------------- 명심할 점 */

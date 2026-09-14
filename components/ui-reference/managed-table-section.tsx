@@ -108,11 +108,15 @@ export function ManagedTableSection() {
     resizeBy,
     startResize,
     reset,
+    ready,
+    saving,
+    error,
   } = useManagedColumns(STORAGE_KEY, COLUMNS);
 
   return (
     <DetailSection
       actions={
+        <fieldset disabled={!ready} className="m-0 border-0 p-0">
         <ColumnSettingsPopover
           columns={COLUMNS}
           onMove={move}
@@ -120,17 +124,20 @@ export function ManagedTableSection() {
           onToggle={toggle}
           prefs={prefs}
         />
+        </fieldset>
       }
       title="9. 관리형 테이블 · 컬럼 표시·순서·너비"
     >
+      {error ? <p role="alert" className="mb-2 text-[12px] text-[var(--bi-error)]">{error}</p> : null}
+      <p role="status" className="mb-2 text-[11px] text-[var(--bi-muted)]">{!ready ? "공유 설정을 불러오는 중…" : saving ? "컬럼 설정 저장 중…" : "컬럼 설정은 모든 기기에서 공유됩니다."}</p>
       <div className="overflow-x-auto">
         <DataTable
           caption="관리형 테이블 샘플"
           columns={visibleColumns}
           columnWidths={columnWidths}
           emptyMessage="데이터가 없습니다."
-          onResizeStart={startResize}
-          onResizeStep={resizeBy}
+          onResizeStart={ready ? startResize : undefined}
+          onResizeStep={ready ? resizeBy : undefined}
           rowKey={(row) => String(row.id)}
           rows={ROWS}
         />

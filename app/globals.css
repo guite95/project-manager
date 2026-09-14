@@ -30,6 +30,10 @@
   --bi-card-bg: #ffffff;
   --bi-sidebar-bg: #fafafa;
   --bi-sidebar-active: #e8e8e8;
+  --bi-rail-bg: #111827;
+  --bi-rail-active: #293142;
+  --bi-rail-muted: #a7aebc;
+  --bi-rail-indicator: #899ac5;
   --bi-table-header: #fafafa;
   --bi-success: #10b981;
   --bi-warning: #f5a623;

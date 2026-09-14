@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FlowLegend } from "@/components/flow/flow-legend";
 import { ProcessFlow } from "@/components/flow/process-flow";
 import { ErdViewer } from "@/components/flow/erd-viewer";
+import { ChartSelector } from "@/components/flow/chart-selector";
 import { RichText } from "@/components/rich-text";
 import { resolveChart } from "@/lib/flows/registry";
 import { getFlowProject, getTnsErdSnapshot } from "@/lib/server/flows-store";
@@ -53,7 +54,11 @@ export default async function ProjectFlowsPage({
   const { category, chart } = resolved;
 
   return (
-    <div className="mx-auto max-w-[1200px] px-6 py-6">
+    <>
+      <ChartSelector key={`${project.slug}/${category.slug}/${chart.slug}`} projectSlug={project.slug} projectTitle={project.title}
+        categorySlug={category.slug} categoryTitle={category.title} selectedSlug={chart.slug}
+        charts={category.charts.map(({ slug, title, description, erdDomain }) => ({ slug, title, description, erdDomain }))} />
+    <div className="mx-auto max-w-[1200px] px-4 py-5 md:px-6 md:py-6">
       <header className="mb-4 border-b border-[var(--bi-border)] pb-4">
         <h1 className="mt-0 mb-1 text-[20px] font-bold tracking-[-0.01em] text-[var(--bi-fg)]">
           {project.title}
@@ -64,17 +69,6 @@ export default async function ProjectFlowsPage({
           </p>
         ) : null}
       </header>
-
-      <nav
-        aria-label="위치"
-        className="mb-2 flex items-center gap-1.5 text-[11px] text-[var(--bi-muted)]"
-      >
-        <span>{project.title}</span>
-        <span aria-hidden>›</span>
-        <span>{category.title}</span>
-        <span aria-hidden>›</span>
-        <span className="font-semibold text-[var(--bi-fg)]">{chart.title}</span>
-      </nav>
 
       <h2 className="mt-0 mb-1 text-[17px] font-bold tracking-[-0.01em] text-[var(--bi-fg)]">
         {chart.title}
@@ -107,5 +101,6 @@ export default async function ProjectFlowsPage({
         </section>
       ) : null}
     </div>
+    </>
   );
 }
