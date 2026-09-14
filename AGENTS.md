@@ -28,3 +28,5 @@
 
 - Project accordions start fully collapsed on desktop and mobile, with only one project open at a time. Expansion is transient; do not restore legacy DB project expansion keys.
 - Write new comments in Korean or English; do not use Japanese.
+- Imported Focus AI content lives in `flow_document.document.content` (schedule, ERD, slides, HTML, notice). `data/imports/focus-ai-2026-09-14.json` is an import snapshot, not a runtime source. WBS completion is a read-only snapshot, without upstream synchronization.
+- Imported HTML must render only in a sandboxed iframe with a restrictive CSP; never render it in the application DOM or enable scripts/same-origin. Menu summaries must exclude content bodies and embedded assets.

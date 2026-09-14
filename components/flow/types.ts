@@ -1,3 +1,5 @@
+import type { ProjectContent } from "../../lib/flows/content";
+
 /* -------------------------------------------------------------------------
  * 플로우차트 선언 타입.
  *
@@ -108,6 +110,8 @@ export type FlowDirection = "LR" | "TB";
 
 /** 플로우차트 한 장. */
 export type FlowChart = {
+  content?: ProjectContent;
+  source?: { url: string; capturedAt: string };
   erdDomain?: string;
   /** `chart` 쿼리파람 값 — 같은 카테고리 안에서 유일해야 한다. */
   slug: string;

@@ -1,3 +1,4 @@
+import type { ProjectContent } from "../flows/content.ts";
 import { cache } from "react";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db.ts";
@@ -5,7 +6,7 @@ import { resolveChart } from "../flows/registry.ts";
 import { getFlowDocument } from "./flows-store.ts";
 import type { FlowNavigationChart, FlowNavigationProject } from "../navigation/flow-navigation.ts";
 
-export type FlowChartSummary = FlowNavigationChart & { erdDomain?: string; nodeCount: number; edgeCount: number };
+export type FlowChartSummary = FlowNavigationChart & { erdDomain?: string; contentKind?: ProjectContent["kind"]; nodeCount: number; edgeCount: number };
 export type FlowProjectSummary = {
   slug: string; title: string; intro?: string;
   categories: { slug: string; title: string; charts: FlowChartSummary[] }[];
@@ -14,7 +15,7 @@ type CatalogRow = {
   projectSlug: string; projectTitle: string; intro: string | null;
   categorySlug: string | null; categoryTitle: string | null;
   chartSlug: string | null; chartTitle: string | null; description: string | null;
-  erdDomain: string | null; nodeCount: number; edgeCount: number;
+  erdDomain: string | null; contentKind: ProjectContent["kind"] | null; nodeCount: number; edgeCount: number;
 };
 
 /** JSONB에서 필요한 필드만 조회한다. 그래프 전체를 Node.js로 가져오지 않는다. */
@@ -23,7 +24,7 @@ export async function readFlowCatalog(projectSlug?: string): Promise<FlowProject
     SELECT p.slug AS "projectSlug", p.title AS "projectTitle", p.intro,
       c.slug AS "categorySlug", c.title AS "categoryTitle",
       d.slug AS "chartSlug", d.document->>'title' AS "chartTitle",
-      d.document->>'description' AS description, d.document->>'erdDomain' AS "erdDomain",
+      d.document->>'description' AS description, d.document->>'erdDomain' AS "erdDomain", d.document->'content'->>'kind' AS "contentKind",
       COALESCE(jsonb_array_length(d.document->'nodes'), 0)::int AS "nodeCount",
       COALESCE(jsonb_array_length(d.document->'edges'), 0)::int AS "edgeCount"
     FROM flow_project p
@@ -49,6 +50,7 @@ export async function readFlowCatalog(projectSlug?: string): Promise<FlowProject
       slug: row.chartSlug, title: row.chartTitle ?? row.chartSlug,
       ...(row.description === null ? {} : { description: row.description }),
       ...(row.erdDomain === null ? {} : { erdDomain: row.erdDomain }),
+      ...(row.contentKind == null ? {} : { contentKind: row.contentKind }),
       nodeCount: row.nodeCount, edgeCount: row.edgeCount,
     });
   }

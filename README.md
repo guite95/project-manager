@@ -257,3 +257,22 @@ pnpm db:shared -- node scripts/your-db-command.mjs
 공유 DB에서 `migrate dev`, `db push`, reset과 통합 테스트를 실행하지 않는다.
 로컬 DB에만 남은 실제 업무 데이터는 자동으로 서버와 합치거나 삭제하지 않는다.
 공유 전환 전 데이터 차이를 확인하고 필요한 항목만 별도로 이관한다.
+
+## 포커스에이아이 레퍼런스 콘텐츠
+
+`/flows/focus-ai`에서 2026-09-14에 가져온 원본 콘텐츠 24개와 빈 회의록 안내를 확인한다.
+업무·구조 차트 20개, WBS/TODO 111개(완료 26개), ERD 38개 테이블/114개 FK,
+킥오프 슬라이드 14장, Forecast HTML 보고서를 포함한다. 원본 회의록은 0건이다.
+NotebookLM 링크는 포함하지 않는다.
+
+이 데이터는 공유 DB의 `flow_project`, `flow_category`, `flow_document.document`에 저장한다.
+`data/imports/focus-ai-2026-09-14.json`은 최초 가져오기용 스냅샷이며, 런타임은 이 파일을
+읽지 않는다. 일정·완료 상태도 가져온 시점의 스냅샷이고 원본 사이트와 자동 동기화하지 않는다.
+슬라이드 이미지와 CSS, 보고서 본문을 함께 저장하여 원본 로그인과 외부 요청 없이 표시한다.
+HTML은 스크립트·폼·외부 요청을 허용하지 않는 sandbox iframe에서만 표시한다.
+
+`pnpm db:shared -- node scripts/import-focus-reference.mjs`는 읽기 전용 사전 검사다.
+사용자가 가져오기를 승인한 경우에만 `--apply`로 추가한다. 적용 전 관련 카탈로그를
+`~/pm-backups`에 백업하고 파일 해시를 검증한다. 프로젝트 전체를 한 트랜잭션으로 추가하며,
+동일 slug가 있으면 덮어쓰지 않고 중단한다. 적용 후 문서 전체 일치와 기존 프로젝트 보존을
+검증한다. 스키마 변경은 없으며, 새 자료 뷰어는 이 코드가 배포된 앱에서 사용할 수 있다.

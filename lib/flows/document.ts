@@ -1,3 +1,4 @@
+import { validateProjectContent } from "./content.ts";
 import type { FlowChart } from '../../components/flow/types.ts';
 
 const nodeKinds = new Set(['intake','core','master','future','entry','model','deterministic','verify','gate','activate','store','failure']);
@@ -40,6 +41,15 @@ export function parseFlowChart(value: unknown): FlowChart {
   if (c.howToRead !== undefined) strings(c.howToRead, 'howToRead');
   for (const key of ['direction','groupDirection']) requireValue(c[key] === undefined || c[key] === 'LR' || c[key] === 'TB', key);
   requireValue(c.nodeWidth === undefined || (typeof c.nodeWidth === 'number' && Number.isFinite(c.nodeWidth) && c.nodeWidth > 0), 'nodeWidth');
+  if (c.content !== undefined) {
+    try { validateProjectContent(c.content); } catch { throw new FlowDocumentError('프로젝트 콘텐츠 형식이 올바르지 않습니다.'); }
+  }
+  if (c.source !== undefined) {
+    const source = object(c.source, 'source');
+    string(source.url, 'source.url'); string(source.capturedAt, 'source.capturedAt');
+    try { requireValue(new URL(source.url as string).protocol === 'https:', 'source.url'); }
+    catch { throw new FlowDocumentError('출처 URL이 올바르지 않습니다.'); }
+  }
   const groups = uniqueRows(c.groups ?? [], 'groups');
   const nodes = uniqueRows(c.nodes, 'nodes');
   const edges = uniqueRows(c.edges, 'edges');

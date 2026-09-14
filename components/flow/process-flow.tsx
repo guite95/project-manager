@@ -45,7 +45,7 @@ export function FlowCanvas({ chart, onEntitySelect }: { chart: FlowChart; onEnti
       fitViewOptions={{ padding: 0.15 }}
       // 넓은 차트도 fitView 가 전부 담을 수 있어야 한다. 0.3 이면 노드가 많은
       // LR 차트에서 클램프에 걸려 좌우가 잘린다.
-      minZoom={chart.erdDomain ? 0.02 : 0.1}
+      minZoom={chart.erdDomain || chart.content?.kind === "erd" ? 0.02 : 0.1}
       maxZoom={2}
       nodesDraggable={false}
       nodesConnectable={false}

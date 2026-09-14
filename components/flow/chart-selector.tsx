@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { HiChevronDown, HiCheck } from "react-icons/hi";
+import { contentLabels, type ProjectContent } from "@/lib/flows/content";
 import type { FlowChart } from "./types";
 import { chartHref } from "@/lib/flows/registry";
 
-type ChartOption = Pick<FlowChart, "slug" | "title" | "description" | "erdDomain">;
+type ChartOption = Pick<FlowChart, "slug" | "title" | "description" | "erdDomain"> & { contentKind?: ProjectContent["kind"] };
+const kindLabel = (chart: ChartOption) => chart.erdDomain ? "ERD" : chart.contentKind ? contentLabels[chart.contentKind] : "차트";
 const badge = "shrink-0 rounded-[3px] bg-[var(--bi-accent-light)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--bi-accent)]";
 
 export function ChartSelector({ projectSlug, projectTitle, categorySlug, categoryTitle, charts, selectedSlug }: {
@@ -62,7 +64,7 @@ export function ChartSelector({ projectSlug, projectTitle, categorySlug, categor
         <button type="button" ref={trigger} aria-expanded={open} aria-controls={open ? id : undefined}
           aria-label={`차트 선택: ${selected.title}`} onClick={() => setOpen(current => !current)}
           className="flex min-h-9 w-full items-center gap-2 rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">
-          <span className={badge}>{selected.erdDomain ? "ERD" : "차트"}</span>
+          <span className={badge}>{kindLabel(selected)}</span>
           <span className="min-w-0 flex-1 truncate text-[12px] font-semibold">{selected.title}</span>
           <span className="shrink-0 text-[10px] text-[var(--bi-muted)]">{charts.length}</span>
           <HiChevronDown size={14} aria-hidden className={`shrink-0 text-[var(--bi-muted)] ${open ? "rotate-180" : ""}`} />
@@ -73,7 +75,7 @@ export function ChartSelector({ projectSlug, projectTitle, categorySlug, categor
             aria-current={chart.slug === selectedSlug ? "page" : undefined}
             onClick={() => { setOpen(false); trigger.current?.focus(); }}
             className={`flex min-h-12 items-start gap-2 px-3 py-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--bi-accent)] ${chart.slug === selectedSlug ? "bg-[var(--bi-accent-light)]" : "hover:bg-[var(--bi-sidebar-bg)]"}`}>
-            <span className={badge}>{chart.erdDomain ? "ERD" : "차트"}</span>
+            <span className={badge}>{kindLabel(chart)}</span>
             <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold">{chart.title}</span>
               {chart.description ? <span className="mt-1 block text-[11px] leading-relaxed text-[var(--bi-muted)]">{chart.description}</span> : null}
             </span>

@@ -4,6 +4,7 @@ import { FlowLegend } from "@/components/flow/flow-legend";
 import { ProcessFlow } from "@/components/flow/process-flow";
 import { ErdViewer } from "@/components/flow/erd-viewer";
 import { ChartSelector } from "@/components/flow/chart-selector";
+import { ProjectContentView } from "@/components/flow/project-content";
 import { RichText } from "@/components/rich-text";
 import { getTnsErdSnapshot } from "@/lib/server/flows-store";
 import { getChartPage } from "@/lib/server/flow-catalog-store";
@@ -53,7 +54,7 @@ export default async function ProjectFlowsPage({
     <>
       <ChartSelector key={`${project.slug}/${category.slug}/${chart.slug}`} projectSlug={project.slug} projectTitle={project.title}
         categorySlug={category.slug} categoryTitle={category.title} selectedSlug={chart.slug}
-        charts={category.charts.map(({ slug, title, description, erdDomain }) => ({ slug, title, description, erdDomain }))} />
+        charts={category.charts.map(({ slug, title, description, erdDomain, contentKind }) => ({ slug, title, description, erdDomain, contentKind }))} />
     <div className="mx-auto max-w-[1200px] px-4 py-5 md:px-6 md:py-6">
       <header className="mb-4 border-b border-[var(--bi-border)] pb-4">
         <h1 className="mt-0 mb-1 text-[20px] font-bold tracking-[-0.01em] text-[var(--bi-fg)]">
@@ -75,7 +76,9 @@ export default async function ProjectFlowsPage({
         </p>
       ) : null}
 
-      {chart.erdDomain ? (
+      {chart.content ? (
+        <ProjectContentView key={chart.slug} chart={chart} />
+      ) : chart.erdDomain ? (
         <ErdViewer key={chart.erdDomain} domain={chart.erdDomain} snapshot={await getTnsErdSnapshot()} />
       ) : (
         <>
@@ -84,6 +87,7 @@ export default async function ProjectFlowsPage({
         </>
       )}
 
+      {chart.source ? <p className="mt-4 text-[11px] text-[var(--bi-muted)]">레퍼런스 콘텐츠 · 가져온 날짜 {chart.source.capturedAt.slice(0, 10)}</p> : null}
       {chart.howToRead?.length ? (
         <section className="mt-5">
           <h3 className="mt-0 mb-2 text-[14px] font-semibold text-[var(--bi-fg)]">
