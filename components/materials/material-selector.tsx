@@ -6,6 +6,7 @@ import { Badge } from '@/components/erp/badge';
 import { Button } from '@/components/erp/button';
 import { Dropdown } from '@/components/erp/dropdown';
 import { materialsHref, type MaterialSummary } from '@/lib/materials';
+import { MaterialDeleteButton } from './material-delete-button';
 
 export const materialFormatLabel = (format: string) => format === 'slides' ? '발표' : format.toUpperCase();
 
@@ -31,5 +32,6 @@ export function MaterialSelector({ project, projectTitle, materials, selectedSlu
       <span className="shrink-0 text-[11px] tabular-nums text-[var(--bi-muted)]">{selected ? `${index + 1} / ${materials.length}` : `${materials.length}개`}</span>
     </div>
     <Button size="sm" variant="secondary" onClick={onAdd ?? (() => router.push(`${materialsHref(project)}?add=1`))}>자료 추가</Button>
+    {selected ? <MaterialDeleteButton key={selected.slug} project={project} slug={selected.slug} title={selected.title} returnToList /> : null}
   </div>;
 }

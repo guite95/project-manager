@@ -24,6 +24,15 @@ export const getMaterial = cache(async (project: string, slug: string) => {
   return record && ['material', 'html', 'slides'].includes(record.chart.content?.kind ?? '') ? record : null;
 });
 
+export async function deleteMaterial(projectSlug: string, slug: string): Promise<boolean> {
+  if (projectSlug === 'common') return false;
+  const deleted = await prisma.$executeRaw(Prisma.sql`
+    DELETE FROM flow_document WHERE project_slug = ${projectSlug} AND slug = ${slug}
+      AND document->'content'->>'kind' IN ('material', 'html', 'slides')
+  `);
+  return deleted > 0;
+}
+
 export async function createMaterial(projectSlug: string, title: string, content: MaterialContent) {
   validateMaterial(content);
   if (!title.trim() || title.trim().length > 200) throw new Error('자료 제목은 1~200자로 입력해 주세요.');

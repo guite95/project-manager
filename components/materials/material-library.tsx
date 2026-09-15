@@ -9,6 +9,7 @@ import { TextField } from '@/components/erp/form-field';
 import { FormGrid } from '@/components/erp/form-layout';
 import { hangulIncludes } from '@/components/erp/hangul-match';
 import { MaterialSelector, materialFormatLabel } from './material-selector';
+import { MaterialDeleteButton } from './material-delete-button';
 import { useRef, useState, type FormEvent } from 'react';
 import { materialsHref, MAX_MATERIAL_BYTES, type MaterialSummary } from '@/lib/materials';
 
@@ -76,6 +77,7 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
           { key: 'title', header: '자료', render: row => <Link href={materialsHref(project, row.slug)} className="font-semibold text-[var(--bi-accent)] hover:underline">{row.title}</Link> },
           { key: 'file', header: '파일명', render: row => row.fileName ?? '가져온 자료' },
           { key: 'updated', header: '등록·수정일', render: row => row.updatedAt.slice(0, 10) },
+          { key: 'actions', header: '관리', render: row => <MaterialDeleteButton project={project} slug={row.slug} title={row.title} /> },
         ]} />
     </div>
     </div>
