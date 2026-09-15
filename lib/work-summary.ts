@@ -1,3 +1,5 @@
+import { PERSONAL_ISSUES_SLUG } from "./today-board.ts";
+
 /** 작업 정리는 원본 완료 기록과 Git 증거를 참조하는 날짜별 스냅샷이다. */
 export type WorkProject = { key: string; title: string };
 export type WorkSource = {
@@ -225,10 +227,13 @@ export function groupWorkSummary(report: WorkSummary) {
   return [...groups.values()];
 }
 export function formatWorkSummary(report: WorkSummary): string {
-  if (!report.summary.items.length) return "";
+  const groups = groupWorkSummary(report).filter(
+    (group) => group.key !== `app:${PERSONAL_ISSUES_SLUG}`,
+  );
+  if (!groups.length) return "";
   const [, month, day] = report.evidence.date.split("-");
   const lines = [`${month}/${day} 작업내용`];
-  for (const group of groupWorkSummary(report)) {
+  for (const group of groups) {
     lines.push(`\`${group.title}\``);
     for (const item of group.items) lines.push(`- ${item.title}`);
   }
