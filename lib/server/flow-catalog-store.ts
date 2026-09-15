@@ -58,9 +58,18 @@ export async function readFlowCatalog(projectSlug?: string): Promise<FlowProject
 }
 
 export function toFlowNavigation(projects: FlowProjectSummary[]): FlowNavigationProject[] {
-  return projects.map(({ slug, title, categories }) => ({ slug, title, categories: categories.map(({ slug, title, charts }) => ({
+  return projects.map(({ slug, title, categories }) => ({ slug, title, categories: flowCategories(categories).map(({ slug, title, charts }) => ({
     slug, title, charts: charts.map(({ slug, title, description }) => ({ slug, title, ...(description === undefined ? {} : { description }) })),
   })) }));
+}
+
+/** 회의록 전용 메뉴에서 보여 줄 문서와 과거의 빈 안내만 일반 차트 메뉴에서 제외한다. */
+export function flowCategories(categories: FlowProjectSummary['categories']): FlowProjectSummary['categories'] {
+  return categories.flatMap(category => {
+    const charts = category.charts.filter(chart => chart.contentKind !== 'meeting' &&
+      !(category.slug === 'meetings' && chart.slug === 'meetings' && chart.contentKind === 'notice'));
+    return category.charts.length && !charts.length ? [] : [{ ...category, charts }];
+  });
 }
 
 export async function readChartPage(projectSlug: string, categorySlug?: string, chartSlug?: string) {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { meetingsHref } from "@/lib/meetings";
 import { FlowLegend } from "@/components/flow/flow-legend";
 import { ProcessFlow } from "@/components/flow/process-flow";
 import { ErdViewer } from "@/components/flow/erd-viewer";
@@ -49,6 +50,8 @@ export default async function ProjectFlowsPage({
   const resolved = await getChartPage(projectSlug, first(sp.cat), first(sp.chart));
   if (!resolved) notFound();
   const { project, category, chart } = resolved;
+  if (chart.content?.kind === 'meeting') redirect(meetingsHref(project.slug, chart.slug));
+  if (category.slug === 'meetings' && chart.slug === 'meetings' && chart.content?.kind === 'notice') redirect(meetingsHref(project.slug));
 
   return (
     <>

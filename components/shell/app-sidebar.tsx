@@ -22,6 +22,7 @@ import {
 } from "@/lib/project-notes";
 
 import { searchSidebarProjects } from "@/lib/navigation/sidebar-search";
+import { meetingsHref } from "@/lib/meetings";
 
 const ROW = "mx-2 flex min-h-11 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
 const linkCls = (active: boolean) => `${ROW} ${active
@@ -82,6 +83,10 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
 
   // 현재 보고 있는 위치 — 명심할 점 페이지 또는 차트 폴백 규칙으로 판정.
   const active = useMemo(() => {
+    const meetingPath = pathname.match(/^\/flows\/([^/]+)\/meetings(?:\/[^/]+)?$/);
+    if (meetingPath && flowProjects.some(p => p.slug === meetingPath[1])) {
+      return { project: meetingPath[1], category: null, chart: null, view: "meetings" as const };
+    }
     const notesProjectSlug = projectNotesProjectSlug(pathname);
     if (notesProjectSlug) {
       const project = flowProjects.find((p) => p.slug === notesProjectSlug);
@@ -121,7 +126,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   );
 
   const renderProject = (entry: (typeof visibleProjects)[number]) => {
-    const { project, categories, showNotes } = entry;
+    const { project, categories, showNotes, showMeetings } = entry;
     const projectActive = active?.project === project.slug;
     const pCollapsed = expandedProject !== project.slug;
 
@@ -141,6 +146,9 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
       >
         {!pCollapsed ? (
           <>
+            {showMeetings ? <Link href={meetingsHref(project.slug)} aria-label={`${project.title} 회의록`}
+              aria-current={projectActive && active?.view === "meetings" ? "page" : undefined}
+              className={linkCls(projectActive && active?.view === "meetings")}>회의록</Link> : null}
             {showNotes ? (
               <Link
                 aria-label={`${project.title} 명심할 점`}

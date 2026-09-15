@@ -79,6 +79,8 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 | `/today/history` | 날짜별 완료 이력 — 체크한 순간의 날짜로 쌓인다 |
 | `/flows` | 전체 목록 — 프로젝트 → 카테고리 → 차트 |
 | `/flows/[project]?cat=&chart=` | 프로젝트 화면 — 쿼리파람으로 차트 전환, 잘못된 값은 첫 차트 폴백 |
+| `/flows/[project]/meetings` | 각 프로젝트의 회의록 목록·검색, 등록 전 빈 화면 |
+| `/flows/[project]/meetings/[meeting]` | 회의록 상세 — 요약·논의·결정·태스크과 전사본 원문 탭 |
 | `/flows/common/notes` | 명심할 점 — 4단계 우선순위와 서버 자동 저장. 공통 프로젝트에만 있다 |
 | `/guide` | 플로우차트 작성 가이드 (MDX) |
 
@@ -213,6 +215,13 @@ tsconfig 만 아는 것이라 `node --test` 가 `.ts` 를 직접 읽을 때 해�
 
 ## 플로우차트 JSON 저장
 
+프로젝트마다 회의록 공간이 있으며 결정 사항과 태스크를 추가·수정·삭제하고 저장할 수 있다.
+로컬 스킬이 생성할 결과물은 기존 문서의
+`content.kind: "meeting"` 형식으로 표시하며, 규약은 [회의록 문서](docs/meetings.md)를
+참고한다. `skills/sync-sum`는 Codex·Claude Code 공용 로컬 스킬이며,
+전사본 기반 초안 생성·원문 보존·형식 검증과 승인한 신규 회의록 등록을 지원한다.
+`node skills/sync-sum/scripts/install.mjs`로 두 도구에 설치한다.
+
 현재 차트의 원천은 PostgreSQL이다. `flow_project`와 `flow_category`가 순서와 메뉴 정보를,
 `flow_document.document` JSONB가 차트 한 장의 `nodes`, `edges`, `groups`, 설명과 배치 방향을 담는다.
 `app_setting`의 `erd:tns` 값은 ERD 상세/드릴다운에 쓰는 전체 스키마 스냅샷이다.
@@ -276,3 +285,12 @@ HTML은 스크립트·폼·외부 요청을 허용하지 않는 sandbox iframe�
 `~/pm-backups`에 백업하고 파일 해시를 검증한다. 프로젝트 전체를 한 트랜잭션으로 추가하며,
 동일 slug가 있으면 덮어쓰지 않고 중단한다. 적용 후 문서 전체 일치와 기존 프로젝트 보존을
 검증한다. 스키마 변경은 없으며, 새 자료 뷰어는 이 코드가 배포된 앱에서 사용할 수 있다.
+
+## 작업 정리 스킬
+
+완료 이력의 **작업 정리** 탭에는 `work-sum`이 Git 커밋과 완료 체크를 합쳐 저장한
+날짜별 결과가 표시된다. **작업내용 복사**도 이 탭에서 선택한 날짜의 정리 목록을 복사한다.
+기본 Git 탐색 위치는 `~/Documents/project`이며 원본 완료 기록은 유지한다.
+
+`node skills/work-sum/scripts/install.mjs`로 Codex와 Claude에 함께 설치한다.
+사용법과 저장·검증 기준은 [docs/work-summary.md](docs/work-summary.md)를 참고한다.

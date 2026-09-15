@@ -416,39 +416,3 @@ export function groupIssuesByProject(
 
   return groups;
 }
-
-/** "2026-09-08" → "09/08". 형식이 어긋나면 받은 값을 그대로 쓴다. */
-function formatMonthDay(date: string): string {
-  if (!DATE_PATTERN.test(date)) return date;
-  const [, month, day] = date.split("-");
-  return `${month}/${day}`;
-}
-
-/**
- * 공통을 제외한 완료 항목만 프로젝트별로 묶어 붙여넣기용 작업내용 텍스트를 만든다.
- * 순서와 미분류 처리는 화면과 같게 `groupIssuesByProject` 를 그대로 쓴다.
- * 복사할 항목이 하나도 없으면 빈 문자열.
- */
-export function formatWorklog(
-  board: TodayBoard,
-  registryProjects: { slug: string; title: string }[],
-  date: string,
-): string {
-  const done = board.today.filter((item) => item.done && item.projectSlug !== "common");
-  if (done.length === 0) return "";
-
-  const groups = groupIssuesByProject(
-    done,
-    registryProjects,
-    board.customProjects,
-    board.projectOrder,
-  );
-
-  const lines = [`${formatMonthDay(date)} 작업내용`];
-  for (const group of groups) {
-    if (group.issues.length === 0) continue;
-    lines.push(`\`${group.title}\``);
-    for (const issue of group.issues) lines.push(`- ${issue.title}`);
-  }
-  return lines.join("\n");
-}

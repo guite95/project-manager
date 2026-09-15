@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { HiOutlineArrowRight, HiOutlineClipboardCopy } from "react-icons/hi";
+import { HiOutlineArrowRight } from "react-icons/hi";
 import { Badge } from "@/components/erp/badge";
-import { Button } from "@/components/erp/button";
 import { EditButton, InlineEdit } from "@/components/inline-edit";
 import {
   ISSUE_DRAG_TYPE,
@@ -19,7 +18,6 @@ type TodayListProps = {
   onRename: (item: TodayItem, title: string) => void;
   onReturn: (item: TodayItem) => void;
   onDropIssue: (issueId: string) => void;
-  onCopyWorklog: () => Promise<boolean>;
 };
 
 /** "2026-09-09" → "9월 9일 (수)". 클라이언트에서만 렌더하므로 하이드레이션 걱정이 없다. */
@@ -41,22 +39,11 @@ export function TodayList({
   onRename,
   onReturn,
   onDropIssue,
-  onCopyWorklog,
 }: TodayListProps) {
   const [dragOver, setDragOver] = useState(false);
   // 한 번에 한 항목만 편집한다.
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
-    "idle",
-  );
   const doneCount = items.filter((item) => item.done).length;
-  const canCopyWorklog = items.some((item) => item.done && item.projectSlug !== "common");
-
-  const copy = async () => {
-    const ok = await onCopyWorklog();
-    setCopyState(ok ? "copied" : "failed");
-    window.setTimeout(() => setCopyState("idle"), 2000);
-  };
 
   return (
     <section
@@ -74,24 +61,6 @@ export function TodayList({
           <span className="text-[11px] text-[var(--bi-muted)]">
             {formatBoardDate(date)} · {doneCount}/{items.length} 완료
           </span>
-          <Button
-            disabled={!canCopyWorklog}
-            onClick={copy}
-            size="sm"
-            title={
-              !canCopyWorklog
-                ? "공통 외 프로젝트에 체크한 항목이 있어야 복사할 수 있습니다"
-                : "공통을 제외한 체크 항목을 작업내용으로 복사"
-            }
-            variant="secondary"
-          >
-            <HiOutlineClipboardCopy aria-hidden size={14} />
-            {copyState === "copied"
-              ? "복사됨"
-              : copyState === "failed"
-                ? "복사 실패"
-                : "작업내용 복사"}
-          </Button>
         </div>
       </div>
 

@@ -10,6 +10,8 @@ const withMDX = createMDX({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // 프로젝트 지침은 직접 관리하며 개발 서버가 AGENTS.md를 덧쓰지 않게 한다.
+  agentRules: false,
   pageExtensions: ["ts", "tsx", "mdx"],
   // 같은 저장소에서 dev 서버를 두 개 띄우려면 빌드 디렉터리를 나눠야 한다.
   // Next 가 .next/dev 를 잠그기 때문이다. 평소에는 기본값을 쓴다.

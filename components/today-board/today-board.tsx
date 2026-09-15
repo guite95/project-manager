@@ -19,7 +19,6 @@ import {
   readLegacyData,
 } from "@/lib/import-legacy";
 import {
-  formatWorklog,
   groupIssuesByProject,
   isProjectTitleTaken,
   moveProject,
@@ -286,20 +285,6 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
     );
   };
 
-  const handleCopyWorklog = async (): Promise<boolean> => {
-    const text = formatWorklog(board, projects, today);
-    if (!text) return false;
-    try {
-      await navigator.clipboard.writeText(text);
-      setAnnouncement("작업내용을 클립보드에 복사했습니다.");
-      return true;
-    } catch {
-      // 권한이 없거나 비보안 컨텍스트면 클립보드 API 가 막힌다.
-      setAnnouncement("클립보드에 복사하지 못했습니다.");
-      return false;
-    }
-  };
-
   // 드롭은 id 만 넘어온다. 안내 문구를 만들려면 현재 보드에서 항목을 찾아야 하는데,
   // setBoard 업데이터는 순수해야 하므로 여기 밖에서 찾는다.
   const handleDropIssue = (issueId: string) => {
@@ -314,7 +299,6 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
         <TodayList
           date={today}
           items={board.today}
-          onCopyWorklog={handleCopyWorklog}
           onDropIssue={handleDropIssue}
           onRename={handleRename}
           onReturn={handleReturn}

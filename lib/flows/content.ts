@@ -1,16 +1,19 @@
+import { validateMeetingContent, type MeetingContent } from '../meetings.ts';
+
 export type ScheduleItem = { id: string; title: string; completed: boolean; startISO: string | null; endISO: string | null };
 export type ImportedTable = {
   name: string; module: string; koLabel: string; koDesc: string;
   columns: { name: string; label: string; type: string; isPk: boolean; isFk: boolean; nullable: boolean }[];
 };
 export type ProjectContent =
+  | MeetingContent
   | { kind: "schedule"; title: string; startISO: string; endISO: string; phases: { label: string; subtitle: string; groups: { title: string; items: ScheduleItem[] }[] }[] }
   | { kind: "erd"; tables: ImportedTable[]; relations: { from: string; fromColumn: string; to: string; toColumn: string }[] }
   | { kind: "slides"; styles: string; slides: { title: string; html: string }[] }
   | { kind: "html"; html: string }
   | { kind: "notice"; text: string };
 
-export const contentLabels = { schedule: "일정", erd: "ERD", slides: "발표", html: "HTML", notice: "자료" };
+export const contentLabels = { meeting: "회의록", schedule: "일정", erd: "ERD", slides: "발표", html: "HTML", notice: "자료" };
 
 /** 외부 문서는 격리된 프레임에서만 표시하며 네트워크·스크립트·폼 실행을 막는다. */
 export function sandboxedDocument(html: string): string {
@@ -23,7 +26,8 @@ export function validateProjectContent(value: unknown): asserts value is Project
   const str = (v: unknown) => { if (typeof v !== "string") fail(); };
   const rows = (v: unknown): Record<string, unknown>[] => Array.isArray(v) ? v.map(obj) : fail();
   const c = obj(value);
-  if (c.kind === "html") str(c.html);
+  if (c.kind === "meeting") validateMeetingContent(c);
+  else if (c.kind === "html") str(c.html);
   else if (c.kind === "notice") str(c.text);
   else if (c.kind === "slides") {
     str(c.styles);

@@ -1,0 +1,4 @@
+interface:
+  display_name: "sync-sum"
+  short_description: "전사본에서 프로젝트 회의록과 결정 사항·태스크 초안 작성"
+  default_prompt: "$sync-sum로 이 전사본의 회의록 초안을 만들어줘."

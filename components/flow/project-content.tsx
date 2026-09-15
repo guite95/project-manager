@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MeetingDetail } from "@/components/meetings/meeting-detail";
 import type { FlowChart } from "./types";
 import { ProcessFlow } from "./process-flow";
 import { sandboxedDocument, type ProjectContent } from "@/lib/flows/content";
@@ -92,6 +93,7 @@ function ImportedErd({ chart, content }: { chart: FlowChart; content: Extract<Pr
 export function ProjectContentView({ chart }: { chart: FlowChart }) {
   const content = chart.content;
   if (!content) return null;
+  if (content.kind === "meeting") return <MeetingDetail content={content} />;
   if (content.kind === "schedule") return <Schedule content={content} />;
   if (content.kind === "slides") return <Slides content={content} />;
   if (content.kind === "erd") return <ImportedErd chart={chart} content={content} />;
