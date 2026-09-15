@@ -4,6 +4,7 @@ import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { KIND_STYLE } from "./kind-style";
 import { EntityNode } from "./entity-node";
 import type { FlowDirection, FlowNodeData } from "./types";
+import type { ErdPort } from "../../lib/erd/routes";
 
 /**
  * 렌더 시점에만 쓰는 노드 데이터. 선언(`FlowNodeData`)에 배치 방향·폭을 넣지
@@ -14,6 +15,9 @@ import type { FlowDirection, FlowNodeData } from "./types";
 export type FlowRenderData = FlowNodeData & {
   dir: FlowDirection;
   w: number;
+  /** 전체 배치를 유지하면서 현재 선택한 테이블을 표시한다. */
+  emphasized?: boolean;
+  erdPorts?: ErdPort[];
   /** 그룹 안 역방향(loop) 엣지가 이 노드에서 나가거나/들어온다 — 우회 핸들을 단다. */
   loopOut?: boolean;
   loopIn?: boolean;

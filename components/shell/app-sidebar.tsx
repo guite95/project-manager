@@ -23,6 +23,7 @@ import {
 
 import { searchSidebarProjects } from "@/lib/navigation/sidebar-search";
 import { meetingsHref } from "@/lib/meetings";
+import { materialsHref } from "@/lib/materials";
 
 const ROW = "mx-2 flex min-h-11 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
 const linkCls = (active: boolean) => `${ROW} ${active
@@ -83,6 +84,10 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
 
   // 현재 보고 있는 위치 — 명심할 점 페이지 또는 차트 폴백 규칙으로 판정.
   const active = useMemo(() => {
+    const materialPath = pathname.match(/^\/flows\/([^/]+)\/materials(?:\/[^/]+)?$/);
+    if (materialPath && flowProjects.some(p => p.slug === materialPath[1])) {
+      return { project: materialPath[1], category: null, chart: null, view: "materials" as const };
+    }
     const meetingPath = pathname.match(/^\/flows\/([^/]+)\/meetings(?:\/[^/]+)?$/);
     if (meetingPath && flowProjects.some(p => p.slug === meetingPath[1])) {
       return { project: meetingPath[1], category: null, chart: null, view: "meetings" as const };
@@ -126,7 +131,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   );
 
   const renderProject = (entry: (typeof visibleProjects)[number]) => {
-    const { project, categories, showNotes, showMeetings } = entry;
+    const { project, categories, showNotes, showMeetings, showMaterials } = entry;
     const projectActive = active?.project === project.slug;
     const pCollapsed = expandedProject !== project.slug;
 
@@ -146,6 +151,9 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
       >
         {!pCollapsed ? (
           <>
+            {showMaterials ? <Link href={materialsHref(project.slug)} aria-label={`${project.title} 자료`}
+              aria-current={projectActive && active?.view === "materials" ? "page" : undefined}
+              className={linkCls(projectActive && active?.view === "materials")}>자료</Link> : null}
             {showMeetings ? <Link href={meetingsHref(project.slug)} aria-label={`${project.title} 회의록`}
               aria-current={projectActive && active?.view === "meetings" ? "page" : undefined}
               className={linkCls(projectActive && active?.view === "meetings")}>회의록</Link> : null}

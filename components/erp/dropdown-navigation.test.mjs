@@ -26,3 +26,9 @@ test("선택지가 없으면 이동이나 선택을 만들지 않는다", () => 
   assert.equal(resolveDropdownKey("ArrowDown", true, 0, 0), null);
   assert.equal(resolveDropdownKey("Enter", true, 0, 0), null);
 });
+
+test("Home과 End는 검색 결과의 첫 항목과 마지막 항목으로 이동한다", () => {
+  assert.deepEqual(resolveDropdownKey('Home', true, 2, 4), { type: 'move', index: 0 });
+  assert.deepEqual(resolveDropdownKey('End', true, 0, 4), { type: 'move', index: 3 });
+  assert.equal(resolveDropdownKey('End', true, 0, 0), null);
+});

@@ -62,6 +62,8 @@ export const ISSUE_DRAG_TYPE = "application/x-today-issue";
 export const PROJECT_DRAG_TYPE = "application/x-today-project";
 
 export const UNGROUPED_TITLE = "미분류";
+/** 프로젝트에 속하지 않는 개인 이슈의 예약 식별자. 기존 이슈 저장·완료 흐름을 사용한다. */
+export const PERSONAL_ISSUES_SLUG = "__personal_issues__";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -399,7 +401,11 @@ export function groupIssuesByProject(
   const rest = byDefault.filter((group) => !projectOrder.includes(group.slug!));
   const groups: IssueGroup[] = [...ordered, ...rest];
 
+  const personal = issues.filter(issue => issue.projectSlug === PERSONAL_ISSUES_SLUG);
+  if (personal.length) groups.push({slug:PERSONAL_ISSUES_SLUG,title:"개인",canAdd:true,removable:false,issues:personal});
+
   const known = new Set([
+    PERSONAL_ISSUES_SLUG,
     ...registryProjects.map((project) => project.slug),
     ...customProjects.map((project) => project.slug),
   ]);

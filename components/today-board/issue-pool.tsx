@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   HiChevronRight,
   HiOutlineArrowLeft,
@@ -15,19 +15,19 @@ import { Button } from "@/components/erp/button";
 import {
   ISSUE_DRAG_TYPE,
   PROJECT_DRAG_TYPE,
+  PERSONAL_ISSUES_SLUG,
   type Issue,
   type IssueGroup,
 } from "@/lib/today-board";
 
 type IssuePoolProps = {
   groups: IssueGroup[];
+  personalGroups: IssueGroup[];
   onAdd: (projectSlug: string, title: string) => void;
   onRemove: (issue: Issue) => void;
   onRename: (issue: Issue, title: string) => void;
   onSendToToday: (issue: Issue) => void;
-  onAddProject: (title: string) => void;
   onRemoveProject: (group: IssueGroup) => void;
-  isProjectTitleTaken: (title: string) => boolean;
   onMoveProject: (
     slug: string,
     targetSlug: string,
@@ -40,18 +40,20 @@ type IssuePoolProps = {
 
 export function IssuePool({
   groups,
+  personalGroups,
   onAdd,
   onRemove,
   onRename,
   onSendToToday,
-  onAddProject,
   onRemoveProject,
-  isProjectTitleTaken,
   onMoveProject,
   onStepProject,
   collapsedSlugs,
   onToggleCollapsed,
 }: IssuePoolProps) {
+  const [activeTab, setActiveTab] = useState<"project" | "personal">("project");
+  const tabId = useId();
+  const tabs = [{ id: "project", title: "프로젝트 이슈" }, { id: "personal", title: "개인 이슈" }] as const;
   // 순서를 바꿀 수 있는 그룹만 센다 (미분류는 항상 마지막이라 제외).
   const movable = groups.filter((group) => group.slug !== null);
 
@@ -62,16 +64,24 @@ export function IssuePool({
     >
       {/* 왼쪽 "오늘의 할 일" 머리글(최소 높이 26px)과 높이를 맞춰야
           아래 박스들의 윗선이 두 칼럼에서 나란히 놓인다. */}
-      <h3
-        className="flex h-[26px] shrink-0 items-center text-[13px] font-semibold text-[var(--bi-fg)]"
-        id="issue-pool-heading"
-      >
-        프로젝트 이슈
-      </h3>
-      <AddProjectForm
-        isProjectTitleTaken={isProjectTitleTaken}
-        onAddProject={onAddProject}
-      />
+      <h3 className="sr-only" id="issue-pool-heading">이슈 목록</h3>
+      <div role="tablist" aria-label="이슈 구분" className="flex h-[26px] shrink-0 items-stretch gap-5"
+        onKeyDown={event => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === "Home" ? 0 : event.key === "End" ? 1 : activeTab === "project" ? 1 : 0;
+          setActiveTab(tabs[next].id);
+          event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
+        }}>
+        {tabs.map(tab => <button key={tab.id} type="button" role="tab" id={`${tabId}-${tab.id}-tab`}
+          aria-controls={`${tabId}-${tab.id}-panel`} aria-selected={activeTab === tab.id} tabIndex={activeTab === tab.id ? 0 : -1}
+          onClick={() => setActiveTab(tab.id)}
+          className={`border-b-2 px-0.5 pb-1 text-[13px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)] ${activeTab === tab.id ? "border-[var(--bi-accent)] font-semibold text-[var(--bi-accent)]" : "border-transparent font-medium text-[var(--bi-muted)] hover:text-[var(--bi-fg)]"}`}>
+          {tab.title}
+        </button>)}
+      </div>
+      <div role="tabpanel" id={`${tabId}-project-panel`} aria-labelledby={`${tabId}-project-tab`}
+        className={activeTab === "project" ? "flex min-h-0 flex-col gap-3 lg:flex-1" : "hidden"}>
       <div className="flex flex-col gap-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
       {groups.map((group) => {
         const index = movable.findIndex((entry) => entry.slug === group.slug);
@@ -96,49 +106,15 @@ export function IssuePool({
         );
       })}
       </div>
+      </div>
+      <div role="tabpanel" id={`${tabId}-personal-panel`} aria-labelledby={`${tabId}-personal-tab`}
+        className={activeTab === "personal" ? "flex min-h-0 flex-col gap-3 lg:flex-1 lg:overflow-y-auto" : "hidden"}>
+        {personalGroups.map(group => <ProjectGroup key={group.slug ?? "__personal__"} group={group}
+          collapsed={false} isFirst isLast onAdd={onAdd} onRemove={onRemove} onRename={onRename}
+          onSendToToday={onSendToToday} onMoveProject={onMoveProject} onRemoveProject={onRemoveProject}
+          onStepProject={onStepProject} onToggleCollapsed={onToggleCollapsed} />)}
+      </div>
     </section>
-  );
-}
-
-function AddProjectForm({
-  onAddProject,
-  isProjectTitleTaken,
-}: Pick<IssuePoolProps, "onAddProject" | "isProjectTitleTaken">) {
-  const [draft, setDraft] = useState("");
-  const trimmed = draft.trim();
-  const taken = isProjectTitleTaken(draft);
-
-  return (
-    <form
-      className="flex shrink-0 flex-wrap items-center gap-2 rounded-[4px] border border-dashed border-[var(--bi-border-strong)] px-3 py-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!trimmed || taken) return;
-        onAddProject(draft);
-        setDraft("");
-      }}
-    >
-      <input
-        aria-label="프로젝트 추가"
-        className="h-[30px] min-w-0 flex-1 rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)] hover:border-[var(--bi-border-strong)] focus:border-[var(--bi-accent)]"
-        maxLength={40}
-        onChange={(event) => setDraft(event.target.value)}
-        placeholder="새 프로젝트"
-        value={draft}
-      />
-      <Button disabled={!trimmed || taken} size="sm" type="submit">
-        <HiOutlinePlus aria-hidden size={14} />
-        프로젝트 추가
-      </Button>
-      {taken ? (
-        <p
-          aria-live="polite"
-          className="m-0 w-full text-[11px] text-[var(--bi-error)]"
-        >
-          이미 같은 이름의 프로젝트가 있습니다.
-        </p>
-      ) : null}
-    </form>
   );
 }
 
@@ -178,7 +154,7 @@ function ProjectGroup({
   // 핸들을 잡았을 때만 그룹이 끌린다. 안쪽 이슈 카드 드래그와 섞이지 않게 한다.
   const [handleHeld, setHandleHeld] = useState(false);
 
-  const movable = group.slug !== null;
+  const movable = group.slug !== null && group.slug !== PERSONAL_ISSUES_SLUG;
 
   const submit = () => {
     if (!group.slug || !draft.trim()) return;

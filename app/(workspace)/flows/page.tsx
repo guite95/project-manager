@@ -1,5 +1,6 @@
 import { flowCategories, getFlowCatalog } from "@/lib/server/flow-catalog-store";
 import { meetingsHref } from "@/lib/meetings";
+import { materialsHref } from "@/lib/materials";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RichText } from "@/components/rich-text";
@@ -61,10 +62,14 @@ async function ProjectsOverview() {
             </p>
           ) : null}
 
-          <Link href={meetingsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
+          {project.slug !== "common" ? <Link href={meetingsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
             <span className="text-[13px] font-semibold">회의록</span>
             <span className="text-[12px] text-[var(--bi-muted)]">회의 내용·결정 사항·태스크과 전사본 원문</span>
-          </Link>
+          </Link> : null}
+          {project.slug !== "common" ? <Link href={materialsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
+            <span className="text-[13px] font-semibold">자료</span>
+            <span className="text-[12px] text-[var(--bi-muted)]">PDF·HTML 문서 추가와 미리보기</span>
+          </Link> : null}
           {flowCategories(project.categories).map((category) => (
             <div key={category.slug} className="mt-3">
               <h3 className="mt-0 mb-2 text-[13px] font-semibold text-[var(--bi-fg)]">

@@ -8,6 +8,7 @@ import {
   HiOutlineSelector,
   HiOutlineTrash,
 } from "react-icons/hi";
+import { Dropdown } from "@/components/erp/dropdown";
 import { Button } from "@/components/erp/button";
 import { EditButton, InlineEdit } from "@/components/inline-edit";
 import {
@@ -367,22 +368,10 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                     </div>
                   </td>
                   <td className="border-b border-[var(--bi-border)] px-4 py-2.5">
-                    <select
-                      aria-label={`${index + 1}번째 항목 우선순위`}
-                      className={`h-[30px] w-full rounded-[4px] border px-2 text-[12px] font-semibold outline-none focus:outline focus:outline-2 focus:outline-offset-1 focus:outline-[var(--bi-accent)] ${PRIORITY_STYLES[note.priority].select}`}
-                      onChange={(event) =>
-                        editNote(note.id, {
-                          priority: event.target.value as ProjectNotePriority,
-                        })
-                      }
-                      value={note.priority}
-                    >
-                      {PROJECT_NOTE_PRIORITIES.map((priority) => (
-                        <option key={priority.value} value={priority.value}>
-                          {priority.label}
-                        </option>
-                      ))}
-                    </select>
+                    <Dropdown ariaLabel={`${index + 1}번째 항목 우선순위`} searchable
+                      triggerClassName={`font-semibold ${PRIORITY_STYLES[note.priority].select}`}
+                      value={note.priority} options={PROJECT_NOTE_PRIORITIES}
+                      onChange={value => editNote(note.id, { priority: value as ProjectNotePriority })} />
                   </td>
                   <td className="border-b border-[var(--bi-border)] px-4 py-2.5">
                     <InlineEdit

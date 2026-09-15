@@ -1,5 +1,6 @@
 import Dagre from "@dagrejs/dagre";
-import { ENTITY_HEADER, ENTITY_ROW, ENTITY_FOOTER } from "./entity-node";
+import { entityHeight } from "../../lib/erd/geometry";
+import { parseSavedErdLayout, type SavedErdLayout } from "../../lib/erd/saved-layout";
 import { MarkerType, Position, type Edge, type Node } from "@xyflow/react";
 import {
   BADGE_H,
@@ -63,7 +64,7 @@ function wrapCount(text: string, boxWidth: number, fontSize: number): number {
 
 /** 카드 실제 렌더 높이 추정 — 이 값으로 Dagre 가 세로 간격을 잡는다. */
 function estimateHeight(data: FlowNodeData, width: number): number {
-  if (data.entity) return ENTITY_HEADER + ENTITY_ROW * data.entity.fields.length + ENTITY_FOOTER + 2;
+  if (data.entity) return entityHeight(data.entity.fields.length);
   const style = KIND_STYLE[data.kind];
   if (style.compact) return MASTER_H;
 
@@ -289,13 +290,17 @@ function sanitize(chart: FlowChart): SanitizedChart {
 }
 
 /** Dagre 로 좌표를 계산해 React Flow 가 바로 먹을 수 있는 형태로 돌려준다. */
-export function layoutChart(chart: FlowChart): LayoutResult {
+export function layoutChart(chart: FlowChart, savedLayout?: SavedErdLayout): LayoutResult {
   const rankdir = chart.direction ?? "LR";
   const nodeW = chart.nodeWidth ?? DEFAULT_NODE_W;
 
   // 이 아래로는 chart.nodes / chart.edges / chart.groups 를 직접 쓰지 않는다.
   // 걸러낸 배열만 쓴다 — 선언 오류가 배치 계산까지 흘러가지 않게.
   const { nodes, edges, groups } = sanitize(chart);
+  if (chart.erdDomain && nodes.every(n => n.data.entity)) {
+    if (!savedLayout) throw new Error("DB에 저장된 ERD 배치가 필요합니다.");
+    return layoutErdChart(nodes, edges, parseSavedErdLayout(savedLayout, chart));
+  }
   const hasGroups = groups.length > 0;
 
   const innerDir = chart.groupDirection ?? rankdir;
@@ -540,5 +545,38 @@ export function layoutChart(chart: FlowChart): LayoutResult {
         return edge;
       });
     })(),
+  };
+}
+
+/** ERD는 일반 프로세스의 계층 배치 대신 관계 묶음을 여러 열로 배치한다. */
+function layoutErdChart(nodes: FlowNodeDef[], edges: FlowEdgeDef[], saved: SavedErdLayout): LayoutResult {
+  const result = saved.layout;
+  const routed = saved.routing;
+  const routes = new Map(routed.routes.map(r => [r.id, r]));
+  const boxes = new Map(result.nodes.map(n => [n.id, n]));
+  const groupNodes: Node<GroupRenderData>[] = result.groups.map(g => ({
+    id: g.id, type: "flowGroup", position: { x: g.x, y: g.y },
+    data: { label: g.label, w: g.width, h: g.height },
+    style: { width: g.width, height: g.height, pointerEvents: "none" },
+    draggable: false, selectable: false, connectable: false, focusable: false, zIndex: -1,
+  }));
+  const flowNodes: Node<FlowRenderData>[] = nodes.map(n => {
+    const box = boxes.get(n.id)!;
+    return {
+      id: n.id, type: "flow", position: { x: box.x, y: box.y },
+      data: { ...n.data, dir: "LR", w: box.width, erdPorts: routed.ports[n.id] },
+      draggable: false, selectable: false, connectable: false, zIndex: 1,
+    };
+  });
+  return {
+    nodes: [...groupNodes, ...flowNodes],
+    edges: edges.map(e => {
+      const route = routes.get(e.id)!;
+      return {
+        ...buildEdge(e), type: "erdRelation",
+        sourceHandle: route.sourceHandle, targetHandle: route.targetHandle,
+        data: { points: route.points },
+      };
+    }),
   };
 }

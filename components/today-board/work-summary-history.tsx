@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HiOutlineClipboardCopy } from "react-icons/hi";
+import { Dropdown } from "@/components/erp/dropdown";
 import { Button } from "@/components/erp/button";
 import {
   formatWorkSummary,
@@ -95,27 +96,12 @@ export function WorkSummaryHistory({
         </div>
       </div>
       {dates.length > 0 && (
-        <label className="flex items-center gap-2 text-xs text-[var(--bi-muted)]">
-          저장된 정리
-          <select
-            aria-label="저장된 작업 정리"
-            value={dates.includes(date) ? date : ""}
-            onChange={(e) => {
-              if (e.target.value)
-                window.location.assign(
-                  `/today/history?view=summary&date=${e.target.value}`,
-                );
-            }}
-            className="rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] px-2 py-1"
-          >
-            {!dates.includes(date) && <option value="">날짜 선택</option>}
-            {dates.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex items-center gap-2 text-xs text-[var(--bi-muted)]">
+          <span>저장된 정리</span>
+          <Dropdown ariaLabel="저장된 작업 정리" searchable value={dates.includes(date) ? date : ''}
+            options={[...(!dates.includes(date) ? [{ value: '', label: '날짜 선택' }] : []), ...dates.map(d => ({ value: d, label: d }))]}
+            onChange={value => { if (value) window.location.assign(`/today/history?view=summary&date=${encodeURIComponent(value)}`); }} />
+        </div>
       )}
       {!report ? (
         <div className="rounded border border-dashed border-[var(--bi-border)] px-4 py-12 text-center text-[var(--bi-muted)]">

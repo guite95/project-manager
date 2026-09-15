@@ -8,6 +8,7 @@ import { ChartSelector } from "@/components/flow/chart-selector";
 import { ProjectContentView } from "@/components/flow/project-content";
 import { RichText } from "@/components/rich-text";
 import { getTnsErdSnapshot } from "@/lib/server/flows-store";
+import { getTnsErdLayout } from "@/lib/server/erd-layout-store";
 import { getChartPage } from "@/lib/server/flow-catalog-store";
 
 type PageProps = {
@@ -82,7 +83,7 @@ export default async function ProjectFlowsPage({
       {chart.content ? (
         <ProjectContentView key={chart.slug} chart={chart} />
       ) : chart.erdDomain ? (
-        <ErdViewer key={chart.erdDomain} domain={chart.erdDomain} snapshot={await getTnsErdSnapshot()} />
+        <TnsErd domain={chart.erdDomain} />
       ) : (
         <>
           <div className="mb-3"><FlowLegend chart={chart} /></div>
@@ -91,7 +92,7 @@ export default async function ProjectFlowsPage({
       )}
 
       {chart.source ? <p className="mt-4 text-[11px] text-[var(--bi-muted)]">레퍼런스 콘텐츠 · 가져온 날짜 {chart.source.capturedAt.slice(0, 10)}</p> : null}
-      {chart.howToRead?.length ? (
+      {(!chart.erdDomain || chart.content) && chart.howToRead?.length ? (
         <section className="mt-5">
           <h3 className="mt-0 mb-2 text-[14px] font-semibold text-[var(--bi-fg)]">
             읽는 법
@@ -106,4 +107,10 @@ export default async function ProjectFlowsPage({
     </div>
     </>
   );
+}
+
+async function TnsErd({ domain }: { domain: string }) {
+  const snapshot = await getTnsErdSnapshot();
+  const layout = await getTnsErdLayout(snapshot,domain);
+  return <ErdViewer key={domain} domain={domain} snapshot={snapshot} initialLayout={layout} />;
 }

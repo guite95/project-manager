@@ -1,16 +1,19 @@
 "use client";
 
+import { Dropdown } from "@/components/erp/dropdown";
+import { Button } from "@/components/erp/button";
+
 import { useState } from "react";
+import { HtmlDocumentViewer } from "@/components/materials/html-document-viewer";
 import { MeetingDetail } from "@/components/meetings/meeting-detail";
+import { MaterialViewer } from "@/components/materials/material-viewer";
 import type { FlowChart } from "./types";
 import { ProcessFlow } from "./process-flow";
 import { sandboxedDocument, type ProjectContent } from "@/lib/flows/content";
 
-const button = "min-h-10 rounded border border-[var(--bi-border)] px-3 text-[12px] disabled:opacity-40";
 
 function DocumentFrame({ html, title }: { html: string; title: string }) {
-  return <iframe title={title} sandbox="" referrerPolicy="no-referrer" srcDoc={sandboxedDocument(html)}
-    className="h-[75dvh] min-h-[480px] w-full rounded border border-[var(--bi-border)] bg-white" />;
+  return <HtmlDocumentViewer html={html} title={title} />;
 }
 
 function Slides({ content }: { content: Extract<ProjectContent, { kind: "slides" }> }) {
@@ -18,14 +21,11 @@ function Slides({ content }: { content: Extract<ProjectContent, { kind: "slides"
   const slide = content.slides[index];
   return <section aria-label="킥오프 발표 자료">
     <div className="mb-3 flex flex-wrap items-center gap-2">
-      <button className={button} disabled={index === 0} onClick={() => setIndex(i => i - 1)}>이전 슬라이드</button>
-      <label className="min-w-0 flex-1 text-[12px]">슬라이드 선택
-        <select className="ml-2 max-w-full rounded border border-[var(--bi-border)] p-2" value={index} onChange={e => setIndex(Number(e.target.value))}>
-          {content.slides.map((item, i) => <option key={i} value={i}>{i + 1}. {item.title}</option>)}
-        </select>
-      </label>
+      <Button variant="secondary" disabled={index === 0} onClick={() => setIndex(i => i - 1)}>이전 슬라이드</Button>
+      <Dropdown className="min-w-0 flex-1" ariaLabel="슬라이드 선택" searchable value={String(index)} onChange={value => setIndex(Number(value))}
+        options={content.slides.map((item, i) => ({ value: String(i), label: `${i + 1}. ${item.title}` }))} />
       <span className="text-[12px]">{index + 1} / {content.slides.length}</span>
-      <button className={button} disabled={index === content.slides.length - 1} onClick={() => setIndex(i => i + 1)}>다음 슬라이드</button>
+      <Button variant="secondary" disabled={index === content.slides.length - 1} onClick={() => setIndex(i => i + 1)}>다음 슬라이드</Button>
     </div>
     <DocumentFrame title={`슬라이드 ${index + 1}: ${slide.title}`} html={`<style>${content.styles}</style>${slide.html}`} />
   </section>;
@@ -66,10 +66,9 @@ function ImportedErd({ chart, content }: { chart: FlowChart; content: Extract<Pr
     <ProcessFlow chart={chart} onEntitySelect={setSelected} />
     <div className="my-4 flex flex-wrap gap-2">
       <input aria-label="테이블 검색" placeholder="테이블·모듈 검색" value={query} onChange={e => setQuery(e.target.value)} className="min-h-10 rounded border border-[var(--bi-border)] px-3 text-[12px]" />
-      <select aria-label="테이블 선택" value={selected} onChange={e => setSelected(e.target.value)} className="min-h-10 max-w-full rounded border border-[var(--bi-border)] p-2 text-[12px]">
-        {!tables.some(t => t.name === selected) && table ? <option value={table.name}>{table.koLabel} · {table.name}</option> : null}
-        {tables.map(t => <option key={t.name} value={t.name}>{t.module} · {t.koLabel} · {t.name}</option>)}
-      </select>
+      <Dropdown ariaLabel="테이블 선택" searchable value={selected} onChange={setSelected}
+        options={[...(!tables.some(t => t.name === selected) && table ? [{ value: table.name, label: `${table.koLabel} · ${table.name}` }] : []),
+          ...tables.map(t => ({ value: t.name, label: `${t.module} · ${t.koLabel} · ${t.name}` }))]} />
       {!tables.length ? <span className="self-center text-[12px]">검색 결과가 없습니다.</span> : null}
     </div>
     {table ? <div className="rounded border border-[var(--bi-border)] p-4">
@@ -93,17 +92,18 @@ function ImportedErd({ chart, content }: { chart: FlowChart; content: Extract<Pr
 export function ProjectContentView({ chart }: { chart: FlowChart }) {
   const content = chart.content;
   if (!content) return null;
+  if (content.kind === "material") return <MaterialViewer content={content} title={chart.title} />;
   if (content.kind === "meeting") return <MeetingDetail content={content} />;
   if (content.kind === "schedule") return <Schedule content={content} />;
   if (content.kind === "slides") return <Slides content={content} />;
   if (content.kind === "erd") return <ImportedErd chart={chart} content={content} />;
   if (content.kind === "html") return <section>
-    <button className={`${button} mb-3`} onClick={() => {
+    <Button variant="secondary" className="mb-3" onClick={() => {
       const url = URL.createObjectURL(new Blob([sandboxedDocument(content.html)], { type: "text/html;charset=utf-8" }));
       const link = document.createElement("a");
       link.href = url; link.download = `${chart.slug}.html`; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }}>HTML 저장</button>
+    }}>HTML 저장</Button>
     <DocumentFrame title={chart.title} html={content.html} />
   </section>;
   return <p className="whitespace-pre-wrap rounded border border-[var(--bi-border)] p-6 text-[13px]">{content.text}</p>;

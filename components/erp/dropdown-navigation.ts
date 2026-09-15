@@ -15,6 +15,8 @@ export function resolveDropdownKey(
   }
   if (key === "Escape") return { type: "close" };
   if (optionCount === 0) return null;
+  if (key === 'Home') return { type: 'move', index: 0 };
+  if (key === 'End') return { type: 'move', index: optionCount - 1 };
   if (key === "ArrowDown") {
     return { type: "move", index: (activeIndex + 1) % optionCount };
   }

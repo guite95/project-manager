@@ -10,7 +10,6 @@ import {
   patchIssue,
   postImport,
   postIssue,
-  postProject,
   putSettings,
 } from "@/lib/api-client";
 import {
@@ -20,7 +19,7 @@ import {
 } from "@/lib/import-legacy";
 import {
   groupIssuesByProject,
-  isProjectTitleTaken,
+  PERSONAL_ISSUES_SLUG,
   moveProject,
   removeIssue,
   removeProject,
@@ -132,7 +131,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
   const customProjects = board?.customProjects ?? [];
 
   const projectTitles = useMemo(() => {
-    const map: Record<string, string> = {};
+    const map: Record<string, string> = { [PERSONAL_ISSUES_SLUG]: "개인" };
     for (const project of projects) map[project.slug] = project.title;
     for (const project of customProjects) map[project.slug] = project.title;
     return map;
@@ -145,7 +144,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
         projects,
         customProjects,
         board?.projectOrder ?? [],
-      ),
+      ).filter(group => group.slug !== PERSONAL_ISSUES_SLUG),
     [board?.issues, board?.projectOrder, projects, customProjects],
   );
 
@@ -165,18 +164,6 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
       setBoard((current) =>
         current ? { ...current, issues: [...current.issues, issue] } : current,
       );
-    });
-  };
-
-  const handleAddProject = (title: string) => {
-    void sync(async () => {
-      const project = await postProject(title);
-      setBoard((current) =>
-        current
-          ? { ...current, customProjects: [...current.customProjects, project] }
-          : current,
-      );
-      setAnnouncement(`${title.trim()} 프로젝트를 추가했습니다.`);
     });
   };
 
@@ -308,11 +295,11 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
         <IssuePool
           collapsedSlugs={board.collapsedProjects}
           groups={groups}
-          isProjectTitleTaken={(title) =>
-            isProjectTitleTaken(board, title, projects)
-          }
+          personalGroups={[{
+            slug: PERSONAL_ISSUES_SLUG, title: "개인", canAdd: true, removable: false,
+            issues: board.issues.filter(issue => issue.projectSlug === PERSONAL_ISSUES_SLUG),
+          }]}
           onAdd={handleAdd}
-          onAddProject={handleAddProject}
           onMoveProject={handleMoveProject}
           onRemove={handleRemove}
           onRemoveProject={handleRemoveProject}

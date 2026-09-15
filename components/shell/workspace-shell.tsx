@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineBriefcase, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
+import { HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
 import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
@@ -13,8 +13,7 @@ import { AppSidebar } from "./app-sidebar";
 const sections = [
   { id: "today", href: "/today", title: "할 일", railTitle: "할 일", description: "오늘의 업무와 완료 이력", icon: HiOutlineCalendar },
   { id: "projects", href: "/flows", title: "풀링", railTitle: "풀링", description: "프로젝트 구조도와 참고 자료", icon: HiOutlineOfficeBuilding },
-  { id: "personal", href: "/personal", title: "개인", railTitle: "개인", description: "사이드 프로젝트와 개인 기록", icon: HiOutlineUser },
-  { id: "portfolio", href: "/portfolio", title: "포트폴리오", railTitle: "포트\n폴리오", description: "소개와 경력, 대표 프로젝트", icon: HiOutlineBriefcase },
+  { id: "personal", href: "/personal", title: "개인", railTitle: "개인", description: "개인 기록과 포트폴리오", icon: HiOutlineUser },
 ] as const;
 const utilitySections = [
   { id: "guide", href: "/guide", title: "작성 가이드", railTitle: "작성\n가이드", description: "플로우차트 JSON 작성 방법", icon: HiOutlineBookOpen },
@@ -36,7 +35,8 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const [navigationProjects, setNavigationProjects] = useState(flowProjects);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentSection: Section = allSections.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.id ?? "projects";
+  const portfolioActive = pathname === "/portfolio" || pathname.startsWith("/portfolio/");
+  const currentSection: Section = portfolioActive ? "personal" : allSections.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.id ?? "projects";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<Section | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -121,9 +121,10 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         {id === "today" ? <>
           <Link href="/today" aria-current={pathname === "/today" ? "page" : undefined} className={panelLink(pathname === "/today")}>오늘의 할 일</Link>
           <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className={panelLink(pathname === "/today/history")}>완료 이력</Link>
-        </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className={panelLink(pathname === menuSection.href)}>
-          {id === "guide" ? "JSON 작성 가이드" : `${title} 홈`}
-        </Link>}
+        </> : id === "personal" ? <>
+          <Link href="/personal" aria-current={pathname === "/personal" ? "page" : undefined} className={panelLink(pathname === "/personal")}>개인 홈</Link>
+          <Link href="/portfolio" aria-current={portfolioActive ? "page" : undefined} className={panelLink(portfolioActive)}>포트폴리오</Link>
+        </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className={panelLink(pathname === menuSection.href)}>JSON 작성 가이드</Link>}
       </nav>
     );
   };

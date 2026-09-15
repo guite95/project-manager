@@ -82,7 +82,7 @@ export function TextField(props: {
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
-  type?: "text" | "number" | "date" | "datetime-local";
+  type?: "text" | "search" | "number" | "date" | "datetime-local";
   autoFocus?: boolean;
   /** type="date" 전용. YYYY-MM-DD 이전 날짜 선택을 막는다. */
   minDate?: string;

@@ -21,7 +21,7 @@ model CustomProject {
 /// "한 항목은 한쪽에만 있다"는 기존 불변식을 컬럼으로 표현한다.
 model Issue {
   id          String   @id
-  /// 레지스트리에도 커스텀에도 없는 값이면 화면에서 미분류로 묶인다. 외래키를 걸지 않는다.
+  /// __personal_issues__는 개인 이슈. 나머지 미등록 값은 미분류로 묶는다. 외래키를 걸지 않는다.
   projectSlug String   @map("project_slug")
   title       String
   createdAt   DateTime @map("created_at")
@@ -68,6 +68,7 @@ model ProjectNote {
 }
 
 /// board: 화면 상태. erd:tns: ERD 전체 컬럼/관계 스냅샷.
+/// erd:tns:layout:domain:* / table:*: ERD 좌표·묶음·연결점·관계선 경로와 스냅샷 해시.
 model AppSetting {
   key   String @id
   value Json

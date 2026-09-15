@@ -15,7 +15,10 @@ import { HiOutlineArrowsExpand, HiOutlineX } from "react-icons/hi";
 import { ExportSvgButton } from "./export-svg-button";
 import { FlowNode } from "./flow-node";
 import { GroupNode } from "./group-node";
+import { ErdEdge } from "./erd-edge";
 import { layoutChart } from "./layout";
+import { erdSelection } from "../../lib/erd/selection";
+import type { SavedErdLayout } from "../../lib/erd/saved-layout";
 import type { FlowChart } from "./types";
 
 /* -------------------------------------------------------------------------
@@ -29,18 +32,36 @@ import type { FlowChart } from "./types";
 // 타입 이름(default/input/output/group)과 겹치면 안 된다 — 기본 스타일이 래퍼에
 // 붙어 커스텀 노드 위에 테두리·배경이 한 겹 더 그려진다.
 const nodeTypes = { flow: FlowNode, flowGroup: GroupNode };
+const edgeTypes = { erdRelation: ErdEdge };
 
 const HINT = "두 손가락 스크롤=이동 · 핀치/Cmd+스크롤=확대";
 
-export function FlowCanvas({ chart, onEntitySelect }: { chart: FlowChart; onEntitySelect?: (id: string) => void }) {
-  const { nodes, edges } = useMemo(() => layoutChart(chart), [chart]);
+export function FlowCanvas({ chart, onEntitySelect, selectedEntity = "", erdLayout }: { chart: FlowChart; onEntitySelect?: (id: string) => void; selectedEntity?: string; erdLayout?: SavedErdLayout }) {
+  const layout = useMemo(() => layoutChart(chart, erdLayout), [chart, erdLayout]);
+  const { nodes, edges } = useMemo(() => {
+    if (!chart.erdDomain) return layout;
+    const selection = erdSelection(chart.nodes.map(n => n.id), chart.edges, selectedEntity);
+    return {
+      nodes: layout.nodes.map(n => ({ ...n,
+        data: { ...n.data, emphasized: n.id === selectedEntity },
+        style: { ...n.style, opacity: !selection || n.type === "flowGroup" || selection.nodes.has(n.id) ? 1 : 0.2 },
+      })),
+      edges: layout.edges.map(e => {
+        const active = selection?.edges.has(e.id);
+        return { ...e, label: active ? e.label : undefined, zIndex: active ? 3 : 0,
+          style: { ...e.style, opacity: selection ? active ? 1 : 0.07 : 0.4, strokeWidth: active ? 2.6 : 1.2 },
+        };
+      }),
+    };
+  }, [chart, layout, selectedEntity]);
 
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      onNodeClick={onEntitySelect ? (_, node) => onEntitySelect(node.id) : undefined}
+      edgeTypes={edgeTypes}
+      onNodeClick={onEntitySelect ? (_, node) => { if (node.type === "flow") onEntitySelect(node.id); } : undefined}
       fitView
       fitViewOptions={{ padding: 0.15 }}
       // 넓은 차트도 fitView 가 전부 담을 수 있어야 한다. 0.3 이면 노드가 많은
@@ -76,9 +97,13 @@ export function ProcessFlow({
   height = 560,
   fill = false,
   onEntitySelect,
+  selectedEntity,
+  erdLayout,
 }: {
   chart: FlowChart;
   onEntitySelect?: (id: string) => void;
+  selectedEntity?: string;
+  erdLayout?: SavedErdLayout;
   /** 인라인 임베드 시 캔버스 높이(px). `fill` 이 true 면 무시된다. */
   height?: number;
   /** true 면 부모 높이를 꽉 채운다 (전용 페이지용). 부모가 flex 컨테이너여야 한다. */
@@ -144,7 +169,7 @@ export function ProcessFlow({
             className={fill ? "min-h-0 flex-1" : undefined}
             style={fill ? undefined : { height }}
           >
-            <FlowCanvas chart={chart} onEntitySelect={onEntitySelect} />
+            <FlowCanvas chart={chart} onEntitySelect={onEntitySelect} selectedEntity={selectedEntity} erdLayout={erdLayout} />
           </div>
         </ReactFlowProvider>
       </figure>
@@ -177,7 +202,7 @@ export function ProcessFlow({
                 </button>
               </div>
               <div className="relative flex-1">
-                <FlowCanvas key={chart.slug} chart={chart} onEntitySelect={onEntitySelect} />
+                <FlowCanvas key={chart.slug} chart={chart} onEntitySelect={onEntitySelect} selectedEntity={selectedEntity} erdLayout={erdLayout} />
               </div>
             </div>,
             document.body

@@ -44,7 +44,7 @@ export function FormsSection() {
         <FormGrid>
           <TextField label="텍스트 필드" onChange={setText} value={text} />
           <SelectField
-            label="셀렉트 필드 (일반)"
+            label="드롭다운 (검색 기본 제공)"
             onChange={setSelect}
             options={[
               { value: "A", label: "옵션 A" },
@@ -55,7 +55,7 @@ export function FormsSection() {
         </FormGrid>
         <div className="mt-4">
           <SelectField
-            label="셀렉트 필드 (검색형)"
+            label="국가 검색 드롭다운"
             onChange={setCountry}
             options={COUNTRY_OPTIONS}
             searchable
