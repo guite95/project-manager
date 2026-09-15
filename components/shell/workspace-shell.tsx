@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
+import { HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineBriefcase, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
 import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
@@ -11,11 +11,16 @@ import { type UiPreferences } from "@/lib/ui-preferences";
 import { AppSidebar } from "./app-sidebar";
 
 const sections = [
-  { id: "today", href: "/today", title: "오늘의 할 일", railTitle: "오늘의\n할 일", description: "오늘의 업무와 완료 이력", icon: HiOutlineCalendar },
-  { id: "projects", href: "/flows", title: "프로젝트", railTitle: "프로젝트", description: "프로젝트 구조도와 참고 자료", icon: HiOutlineOfficeBuilding },
+  { id: "today", href: "/today", title: "할 일", railTitle: "할 일", description: "오늘의 업무와 완료 이력", icon: HiOutlineCalendar },
+  { id: "projects", href: "/flows", title: "풀링", railTitle: "풀링", description: "프로젝트 구조도와 참고 자료", icon: HiOutlineOfficeBuilding },
+  { id: "personal", href: "/personal", title: "개인", railTitle: "개인", description: "사이드 프로젝트와 개인 기록", icon: HiOutlineUser },
+  { id: "portfolio", href: "/portfolio", title: "포트폴리오", railTitle: "포트\n폴리오", description: "소개와 경력, 대표 프로젝트", icon: HiOutlineBriefcase },
+] as const;
+const utilitySections = [
   { id: "guide", href: "/guide", title: "작성 가이드", railTitle: "작성\n가이드", description: "플로우차트 JSON 작성 방법", icon: HiOutlineBookOpen },
 ] as const;
-type Section = (typeof sections)[number]["id"];
+const allSections = [...sections, ...utilitySections];
+type Section = (typeof allSections)[number]["id"];
 const panelLink = (active: boolean) => `mx-2 flex min-h-11 items-center rounded-[3px] px-3 text-[12px] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${active
   ? "bg-[var(--bi-accent)] font-semibold text-white"
   : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
@@ -31,14 +36,14 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const [navigationProjects, setNavigationProjects] = useState(flowProjects);
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentSection: Section = pathname.startsWith("/today") ? "today" : pathname.startsWith("/guide") ? "guide" : "projects";
+  const currentSection: Section = allSections.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.id ?? "projects";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<Section | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
   const prefs = useSharedPreferences("navigation", initialPreferences);
   const collapsed = prefs.values.panelCollapsed === true;
-  const section = sections.find(item => item.id === currentSection)!;
+  const section = allSections.find(item => item.id === currentSection)!;
 
   useEffect(() => { setProjectOrder(initialProjectOrder); }, [initialProjectOrder]);
   useEffect(() => { setNavigationProjects(flowProjects); }, [flowProjects]);
@@ -109,16 +114,27 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
       <AppSidebar flowProjects={navigationProjects} projectOrder={projectOrder}
         onProjectOrderChange={setProjectOrder} inline={inline} />
     );
-    const title = sections.find(item => item.id === id)!.title;
+    const menuSection = allSections.find(item => item.id === id)!;
+    const title = menuSection.title;
     return (
       <nav aria-label={`${title} 상세 메뉴`} className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
         {id === "today" ? <>
           <Link href="/today" aria-current={pathname === "/today" ? "page" : undefined} className={panelLink(pathname === "/today")}>오늘의 할 일</Link>
           <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className={panelLink(pathname === "/today/history")}>완료 이력</Link>
-        </> : <Link href="/guide" aria-current={pathname === "/guide" ? "page" : undefined} className={panelLink(pathname === "/guide")}>JSON 작성 가이드</Link>}
+        </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className={panelLink(pathname === menuSection.href)}>
+          {id === "guide" ? "JSON 작성 가이드" : `${title} 홈`}
+        </Link>}
       </nav>
     );
   };
+  const renderRailLink = (item: (typeof allSections)[number]) => (
+    <Link key={item.id} href={item.href} title={item.title} aria-current={currentSection === item.id ? "true" : undefined}
+      className={`flex min-h-[72px] flex-col items-center justify-center gap-1 border-l-[3px] px-1 py-2 text-center text-[10px] leading-[1.35] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
+        ? "border-[var(--bi-rail-indicator)] bg-[var(--bi-rail-active)] font-semibold text-white"
+        : "border-transparent hover:bg-[var(--bi-rail-active)] hover:text-white"}`}>
+      <item.icon size={18} aria-hidden /><span className="max-w-10 whitespace-pre-line break-keep">{item.railTitle}</span>
+    </Link>
+  );
   return (
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--bi-bg)] text-[var(--bi-fg)] md:flex-row">
       <header inert={mobileOpen} className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 md:hidden">
@@ -139,16 +155,9 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
           <HiOutlineChevronDoubleRight size={16} aria-hidden />펼치기
         </button> : null}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {sections.map(item => (
-            <Link key={item.id} href={item.href} title={item.title} aria-current={currentSection === item.id ? "true" : undefined}
-              className={`flex min-h-[72px] flex-col items-center justify-center gap-1 border-l-[3px] px-1 py-2 text-center text-[10px] leading-[1.35] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
-                ? "border-[var(--bi-rail-indicator)] bg-[var(--bi-rail-active)] font-semibold text-white"
-                : "border-transparent hover:bg-[var(--bi-rail-active)] hover:text-white"}`}>
-              <item.icon size={18} aria-hidden /><span className="max-w-10 whitespace-pre-line break-keep">{item.railTitle}</span>
-            </Link>
-          ))}
+          {sections.map(renderRailLink)}
         </div>
-
+        <div className="shrink-0 border-t border-white/10">{utilitySections.map(renderRailLink)}</div>
       </nav>
 
       <aside id="workspace-panel" ref={panel} role={mobileOpen ? "dialog" : undefined} aria-modal={mobileOpen ? true : undefined}
@@ -163,13 +172,13 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
           </button>
           <span className="truncate font-bold">{brand}</span>
         </div>
-        {mobileOpen ? <nav aria-label="전체 메뉴" className="min-h-0 flex-1 overflow-y-auto p-2">
-          {sections.map(item => {
+        {mobileOpen ? <nav aria-label="전체 메뉴" className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2">
+          {allSections.map(item => {
             const expanded = mobileSection === item.id;
             const contentId = `mobile-section-${item.id}`;
             const triggerId = `${contentId}-trigger`;
             return (
-              <section key={item.id} className="border-b border-[var(--bi-border)] last:border-b-0">
+              <section key={item.id} className={`shrink-0 border-b border-[var(--bi-border)] last:border-b-0 ${item.id === "guide" ? "mt-auto border-t" : ""}`}>
                 <h2 className="m-0">
                   <button id={triggerId} type="button" aria-expanded={expanded} aria-controls={contentId}
                     onClick={() => setMobileSection(current => current === item.id ? null : item.id)}
