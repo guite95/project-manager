@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Background, Controls, ReactFlow, ReactFlowProvider } from '@xyflow/react';
+import { Background, Controls, PanOnScrollMode, ReactFlow, ReactFlowProvider } from '@xyflow/react';
 import { Dropdown } from '../erp/dropdown';
 import { FlowNode } from './flow-node';
 import { GroupNode } from './group-node';
@@ -94,6 +94,7 @@ export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
     {!base ? <p className="p-4">{error ? '불러오기 실패' : '최신 차트를 불러오는 중…'}</p> : <div className="min-h-0 flex-1"><ReactFlowProvider><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
       onNodeDrag={(_, node) => { setLayout(current => ({ ...current, nodes: { ...current.nodes, [node.id]: node.position } })); setDirty(true); }}
       onEdgeClick={(_, edge) => setSelected(edge.id)} onPaneClick={() => setSelected('')}
+      panOnScroll panOnScrollMode={PanOnScrollMode.Free} zoomOnScroll={false} zoomOnPinch
       nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} fitView minZoom={0.02} maxZoom={2} zoomOnDoubleClick={false}>
       <Background /><Controls showInteractive={false} />
     </ReactFlow></ReactFlowProvider></div>}
