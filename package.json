@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@11.13.0",
   "scripts": {
-    "dev": "node scripts/with-shared-db.mjs -- pnpm exec next dev --hostname 127.0.0.1 -p 30001",
+    "dev": "node --experimental-strip-types scripts/with-shared-db.mjs -- pnpm exec next dev --hostname 127.0.0.1 -p 30001",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
@@ -14,9 +14,9 @@
     "db:generate": "prisma generate",
     "db:reset-test": "node --env-file=.env scripts/reset-test-db.mjs",
     "dev:local": "next dev -p 30001",
-    "db:shared": "node scripts/with-shared-db.mjs",
-    "db:shared:status": "node scripts/with-shared-db.mjs -- pnpm exec prisma migrate status",
-    "db:shared:deploy": "node scripts/with-shared-db.mjs -- pnpm exec prisma migrate deploy",
+    "db:shared": "node --experimental-strip-types scripts/with-shared-db.mjs",
+    "db:shared:status": "node --experimental-strip-types scripts/with-shared-db.mjs -- pnpm exec prisma migrate status",
+    "db:shared:deploy": "node --experimental-strip-types scripts/with-shared-db.mjs -- pnpm exec prisma migrate deploy",
     "flow": "node --experimental-strip-types scripts/pm-flow.mjs",
     "flow:install": "node scripts/install-flow-tools.mjs",
     "ai:agent": "node scripts/ai-ops-agent.mjs"
