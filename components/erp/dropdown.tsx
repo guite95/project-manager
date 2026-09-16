@@ -20,6 +20,7 @@ export function Dropdown({ value, onChange, options, ariaLabel, searchable = tru
 }) {
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -32,6 +33,10 @@ export function Dropdown({ value, onChange, options, ariaLabel, searchable = tru
     setOpen(false); setQuery(""); setActiveIndex(0);
     if (restoreFocus) triggerRef.current?.focus();
   };
+  useEffect(() => {
+    // 포털의 panelRef가 연결된 뒤 포커스를 옮겨 외부 blur로 오인하지 않도록 한다.
+    if (open && !disabled && positioned && searchable) searchRef.current?.focus();
+  }, [open, disabled, positioned, searchable]);
   useEffect(() => {
     if (!open) return;
     const dismiss = (event: PointerEvent) => {
@@ -86,7 +91,7 @@ export function Dropdown({ value, onChange, options, ariaLabel, searchable = tru
       {searchable ? <label className="flex items-center gap-1.5 border-b border-[var(--bi-border)] px-2">
         <HiOutlineSearch aria-hidden className="shrink-0 text-[var(--bi-muted)]" size={13} />
         <span className="sr-only">{ariaLabel} 검색</span>
-        <input autoFocus role="combobox" aria-expanded={true} aria-autocomplete="list" aria-controls={listboxId}
+        <input ref={searchRef} role="combobox" aria-expanded={true} aria-autocomplete="list" aria-controls={listboxId}
           aria-activedescendant={visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined}
           className="h-9 min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-[var(--bi-muted)]"
           value={query} placeholder={searchPlaceholder} onChange={event => { setQuery(event.target.value); setActiveIndex(0); }} />
