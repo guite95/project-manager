@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
+import { HiOutlineChip, HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
 import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
@@ -11,6 +11,7 @@ import { type UiPreferences } from "@/lib/ui-preferences";
 import { AppSidebar } from "./app-sidebar";
 
 const sections = [
+  { id: "ai-ops", href: "/ai-ops", title: "AI 관리", railTitle: "AI 관리", description: "AI 대화 활동과 토큰 사용량", icon: HiOutlineChip },
   { id: "today", href: "/today", title: "할 일", railTitle: "할 일", description: "오늘의 업무와 완료 이력", icon: HiOutlineCalendar },
   { id: "projects", href: "/flows", title: "풀링", railTitle: "풀링", description: "프로젝트 구조도와 참고 자료", icon: HiOutlineOfficeBuilding },
   { id: "personal", href: "/personal", title: "개인", railTitle: "개인", description: "개인 기록과 포트폴리오", icon: HiOutlineUser },
@@ -121,6 +122,9 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         {id === "today" ? <>
           <Link href="/today" aria-current={pathname === "/today" ? "page" : undefined} className={panelLink(pathname === "/today")}>오늘의 할 일</Link>
           <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className={panelLink(pathname === "/today/history")}>완료 이력</Link>
+        </> : id === "ai-ops" ? <>
+          <Link href="/ai-ops/activity" aria-current={pathname === "/ai-ops/activity" ? "page" : undefined} className={panelLink(pathname === "/ai-ops/activity")}>활동 및 대화</Link>
+          <Link href="/ai-ops/usage" aria-current={pathname === "/ai-ops/usage" ? "page" : undefined} className={panelLink(pathname === "/ai-ops/usage")}>사용량 통계</Link>
         </> : id === "personal" ? <>
           <Link href="/personal" aria-current={pathname === "/personal" ? "page" : undefined} className={panelLink(pathname === "/personal")}>개인 홈</Link>
           <Link href="/personal/work-records" aria-current={pathname === "/personal/work-records" ? "page" : undefined} className={panelLink(pathname === "/personal/work-records")}>작업 기록</Link>

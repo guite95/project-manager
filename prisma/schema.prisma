@@ -112,3 +112,59 @@ model FlowDocument {
   @@index([projectSlug, categorySlug, position])
   @@map("flow_document")
 }
+
+model AiOpsDevice {
+  id String @id
+  name String
+  lastSyncAt DateTime @default(now()) @map("last_sync_at") @db.Timestamptz(6)
+  rootCount Int @default(0) @map("root_count")
+  files Int @default(0)
+  errors Int @default(0)
+  sessions AiOpsSession[]
+  @@map("ai_ops_device")
+}
+model AiOpsSession {
+  id String @id
+  deviceId String @map("device_id")
+  device AiOpsDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  source String
+  externalId String @map("external_id")
+  cwd String
+  title String
+  startedAt DateTime @map("started_at") @db.Timestamptz(6)
+  lastActiveAt DateTime @map("last_active_at") @db.Timestamptz(6)
+  messages AiOpsMessage[]
+  usage AiOpsUsage[]
+  @@unique([deviceId, source, externalId])
+  @@index([lastActiveAt(sort: Desc), id], map: "ai_ops_session_active_idx")
+  @@map("ai_ops_session")
+}
+model AiOpsMessage {
+  id String @id
+  sessionId String @map("session_id")
+  session AiOpsSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role String
+  model String?
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(6)
+  body String?
+  chars Int
+  @@index([sessionId, occurredAt, id], map: "ai_ops_message_session_time_idx")
+  @@index([occurredAt], map: "ai_ops_message_time_idx")
+  @@map("ai_ops_message")
+}
+model AiOpsUsage {
+  id String @id
+  sessionId String @map("session_id")
+  session AiOpsSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  model String?
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(6)
+  inputTokens BigInt? @map("input_tokens")
+  cacheReadTokens BigInt? @map("cache_read_tokens")
+  cacheWriteTokens BigInt? @map("cache_write_tokens")
+  outputTokens BigInt? @map("output_tokens")
+  reasoningTokens BigInt? @map("reasoning_tokens")
+  totalTokens BigInt? @map("total_tokens")
+  @@index([sessionId, occurredAt, id], map: "ai_ops_usage_session_time_idx")
+  @@index([occurredAt], map: "ai_ops_usage_time_idx")
+  @@map("ai_ops_usage")
+}

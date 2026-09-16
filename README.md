@@ -390,3 +390,10 @@ rmdir "$installer_dir"
 
 Claude Code에서도 `/pm-flow-author`, `/pm-flow-review`로 같은 스킬을 호출할 수 있다.
 설치기 테스트의 `PM_FLOW_CLAUDE_SKILLS_DIR`는 Claude 스킬 경로를 임시 디렉터리로 분리한다.
+
+## AI 세션·대화
+
+`/ai-ops/activity`와 `/ai-ops/usage`에서 개인 AI 대화와 사용량을 확인합니다.
+`pnpm ai:agent scan`으로 Mac의 수집 범위를 전송 없이 검사할 수 있습니다.
+운영 반영 후 `pnpm ai:agent install`로 60초 간격 자동수집을 등록합니다.
+수집 경로, 보관 정책, 설치·중지·검증 절차는 [docs/ai-ops.md](docs/ai-ops.md)를 참고하세요.

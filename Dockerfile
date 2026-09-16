@@ -35,5 +35,8 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 RUN rm -rf node_modules
 COPY --from=builder /app/node_modules ./node_modules
 
+COPY --from=builder /app/lib/ai-ops ./lib/ai-ops
+COPY --from=builder /app/scripts/ai-ops-ingest.mjs ./scripts/ai-ops-ingest.mjs
+
 EXPOSE 30001
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && exec node server.js"]
