@@ -123,6 +123,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
           <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className={panelLink(pathname === "/today/history")}>완료 이력</Link>
         </> : id === "personal" ? <>
           <Link href="/personal" aria-current={pathname === "/personal" ? "page" : undefined} className={panelLink(pathname === "/personal")}>개인 홈</Link>
+          <Link href="/personal/work-records" aria-current={pathname === "/personal/work-records" ? "page" : undefined} className={panelLink(pathname === "/personal/work-records")}>작업 기록</Link>
           <Link href="/portfolio" aria-current={portfolioActive ? "page" : undefined} className={panelLink(portfolioActive)}>포트폴리오</Link>
         </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className={panelLink(pathname === menuSection.href)}>JSON 작성 가이드</Link>}
       </nav>

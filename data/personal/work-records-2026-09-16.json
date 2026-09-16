@@ -1,0 +1,1096 @@
+{
+  "asOf": "2026-09-16",
+  "collectedAt": "2026-09-15T23:53:35.695118+00:00",
+  "author": "장욱 <ju@pooolingforest.com>",
+  "scope": "로컬 브랜치·원격 추적 브랜치·태그·HEAD 전체. 해시 중복 제거. stash와 reflog, 미커밋 변경, 미수신 원격 변경 제외. 작성자 이메일 정확 일치. 기간은 작성자 날짜 기준.",
+  "schemaVersion": 1,
+  "evidenceSha256": "30edf0cc5167fdaca9f9f5f00877c419b74e7f46b2d57e1e0dd997100c06f666",
+  "projects": [
+    {
+      "id": "focusai",
+      "title": "Focus AI",
+      "repository": "/Users/janguk/Documents/project/focusai/focusai",
+      "head": "3b38f695e3c192d6c7ff1a53ccbfd515c4476338",
+      "periodStart": "2026-08-21",
+      "periodEnd": "2026-09-15",
+      "commitCount": 493,
+      "mergeCount": 1,
+      "groups": [
+        {
+          "title": "Forecast·매출계획",
+          "summary": "부서별 Excel 업로드, 헤더 기반 부서·월 블록 판별, 과거 실적 가져오기, 소진 화면과 안전재고 표시를 구현하고 역할 전환 시 회차 선택을 유지하도록 수정했다.",
+          "commits": [
+            {
+              "hash": "3b38f695e3c192d6c7ff1a53ccbfd515c4476338",
+              "date": "2026-09-15",
+              "subject": "feat: Forecast 업로드의 부서·월 블록을 헤더 기반으로 판별"
+            },
+            {
+              "hash": "48f7b2fccb70f0f78777d84d7d79c92a893755e0",
+              "date": "2026-09-14",
+              "subject": "feat: Forecast 부서별 Excel 업로드 및 사용계획 중심 화면 정리"
+            },
+            {
+              "hash": "d0f8a52d7fb7d2f80cef5761bc01ad541ba02029",
+              "date": "2026-08-28",
+              "subject": "feat(forecast): 과거 매출 실적 가져오기를 추가한다"
+            },
+            {
+              "hash": "98062557de70693f7b9fa17eab48fcc3f1714d7c",
+              "date": "2026-09-10",
+              "subject": "feat: 소진 Forecast 품목별 목록에 안전재고 미달 표시 추가"
+            },
+            {
+              "hash": "f55c43c11207f266d194c93f100c47f63cc570b7",
+              "date": "2026-09-14",
+              "subject": "fix(forecast): 역할을 전환해도 선택한 회차를 유지한다"
+            }
+          ]
+        },
+        {
+          "title": "조직·역할·부서 권한",
+          "summary": "부서 역할과 정책 상속, 겸직 소속, 실효 권한 조회·조정, 교차 부서 범위 합산을 구현했다. 역할·부서 권한 관리를 통합하고 시스템 관리자의 전사 접근 범위를 수정했다.",
+          "commits": [
+            {
+              "hash": "5eb636fb29967a6aea0daee6dc88cc2c10bae75a",
+              "date": "2026-09-14",
+              "subject": "feat: 역할·부서 권한 관리 통합 및 상속 동기화"
+            },
+            {
+              "hash": "6ceb52cf97b20c51b4123ea0b8d8f9132c2c9151",
+              "date": "2026-09-14",
+              "subject": "fix: 시스템 관리자에 부서 무관 전사 권한 부여"
+            },
+            {
+              "hash": "61a0f717db176319b3f7783822e7039df1ff677a",
+              "date": "2026-09-08",
+              "subject": "feat: 조직도 겸직 소속과 부서별 권한 지원"
+            },
+            {
+              "hash": "bf5e5e94774766c512fbbd7b36149e83e20f9154",
+              "date": "2026-09-07",
+              "subject": "feat(auth): 역할 기반 자동 권한과 교차 부서 범위 합산 구현"
+            },
+            {
+              "hash": "930e72de7efaf0d472b6e8864d81aaa325950c45",
+              "date": "2026-09-07",
+              "subject": "feat(organization): 구성원 실효 권한 탭을 추가한다"
+            }
+          ]
+        },
+        {
+          "title": "승인 프로세스와 결재선",
+          "summary": "프로세스별 결재선 조회·버전 저장·예정 버전 삭제와 라인 상세 편집을 추가하고, 승인자 혼합형 권한 체계를 구현했다.",
+          "commits": [
+            {
+              "hash": "67489ece62218576912846986af7d1428c66a0be",
+              "date": "2026-08-25",
+              "subject": "feat(approval): 라인 상세에서 결재선을 인라인 수정해 새 버전으로 저장하고 예정 버전을 삭제한다"
+            },
+            {
+              "hash": "d60d46d8fa5a422cf505b34a6626724f0472bdaf",
+              "date": "2026-08-25",
+              "subject": "feat(approval): 승인 프로세스 라인 상세 — 결재선 보기·버전 이력·지난 버전 보기"
+            },
+            {
+              "hash": "e1c4464c2b975d761f041de62f8f874bbcafa203",
+              "date": "2026-08-25",
+              "subject": "feat(approval): 승인 프로세스 라인 조회·버전 저장·예정 버전 삭제 API를 추가한다"
+            },
+            {
+              "hash": "ad91739eb69125c4bf53f491b066c9d6021d8584",
+              "date": "2026-09-07",
+              "subject": "feat: 승인자 혼합형 권한 체계 추가"
+            }
+          ]
+        },
+        {
+          "title": "A/S·CS 업무와 기존 데이터 전환",
+          "summary": "A/S 접수의 계약 연결 변경, 유선응대, 방문 A/S 등록·편집, 대체품 신청과 통계 보기를 보강했다. 원본 보존을 포함한 기존 업무 데이터 전환 및 적재 대상 검증 코드를 추가했다.",
+          "commits": [
+            {
+              "hash": "d395f14770ce5a9b90e99449b275c9d1ab9c4ad2",
+              "date": "2026-08-24",
+              "subject": "feat(service): A/S 접수 연결 변경 흐름 추가"
+            },
+            {
+              "hash": "2108a41210615f4b6644498c51c0c8b8af8ae280",
+              "date": "2026-08-24",
+              "subject": "feat(service): A/S 유선응대 필드 보강"
+            },
+            {
+              "hash": "f3a6b780dc43cbd2aee59d0ac7a405b70513c743",
+              "date": "2026-08-24",
+              "subject": "feat(service): 방문AS 목록에서 등록·편집을 할 수 있게 한다"
+            },
+            {
+              "hash": "1146552b3122e0bb91c0d0e6f20ea21956042110",
+              "date": "2026-08-24",
+              "subject": "feat(service): A/S 통계 보기 6종으로 확장"
+            },
+            {
+              "hash": "56645dcd7188bf3f88c2220ec41a347af5055c9f",
+              "date": "2026-09-11",
+              "subject": "feat: A/S·CS 원본 보존 및 기존 업무 데이터 전환"
+            },
+            {
+              "hash": "0f554c8186957edc7561bda208c7a2ea28c68570",
+              "date": "2026-09-11",
+              "subject": "fix: A/S·CS 운영 적재 대상 검증 및 실행 지원"
+            }
+          ]
+        },
+        {
+          "title": "내부발주·출고·매출 원장",
+          "summary": "영업 출고 요청과 생산 출고 권한을 분리했다. 출고와 매출 탭·처리를 분리하고 매출 원장, 처리·되돌리기 API, 매출 대기 목록, 대시보드 집계 및 기존 데이터 백필 스크립트를 추가했다.",
+          "commits": [
+            {
+              "hash": "50fe0bd6f794624746ef9815acf18689ff4c62d5",
+              "date": "2026-09-08",
+              "subject": "feat: 영업 출고 요청과 생산 출고 권한 분리"
+            },
+            {
+              "hash": "b44a2835e71cf36d34a3c6ddd102a91eb6f767fc",
+              "date": "2026-09-10",
+              "subject": "feat: 내부발주 매출 원장 스키마와 채번 추가"
+            },
+            {
+              "hash": "351f7df99b209f9397cebbc416331ba68c80a2be",
+              "date": "2026-09-10",
+              "subject": "feat: 매출 처리·되돌리기 API 라우트 추가"
+            },
+            {
+              "hash": "52f1bc33f97a67df5386244fccb289556ba50d28",
+              "date": "2026-09-10",
+              "subject": "feat: 내부발주 매출 탭 추가와 출고 탭 분리"
+            },
+            {
+              "hash": "054b5b267b7f3a06f13b53fbee7bf3e179f80e41",
+              "date": "2026-09-10",
+              "subject": "feat: 대시보드 확정·가매출을 매출 원장 기준으로 전환"
+            },
+            {
+              "hash": "0feef5515c51c79795fce832f19886995b8fe030",
+              "date": "2026-09-10",
+              "subject": "feat: 기존 출고·부대비용 매출 백필 스크립트 추가"
+            }
+          ]
+        },
+        {
+          "title": "개발의뢰·생산의뢰·양산이관",
+          "summary": "개발의뢰 검토 배정 승인, 회차별 제출자료 패키지 고정, 생산의뢰 연결을 구현했다. 양산이관 검토·승인 화면을 생산 쪽에 구성하고 자료별 필수 여부 설정을 추가했다.",
+          "commits": [
+            {
+              "hash": "35a2d5f2233771f93e611f03df095ec394e9a2ba",
+              "date": "2026-08-31",
+              "subject": "feat: 개발의뢰 검토 배정 승인 흐름을 추가한다"
+            },
+            {
+              "hash": "f8ca166f7c84d97a3a039d82c1eaa0b2e2bd3045",
+              "date": "2026-08-31",
+              "subject": "feat: 승인 회차별 제출자료 패키지를 고정한다"
+            },
+            {
+              "hash": "840217831f4b416924cf93baa6c4f262a64649c7",
+              "date": "2026-08-31",
+              "subject": "feat: 최종 승인 패키지를 생산의뢰에 연결한다"
+            },
+            {
+              "hash": "962a048a8c3f8faefbc07aa034ac3e09cc8ec940",
+              "date": "2026-09-03",
+              "subject": "feat(production): 양산이관 검토·승인 상세 화면을 생산 쪽에 만든다"
+            },
+            {
+              "hash": "1aa348a5733e7122382ce47bd44839849f447568",
+              "date": "2026-09-09",
+              "subject": "feat: 양산이관 자료별 필수 여부 설정 추가"
+            }
+          ]
+        },
+        {
+          "title": "문서번호·기준정보·납품장소",
+          "summary": "제안서·개발의뢰·생산의뢰 문서번호 채번과 연도별 초기화 형식을 적용했다. 품목 Excel 가져오기와 납품장소 주소 검색·지도 컴포넌트를 추가했다.",
+          "commits": [
+            {
+              "hash": "388956465ab675c8cbac7af76dc948af5572ae1a",
+              "date": "2026-09-09",
+              "subject": "feat: 문서번호를 연도별 초기화 형식(PREFIX-YY-0000)으로 변경"
+            },
+            {
+              "hash": "683ad0285d4a4b7d839e016869eec1655cdf18d6",
+              "date": "2026-09-09",
+              "subject": "feat(db): 제안서·개발의뢰·생산의뢰 문서번호 컬럼과 채번 프리픽스 추가"
+            },
+            {
+              "hash": "cef72efd715054b195c1f6aa18050d4f26d4b930",
+              "date": "2026-08-28",
+              "subject": "feat(master): 품목 Excel 가져오기를 추가한다"
+            },
+            {
+              "hash": "10122e0c12f010437ee7f9fb99a2e8740d853f4c",
+              "date": "2026-08-25",
+              "subject": "feat(erp): 주소 검색·지도·상세주소를 묶은 납품장소 블록 컴포넌트를 추가한다"
+            }
+          ]
+        },
+        {
+          "title": "업무 탐색과 공지 UI",
+          "summary": "듀얼 사이드바, 승인 대기 배지, 공지사항 관리·알림 패널을 추가하고 목록에서 행 클릭으로 상세에 진입하도록 통일했다.",
+          "commits": [
+            {
+              "hash": "f78fd50a294cffc2c4ac9d2910e61b3e016114df",
+              "date": "2026-08-27",
+              "subject": "feat(erp): 라벨형 듀얼 사이드바와 접기 동작 추가"
+            },
+            {
+              "hash": "ad54ea56fa829fb5e0667a542d099e89d5b0bd95",
+              "date": "2026-09-09",
+              "subject": "feat: 사이드바 업무 레일에 승인 대기 건수 배지 추가"
+            },
+            {
+              "hash": "082fd1669b19e8f63c29707208214754f897e9a2",
+              "date": "2026-08-23",
+              "subject": "feat(notice): 공지사항 관리 화면과 사이드바 메뉴를 추가한다"
+            },
+            {
+              "hash": "535febec4fb75924f94dc907d98995a5f191febe",
+              "date": "2026-08-23",
+              "subject": "feat(notice): 우하단 알림 패널을 추가한다"
+            },
+            {
+              "hash": "15db2a0631a552ef83a852aa8eafdf754ff5da98",
+              "date": "2026-08-27",
+              "subject": "feat(erp): 목록 상세 진입 트리거를 행 클릭으로 통일한다"
+            }
+          ]
+        },
+        {
+          "title": "데이터 이관·배포 도구 보완",
+          "summary": "운영 데이터 보존형 ID 재매핑, 충돌·채번 병합 검증과 dry-run을 구현했다. 웹 배포 게이트와 운영 빌드 메모리 설정을 보완했다.",
+          "commits": [
+            {
+              "hash": "8522c9a92430595470b59422214c66bcec08e4b3",
+              "date": "2026-08-26",
+              "subject": "feat(db): 재매핑 이관을 검증 후 적용한다"
+            },
+            {
+              "hash": "51eaa87342aa82ddb963b0e1a0db2766800c9c11",
+              "date": "2026-08-26",
+              "subject": "feat(db): 운영 보존형 dry-run을 통합한다"
+            },
+            {
+              "hash": "348a95cbd0b9b69fc480fc701355ff55c2af7874",
+              "date": "2026-08-26",
+              "subject": "feat(db): 이관 충돌과 채번 병합을 검증한다"
+            },
+            {
+              "hash": "4073c4cb0637baec39466b05d0bb07776908df38",
+              "date": "2026-08-26",
+              "subject": "fix(deploy): 운영 웹 배포 게이트를 복구한다"
+            },
+            {
+              "hash": "a12953e1884b058c4ea784f4c2f14626ce688f24",
+              "date": "2026-09-14",
+              "subject": "fix: 운영 빌드 타입 검사의 Node 메모리 한도 확대"
+            }
+          ]
+        }
+      ],
+      "latest": [
+        {
+          "hash": "3b38f695e3c192d6c7ff1a53ccbfd515c4476338",
+          "date": "2026-09-15",
+          "subject": "feat: Forecast 업로드의 부서·월 블록을 헤더 기반으로 판별"
+        },
+        {
+          "hash": "a12953e1884b058c4ea784f4c2f14626ce688f24",
+          "date": "2026-09-14",
+          "subject": "fix: 운영 빌드 타입 검사의 Node 메모리 한도 확대"
+        },
+        {
+          "hash": "c0eecd30ce7381e77e8ee61f757c9295795e6e3d",
+          "date": "2026-09-14",
+          "subject": "test: Forecast 변경에 맞춰 권한 목록과 화면 검증 정리"
+        },
+        {
+          "hash": "48f7b2fccb70f0f78777d84d7d79c92a893755e0",
+          "date": "2026-09-14",
+          "subject": "feat: Forecast 부서별 Excel 업로드 및 사용계획 중심 화면 정리"
+        },
+        {
+          "hash": "6ceb52cf97b20c51b4123ea0b8d8f9132c2c9151",
+          "date": "2026-09-14",
+          "subject": "fix: 시스템 관리자에 부서 무관 전사 권한 부여"
+        }
+      ]
+    },
+    {
+      "id": "tns",
+      "title": "티앤에스 (TNS)",
+      "repository": "/Users/janguk/Documents/project/tns/tnstrading",
+      "head": "3e18d6e65de4ca44c14c7c2a9c119720db7f3358",
+      "periodStart": "2026-07-02",
+      "periodEnd": "2026-09-15",
+      "commitCount": 2554,
+      "mergeCount": 5,
+      "groups": [
+        {
+          "title": "영업 계약·견적·할인 결재",
+          "summary": "계약 형태를 리테일형·프로젝트형으로 분리하고 전환 서비스·가격 재계산·잠금 판정을 구현했다. 기본·영업자·팀장·본부장·대표의 5단계 할인과 단계별 결재를 연결했다.",
+          "commits": [
+            {
+              "hash": "32b35628e7c3dd45358870fc208fadfe56f000fb",
+              "date": "2026-09-08",
+              "subject": "feat(sales): 계약 형태 컬럼과 자연 형태 백필 SQL을 추가하고 생성 경로를 연결한다"
+            },
+            {
+              "hash": "88fbab5dd657aea53e36fc4de7a95b125123b6f6",
+              "date": "2026-09-08",
+              "subject": "feat(sales): 확정 해제와 가격 재계산을 동반하는 계약 형태 전환 서비스를 추가한다"
+            },
+            {
+              "hash": "783cc3c8c5cfab49f49c66ea678f485bc7b20b2b",
+              "date": "2026-09-08",
+              "subject": "feat(sales): 계약 형태 판정과 전환 불가 사유를 순수 모듈로 둔다"
+            },
+            {
+              "hash": "b39b1b5ffd4d96aa620a70c733e52f33290e92e2",
+              "date": "2026-09-07",
+              "subject": "feat(sales): 할인 사다리 5단계 순수 로직 — 곱 산식·단계 범위·순서·잠금·역산"
+            },
+            {
+              "hash": "6551be4c5216bf6b051b4c1f959634a41a70f984",
+              "date": "2026-09-07",
+              "subject": "feat(sales): 계약상세 금액 그룹을 할인 사다리 5행(기본·영업자 편집, 팀장·본부장·대표 결재)으로 바꾼다"
+            },
+            {
+              "hash": "939e78df2d24a8c3141ddaf852bde129c51e0028",
+              "date": "2026-09-07",
+              "subject": "feat(sales): 추가할인 결재를 단계·값 명시형으로 바꾸고 순서·잠금 판정, 승인 시 단계 컬럼 쓰기, 진행중 철회를 붙인다"
+            }
+          ]
+        },
+        {
+          "title": "국내·해외 매입과 조달",
+          "summary": "국내·해외 매입 단계와 PO 중심 진행 흐름을 정리했다. 국내매입 발주·입고 취득원가, 매입처 지정, 검토·칸반 필터, 해외 이관 경로를 구현·수정했다.",
+          "commits": [
+            {
+              "hash": "7379d43e76f8d6fd7f5844d720e5711220faae83",
+              "date": "2026-07-13",
+              "subject": "feat(domestic): 국내·수입 매입 상태 공통 단계 정규화 함수"
+            },
+            {
+              "hash": "de0ba86dda2c55e1d512f70fac9c49265c02b028",
+              "date": "2026-08-18",
+              "subject": "fix(purchase): 접수행 개별 전진 경로를 없앤다 — 발주 이후 상태는 PO 가 소유한다"
+            },
+            {
+              "hash": "2c01613bb70e34fd7a34eed52a9278dbb4535023",
+              "date": "2026-09-07",
+              "subject": "feat(purchase): 국내매입 발주가 매입처로 나가고, 입고가 취득원가를 남긴다"
+            },
+            {
+              "hash": "f46309d909ed7006c1ea05c55009a2584ccd504e",
+              "date": "2026-09-07",
+              "subject": "feat(purchase): 매입현황에서 매입처를 거래처로 지정한다"
+            },
+            {
+              "hash": "8048cc4f35f98cf2deda2d3d421037cf0148c06b",
+              "date": "2026-09-07",
+              "subject": "feat(purchase): 검토 탭 헤더에 출처·현장·종류·매입처·납기 필터를 PO 생성 오른쪽에 단다"
+            },
+            {
+              "hash": "5a0fd5978bc35ab900de5aa9b4874514b23edbff",
+              "date": "2026-09-04",
+              "subject": "fix(purchase): 수입 이관이 딜 단계를 전진시키지 않아 견적/할인에 고인다"
+            }
+          ]
+        },
+        {
+          "title": "무역 발주·OC·선적·지급",
+          "summary": "고객 원본 서식 기반 발주서, 납기 역산 선적기한 추천, OC 검토 수량·단가 적용, 분할선적과 입고 연결, 생산·픽업 일정 및 대금·물류비 출금 매칭을 구현했다.",
+          "commits": [
+            {
+              "hash": "e07ce11419f1cabf59fb2891a40d725884b213e7",
+              "date": "2026-09-11",
+              "subject": "feat(trade): 통일 발주서를 고객 원본 서식 실측으로 재현"
+            },
+            {
+              "hash": "26eb7c1535157e5beb04b9dd4d991f8c401e34dd",
+              "date": "2026-09-10",
+              "subject": "feat(trade): PO 선적기한을 계약 납기 역산 추천 + 무역담당자 편집으로 전환"
+            },
+            {
+              "hash": "fbe23a337f41fbea5386edaf9b9ff1cc31f3b09e",
+              "date": "2026-09-09",
+              "subject": "feat: OC 검토와 확정 시 수량·단가 일괄 적용"
+            },
+            {
+              "hash": "c32c7bee7ffcdb2a30ad1e963b3c47846f2a274e",
+              "date": "2026-09-09",
+              "subject": "feat(trade): 문서 기반 분할선적 배정과 물류 입고처리 연결"
+            },
+            {
+              "hash": "135aaf00dccb6c2db92baf5cc1f86903f8623214",
+              "date": "2026-09-09",
+              "subject": "feat(trade): 생산·픽업 일정 관리와 물품대금 출금 매칭 추가"
+            },
+            {
+              "hash": "13eb55081c8fee7fc19a8bed282de9a544942fe3",
+              "date": "2026-09-09",
+              "subject": "feat(trade): 선적 상세·입고 예정일·물류비 출금 매칭 배선"
+            },
+            {
+              "hash": "5d38e1bd8ac8aa1a63090ededcb64ecec648b95a",
+              "date": "2026-09-09",
+              "subject": "feat(trade): 물류비 결의를 지급 탭으로 옮기고 상세 화면 규격 정리"
+            }
+          ]
+        },
+        {
+          "title": "무역 문서 판독과 자동 연결",
+          "summary": "무역 문서 판독 패키지와 정규화, 판독 잡 설정, 미처리 사유 표시, PO 문서 자동 연결을 추가했다. B/L 문서 연결로 선적을 생성하고 관련 문서를 선적에 연결하는 흐름을 구현했다.",
+          "commits": [
+            {
+              "hash": "1db575418eec6cd7f958e293994cd546ee829db1",
+              "date": "2026-08-23",
+              "subject": "feat(trade-doc): 판독 패키지 스캐폴드와 텍스트 정규화"
+            },
+            {
+              "hash": "6a17633cdb7bcf756c811f49460f4d124e7e5184",
+              "date": "2026-08-27",
+              "subject": "feat(trade-doc): trade-doc-parse 잡 설정 행을 마이그레이션이 넣는다"
+            },
+            {
+              "hash": "687e2010dabdaa00ae5b5fb4a03a99c2732d1089",
+              "date": "2026-08-27",
+              "subject": "feat(trade-doc): 미처리문서 탭이 판독 사유를 보여준다"
+            },
+            {
+              "hash": "02395dd5930dd4833c077472edb46c98c199aca0",
+              "date": "2026-08-30",
+              "subject": "feat(trade-doc): auto-link parsed PO documents"
+            },
+            {
+              "hash": "e4886c859ff3af5d845fe180de723547c545bdb7",
+              "date": "2026-09-03",
+              "subject": "feat(trade): B/L 문서 연결이 선적을 만들고 1SET 문서를 선적에 직결"
+            }
+          ]
+        },
+        {
+          "title": "재고·예약·물류 정합성",
+          "summary": "재고의 입고·이동 파생, 계약 홀딩, 창고별 예약 및 LOT 잔여 계산을 보완했다. 재고 상세·예약 소유자 액션과 출고 정합 검증 코드를 추가·수정했다.",
+          "commits": [
+            {
+              "hash": "f79a98a868a2d10c701c330f6f9193e94a0f79c0",
+              "date": "2026-07-17",
+              "subject": "feat(inventory): W1 재고 오버레이 순수 로직(baseline+movement+tradeInbound 파생)"
+            },
+            {
+              "hash": "5f23e4ac46b2eca1c286d7c4c539d5c31c4b1faf",
+              "date": "2026-09-08",
+              "subject": "feat(inventory): 재고 「홀딩」을 계약 선택 → 계약 상세 라인 추가(수량만 입력)로 잇는다"
+            },
+            {
+              "hash": "b9bc4347535164b4d91bf38717830f0213cf0fef",
+              "date": "2026-09-08",
+              "subject": "fix(inventory): 다중 창고 예약과 라인별 편집 가용을 정합화한다"
+            },
+            {
+              "hash": "778f4d97c0513693835d2b0c6ffecfda667695fc",
+              "date": "2026-09-08",
+              "subject": "fix(inventory): 쓰기 LOT 잔여에 비LOT FIFO 조정을 반영한다"
+            },
+            {
+              "hash": "571c56c46d83e8e87d699d3e4fddfdfe1d03c17c",
+              "date": "2026-08-31",
+              "subject": "fix(inventory): 내 예약재고 취소 액션 추가"
+            },
+            {
+              "hash": "f287a5055fceeb877874426be13ff34f719f6638",
+              "date": "2026-08-12",
+              "subject": "feat(verify): 출고 정합 검사를 품목별 D·F·G·H 로 확장한다"
+            }
+          ]
+        },
+        {
+          "title": "쇼룸 전시재고·판매 견적",
+          "summary": "쇼룸 전용 견적 채번, 전시재고 가용수량·판매예약, SHOWROOM 창고 예약과 출고 규칙을 구현했다. 판매 견적과 계약 상세를 연결하고 불출·이력 화면을 정리했다.",
+          "commits": [
+            {
+              "hash": "63f3e1eb42c8d5ddf86535301627d6f3bbea0df5",
+              "date": "2026-09-07",
+              "subject": "feat(sales): 쇼룸 채널 견적 생성 — SD- 채번·판매가능 재고 검사·SHOWROOM 예약·채널별 조달 검증"
+            },
+            {
+              "hash": "d06a6aa932d7508f40a06904ca0cb83b92c64d43",
+              "date": "2026-09-07",
+              "subject": "feat(showroom): 전시재고에 가용수량·판매예약 열을 더하고 판매가능 행 파생 함수를 만든다"
+            },
+            {
+              "hash": "60a9b88e679db4b56093ee44c4711e117ff6d9af",
+              "date": "2026-09-07",
+              "subject": "feat(sales): 쇼룸 라인의 확정(조달 없음)·SHOWROOM 출고 소스·창고 종류 락, 양도·일괄출고는 거부"
+            },
+            {
+              "hash": "6547ec1c8cf6be1dac82f95471591ff395ba1b28",
+              "date": "2026-09-07",
+              "subject": "feat(showroom): 견적서 작성을 주문 생성으로 바꾸고 판매 견적 작성 버튼·판매 견적 탭에서 쇼룸 딜의 계약 상세를 연다"
+            },
+            {
+              "hash": "3dca17aec64d0c0eb92d5ff00a0274d8b9dbf3d3",
+              "date": "2026-09-06",
+              "subject": "feat(showroom): 표가 있는 네 탭이 같은 줄을 쓴다 — 불출 신청에 필터바를 내고 재고 필터 축은 패널로 넣는다"
+            }
+          ]
+        },
+        {
+          "title": "수금·채권·입금 매칭·정산",
+          "summary": "채권 화면을 서버 조회로 전환하고 워커 입금내역을 매칭 화면에 연결했다. 입금 배분 모달, 만기 연장 결재, 팝빌 발행 액션 및 상태 표시를 구현했다.",
+          "commits": [
+            {
+              "hash": "76996a2ef6e1697c57ad1141cbd93bc68c5e6f84",
+              "date": "2026-08-12",
+              "subject": "feat(receivables): 레이아웃이 채권 스냅샷을 조회해 주입한다"
+            },
+            {
+              "hash": "192accc639bbdd249be9be34a062f39635ac5089",
+              "date": "2026-08-31",
+              "subject": "feat(finance): 워커 입금내역을 매칭 화면에 연결"
+            },
+            {
+              "hash": "99eb9ba5495a26fbb502b6b6118f4e58232294cc",
+              "date": "2026-09-07",
+              "subject": "feat(finance): 입금매칭을 거래내역 표 한 장과 배분 모달로 바꾼다"
+            },
+            {
+              "hash": "fa58afd91104519eb7c208600394967124bc3726",
+              "date": "2026-08-24",
+              "subject": "fix(finance): 만기 연장 결재 상신 경로를 완성한다"
+            },
+            {
+              "hash": "1ebe2135bb2a58d1b25e6cdfda283bcf31c32265",
+              "date": "2026-08-13",
+              "subject": "feat(settlement): 팝빌 발행을 정산 탭의 4중 가드 위 서버 액션으로 연다"
+            },
+            {
+              "hash": "294e7c841eec64e20953592bd42242a6f0dea932",
+              "date": "2026-08-13",
+              "subject": "feat(settlement): 발행 계산서 패널에 팝빌 상태와 발행 버튼을 얹는다"
+            }
+          ]
+        },
+        {
+          "title": "품목·가격표·기준정보",
+          "summary": "가격표 워커와 파이프라인 계약·상태 머신, 섹션 라우팅을 구현했다. Inbani 가격표 재적재 스크립트, 품목 코드·옵션 선택, 고객 등급·환율·거래처 화면을 보완했다.",
+          "commits": [
+            {
+              "hash": "a7e49228c1ece1d7417cf693989cc0075e4aec62",
+              "date": "2026-08-05",
+              "subject": "feat(pricelist-worker): 워커 패키지 골격을 추가한다"
+            },
+            {
+              "hash": "c05332c1e3d9594171934d3967c2d2af023dac15",
+              "date": "2026-08-05",
+              "subject": "feat(pricelist): 파이프라인 계약·상태머신 스캐폴딩을 추가한다"
+            },
+            {
+              "hash": "695519544fe59f9715a223651c830e589b71ebb7",
+              "date": "2026-08-06",
+              "subject": "feat(pricelist-pipeline): 섹션 라우팅 판정을 순수 함수로 구현한다"
+            },
+            {
+              "hash": "f19b0121f341b0362f27a3b2cc84de47180e4c9e",
+              "date": "2026-07-13",
+              "subject": "chore(scripts): Inbani Tarifa nº17 재그레인·재적재 파이프라인(소스)"
+            },
+            {
+              "hash": "0cbea6b43163972bf534e63c5ab6b6627507f88e",
+              "date": "2026-08-10",
+              "subject": "feat(items): select external code options individually"
+            },
+            {
+              "hash": "97d2889bd74399b9b6d0e1c80d28a4d022c6fab5",
+              "date": "2026-09-06",
+              "subject": "feat(master): 환율 화면을 「현재 적용중」 인라인 수정으로 바꾸고 이력의 컬럼 설정을 헤더로 올린다"
+            },
+            {
+              "hash": "f5ff2b08d2902ae790140909a894f8ebd34efb1d",
+              "date": "2026-09-03",
+              "subject": "fix(master): 등급 순서 교환을 값 기준으로, 등급 거절 시 기본정보 미저장, 비활성 거래처 표시, 시드 액터 등록"
+            }
+          ]
+        },
+        {
+          "title": "조직·결재·인사총무",
+          "summary": "조직에서 결재자를 파생하고 상신함·받은 결재를 구분했다. 인사총무의 근무일정·근태·휴가·세콤 반영을 조직관리와 연결하고 개발 전용 접근 제어·세콤 수신 조회를 추가했다.",
+          "commits": [
+            {
+              "hash": "5db307b0414edc2eb985b2535089ea45fbd7efd8",
+              "date": "2026-08-23",
+              "subject": "feat(approval): 조직에서 결재자를 파생하는 순수함수를 만든다"
+            },
+            {
+              "hash": "0610887249b8d08ddf6fb07285297878a2fb05e0",
+              "date": "2026-08-18",
+              "subject": "feat(admin): 결재함 \"받은 결재\"·\"상신함\" 탭을 실제로 나눈다"
+            },
+            {
+              "hash": "0fe45099fdc2e12f831a8a6fba0bb8d351d422b4",
+              "date": "2026-09-15",
+              "subject": "feat(hr): 인사총무 통합 — 근무일정·근태·휴가·세콤 반영과 조직관리 연결"
+            },
+            {
+              "hash": "3e18d6e65de4ca44c14c7c2a9c119720db7f3358",
+              "date": "2026-09-11",
+              "subject": "feat(admin): 개발 전용 접근 제어와 세콤 수신 조회 추가"
+            }
+          ]
+        },
+        {
+          "title": "서버 조회 구조와 성능 개선",
+          "summary": "전사 데이터를 한 번에 적재하던 스토어를 제거하고 영업·계약·프로젝트·재고·쇼룸·매입을 화면별 서버 조회로 전환했다. 계약 상세 할인표의 조회 범위를 제한했다.",
+          "commits": [
+            {
+              "hash": "2638930c44d3d16ae9c53595a498c46d7f98f554",
+              "date": "2026-09-08",
+              "subject": "refactor: 화면별 조회 전환을 마치고 전사 스토어 적재 제거"
+            },
+            {
+              "hash": "4b4336e34a946c7b37ed8e25870b1a6ebcbdb38a",
+              "date": "2026-09-08",
+              "subject": "feat(sales): 영업 보드 목록과 현장 집계를 서버로 이관한다"
+            },
+            {
+              "hash": "754f710091d77036ad7f9668dcf0bdac95a6d1c2",
+              "date": "2026-09-08",
+              "subject": "feat(sales): 계약 상세와 품목 재고를 서버 조회로 전환"
+            },
+            {
+              "hash": "ab636e966dc569663aa2cb6a8e5e11a84025a2d8",
+              "date": "2026-09-08",
+              "subject": "feat(inventory): 재고 화면과 홀딩 연결을 서버 조회로 전환"
+            },
+            {
+              "hash": "d07dbfd0dcde1629be32343cb5806be11df3a27d",
+              "date": "2026-09-08",
+              "subject": "refactor: 매입 목록과 선택 상세를 서버 조회로 전환"
+            },
+            {
+              "hash": "e470b15741316e0c21b108f5d6df90bcedb55690",
+              "date": "2026-09-08",
+              "subject": "perf(sales): 계약 상세 할인표의 조회 범위를 제한한다"
+            }
+          ]
+        },
+        {
+          "title": "공통 화면·문서·첨부·메일",
+          "summary": "듀얼 사이드바와 공통 표·모달·폼 컨트롤을 정리했다. 공용 첨부 업로드, 발주서 PDF, 무역 메일 본문·첨부 발송 연결을 추가했다.",
+          "commits": [
+            {
+              "hash": "4ba88f73a6b33298f9129e7caa3cfbc73f060890",
+              "date": "2026-09-01",
+              "subject": "feat(shell): 앱 셸을 듀얼 사이드바로 전환하고 상단바를 제거"
+            },
+            {
+              "hash": "a8d1b981179ea2c6a711fb30be73207126d1cf34",
+              "date": "2026-09-02",
+              "subject": "feat(erp): 상세 업무 흐름과 견적 문서 편집 개선"
+            },
+            {
+              "hash": "28f2db7ce41054e85272dbf11c14ff49dcefa5dc",
+              "date": "2026-08-21",
+              "subject": "feat(erp): 요청 파일 업로드·첨부 조회·삭제 공용화"
+            },
+            {
+              "hash": "9b8f6aea4c8f37ebffbe511ab13887e7e38ba463",
+              "date": "2026-08-25",
+              "subject": "feat(pdf): 통일 발주서 PDF 렌더러와 Pretendard 폰트 동봉"
+            },
+            {
+              "hash": "fca1cdcb3074fd8b9823403b9f2eff9a8244345e",
+              "date": "2026-08-25",
+              "subject": "feat(mail): PO·포워더 통지 메일 제목·HTML 본문 빌더"
+            },
+            {
+              "hash": "31204e639dc5b79916be9faa67f690704c6e1076",
+              "date": "2026-08-25",
+              "subject": "feat(microsoft): Graph sendMail 에 HTML 본문·파일 첨부 추가"
+            }
+          ]
+        },
+        {
+          "title": "검증 시나리오·운영 보완",
+          "summary": "업무 시연 시드·대본 및 DB 정합 검증 코드를 작성했다. 문서 주도 선적 시연 헬퍼, 빌드 메모리 한도와 Cloud SQL 백업 정책 설정을 보완했다.",
+          "commits": [
+            {
+              "hash": "44859bbfa756dda100f781a54e30b235aae64fdd",
+              "date": "2026-09-03",
+              "subject": "test(seed): walkthrough 시드 게이트·행 수 스냅샷·헬퍼 리허설 스크립트"
+            },
+            {
+              "hash": "c4f807526d5f90dc18b8294f10a985dd51ab92f3",
+              "date": "2026-09-03",
+              "subject": "feat(seed): walkthrough 선적 취소 헬퍼 trade:unship — 오타 B/L 복구 경로"
+            },
+            {
+              "hash": "2b44651cf217472aad06980c21b94646ea6caf01",
+              "date": "2026-08-14",
+              "subject": "test(verify): 계약 현장 손익 DB 검증을 추가한다"
+            },
+            {
+              "hash": "19a68c483b892c105cc6204218ddaa498a505d48",
+              "date": "2026-08-31",
+              "subject": "fix(deploy): Cloud Build 메모리 한도 상향"
+            },
+            {
+              "hash": "ee056664501e5a40722ebe9f8a91998ea7868e2b",
+              "date": "2026-08-30",
+              "subject": "fix(deploy): enforce Cloud SQL backup policy"
+            }
+          ]
+        }
+      ],
+      "latest": [
+        {
+          "hash": "0fe45099fdc2e12f831a8a6fba0bb8d351d422b4",
+          "date": "2026-09-15",
+          "subject": "feat(hr): 인사총무 통합 — 근무일정·근태·휴가·세콤 반영과 조직관리 연결"
+        },
+        {
+          "hash": "3e18d6e65de4ca44c14c7c2a9c119720db7f3358",
+          "date": "2026-09-11",
+          "subject": "feat(admin): 개발 전용 접근 제어와 세콤 수신 조회 추가"
+        },
+        {
+          "hash": "e07ce11419f1cabf59fb2891a40d725884b213e7",
+          "date": "2026-09-11",
+          "subject": "feat(trade): 통일 발주서를 고객 원본 서식 실측으로 재현"
+        },
+        {
+          "hash": "26eb7c1535157e5beb04b9dd4d991f8c401e34dd",
+          "date": "2026-09-10",
+          "subject": "feat(trade): PO 선적기한을 계약 납기 역산 추천 + 무역담당자 편집으로 전환"
+        },
+        {
+          "hash": "fc8a23fad17dc78d16beaaa7ebbd9c8afa4c1fc7",
+          "date": "2026-09-10",
+          "subject": "feat(trade): 공급사 PO 문서에서 한글 제거 — 담당·지급조건 영문 표기"
+        }
+      ]
+    },
+    {
+      "id": "finance",
+      "title": "Poooling Finance",
+      "repository": "/Users/janguk/Documents/poooling-foundation/poooling-finance",
+      "head": "0ba688e83288c0aa5ee60170929e7acf6cd2d876",
+      "periodStart": "2026-06-23",
+      "periodEnd": "2026-06-30",
+      "commitCount": 85,
+      "mergeCount": 0,
+      "groups": [
+        {
+          "title": "재무 모듈 기반과 데이터 모델",
+          "summary": "Next.js 기반 앱, Prisma 어댑터, 회계 라우트·라이브러리 구조, 회계 테이블·enum 마이그레이션 및 ORM 격리 포트·어댑터 계약을 구축했다.",
+          "commits": [
+            {
+              "hash": "7d45e530f29820aa6c46d8887d47bb3d03df437b",
+              "date": "2026-06-23",
+              "subject": "chore: Next.js 16 스캐폴드 (host-A 스택 정렬)"
+            },
+            {
+              "hash": "715f1ebf5e4bb2b68c5f446c7b322c534e112011",
+              "date": "2026-06-23",
+              "subject": "feat(db): Prisma 7 driver adapter + 로컬 Postgres 연결"
+            },
+            {
+              "hash": "4b3b62d73abe429de7a52e55f3c9e07666f1829f",
+              "date": "2026-06-23",
+              "subject": "feat(schema): 17테이블 + enum 마이그레이션 (ERD 명세 §2)"
+            },
+            {
+              "hash": "ef92c580850a21d836451d56eff2f400c24de4eb",
+              "date": "2026-06-23",
+              "subject": "feat(repository): ORM 격리 포트/어댑터 계약 확정"
+            }
+          ]
+        },
+        {
+          "title": "분개 엔진과 거래 유형",
+          "summary": "분개 조립 엔진과 공통 전기 코어를 구현하고 매출·매입·현금·카드매출·경비·수동전표·계좌이체·카드대금결제·원가전표를 연결했다.",
+          "commits": [
+            {
+              "hash": "6727842a255b1f1a9e4adbb1dc322791a787d5d4",
+              "date": "2026-06-23",
+              "subject": "feat(engine): 분개 조립 엔진 assemble() 포팅 + 케이스 빌더"
+            },
+            {
+              "hash": "9faddfd34b9f045f8672e612dd949d0eb10fa411",
+              "date": "2026-06-23",
+              "subject": "refactor(posting): 전기 공통 코어 assembleAndPost 추출"
+            },
+            {
+              "hash": "1a5156845ade0b6c7c24073227d74e5eb3e8591b",
+              "date": "2026-06-23",
+              "subject": "feat(slice): 매출(C1)/매입(C4) 전기 로직 — 실데이터 검증 대기"
+            },
+            {
+              "hash": "7c06a9c215c7760fabeb9d78d90f4acb07eb0169",
+              "date": "2026-06-23",
+              "subject": "feat(cases): 발생 케이스 완성 — C3 현금·카드매출 / C6 경비 / C18 수동전표"
+            },
+            {
+              "hash": "3f8b6e1af7918d38aa70f237b3bdbc9969dcae0d",
+              "date": "2026-06-23",
+              "subject": "feat(cases): C8 계좌이체 · C9 카드대금결제"
+            },
+            {
+              "hash": "73381c8b31c9072e0ff5183d43b037e1e7d42c31",
+              "date": "2026-06-23",
+              "subject": "feat(cogs): R-COGS 원가전표 + 재고법 config"
+            }
+          ]
+        },
+        {
+          "title": "채권·채무 대사와 정산",
+          "summary": "수금·지급 및 미결항목 대사를 구현했다. 거래처 필터, 통화별 미결항목 매칭, 초과입금의 선수금·초과지급의 선급금 처리를 추가했다.",
+          "commits": [
+            {
+              "hash": "64d622642956067b6a1090f3f4c8b7cf14de8e5a",
+              "date": "2026-06-23",
+              "subject": "feat(reconcile): 수금(C2)·지급(C5) + 대사(match/match_line)"
+            },
+            {
+              "hash": "3d051d890d525d2efadb71dfe9b9af6026bfa4d7",
+              "date": "2026-06-23",
+              "subject": "feat(reconcile): 채권·채무 정산 거래처별 필터"
+            },
+            {
+              "hash": "0da7a14bdc3a4065d797bc7ac340d44e5c65ce37",
+              "date": "2026-06-29",
+              "subject": "feat(settle): 통화-인지 open-item 매칭 (M6)"
+            },
+            {
+              "hash": "ed7da1494648df54143269d6b39fac55fcae665d",
+              "date": "2026-06-29",
+              "subject": "feat(settle): 초과 정산 라우팅 — 초과입금→선수금/초과지급→선급금 (M7)"
+            }
+          ]
+        },
+        {
+          "title": "결산·세무·외화회계",
+          "summary": "손익대체·기초이월·부가세 정리, 고정자산·차입·결산정리 유형과 외화 전기·실현 환차손익·기말평가·자동 역분개를 구현했다. 환율 마스터와 설정 화면을 추가했다.",
+          "commits": [
+            {
+              "hash": "c52acf15683cf799007143cdba6b085007170389",
+              "date": "2026-06-23",
+              "subject": "feat(closing): C15 손익대체 — 수익·비용 → 집합손익 → 이익잉여금"
+            },
+            {
+              "hash": "767fc5cc8ee214bd3c7a01bc09c6f75f7c9656f8",
+              "date": "2026-06-23",
+              "subject": "feat(closing): C17a 기초이월 — 전기말 BS 잔액 → 당기초 개시잔액"
+            },
+            {
+              "hash": "6a08239ca270ab1e99562be389d374b5dc7d51a0",
+              "date": "2026-06-23",
+              "subject": "feat(vat): C11 부가세 정리·납부·환급"
+            },
+            {
+              "hash": "f772a61c302343353e11aece7ed8ec3e5b016c8b",
+              "date": "2026-06-23",
+              "subject": "feat(cases): 후순위 케이스 — C12/13 고정자산·C10 차입·C16 결산정리"
+            },
+            {
+              "hash": "2d15e9e623244cb387375a5f5686586e81a8f37a",
+              "date": "2026-06-24",
+              "subject": "feat(engine): R-FX 외화 거래기록 라이더 — base 환산 전기"
+            },
+            {
+              "hash": "c986abb94585f190f8011df128f32e924b7a1c7b",
+              "date": "2026-06-24",
+              "subject": "feat(settlement): R-FX 정산 실현 환차손익 — C23b"
+            },
+            {
+              "hash": "4a77913c4a630560be195104fdc276361530e9bc",
+              "date": "2026-06-24",
+              "subject": "feat(closing): R-FX 기말 외화환산 C23a — 미실현 평가 + 자동 역분개"
+            },
+            {
+              "hash": "3db1de735737fc8e738cf3ed4615edd3b7e23b1b",
+              "date": "2026-06-24",
+              "subject": "feat(fx): 환율 설정 화면 + 메뉴 — /settings/exchange-rates"
+            }
+          ]
+        },
+        {
+          "title": "원장·시산표·재무제표",
+          "summary": "장부·시산표·재무제표 SQL 뷰와 조회 화면을 작성하고 현금흐름표·자본변동표, 거래처원장, 관리회계 분석축과 기중 재무상태표의 미마감 당기순이익 행을 추가했다.",
+          "commits": [
+            {
+              "hash": "b502b38380390e817f488ac4f4c65cb4030811eb",
+              "date": "2026-06-23",
+              "subject": "feat(views): 장부·시산표·재무제표 뷰 (CREATE VIEW migration)"
+            },
+            {
+              "hash": "27323a0fcedc9d68b607b107e662992b823f8c2b",
+              "date": "2026-06-23",
+              "subject": "feat(ui): 읽기 화면 — 대시보드·시산표·재무제표 4종·부가세·원장·전표·계정과목"
+            },
+            {
+              "hash": "5b2e9b81ceda12bbc16e395468f3b29a59171689",
+              "date": "2026-06-23",
+              "subject": "feat(statements): 현금흐름표·자본변동표 → 재무제표 4종 완비"
+            },
+            {
+              "hash": "b34bc2e114b7451e64825f3cb216c5cfff2f538f",
+              "date": "2026-06-23",
+              "subject": "feat(ledger): 거래처원장 활성화 + 총계정원장·거래처원장 전체 보기"
+            },
+            {
+              "hash": "d94373948c1e44e8b7957ea8059a6235f21d2f54",
+              "date": "2026-06-24",
+              "subject": "feat(engine): 관리회계 분석축(dimension) 엔진 배선"
+            },
+            {
+              "hash": "036c2ddab75b9cef7805f526958025236c73e1c2",
+              "date": "2026-06-29",
+              "subject": "feat(views): 기중 BS 항등식 — 미마감 당기순이익 합성행 (M4)"
+            }
+          ]
+        },
+        {
+          "title": "입력 화면·기준정보·전자결재·가져오기",
+          "summary": "수동전표의 차대평형 표시, 자동분개 미리보기, 계정과목·거래처·규칙·회계기간 CRUD와 승인 시 전표 자동 생성을 구현했다. 월매출 Excel 가져오기 및 자동 파싱을 추가했다.",
+          "commits": [
+            {
+              "hash": "ae5321cf34f2f5a2f7df4d5883dc66ba360f4e37",
+              "date": "2026-06-23",
+              "subject": "feat(ui): 전표 입력 폼 — 수동전표(C18) 실시간 차대평형"
+            },
+            {
+              "hash": "c539b67c1feb583e861068a3601c4b1f0bb661f1",
+              "date": "2026-06-23",
+              "subject": "feat(ui): 자동분개 입력 폼 — 매출/현금매출/매입/경비 + 실시간 분개 미리보기"
+            },
+            {
+              "hash": "9d37c6b454b78bec659c45ea4375135fd6436475",
+              "date": "2026-06-23",
+              "subject": "feat(masters): 기준정보 CRUD — 계정과목·거래처·자동분개규칙·회계기간 + 통장·카드(읽기전용)"
+            },
+            {
+              "hash": "c4b77cda9052d74c7e51a3b4a4c6848365f4a42e",
+              "date": "2026-06-23",
+              "subject": "feat(approval): 전자결재 — 서식→문서→결재선, 승인 시 전표 자동생성"
+            },
+            {
+              "hash": "975299b5dfe3c72555b96e16554c854b42a50725",
+              "date": "2026-06-23",
+              "subject": "feat(import): 월매출 xlsx 실데이터 적재 로직"
+            },
+            {
+              "hash": "c9769376d7478ba4949f0d14cce5dde9e475b6a8",
+              "date": "2026-06-23",
+              "subject": "feat(import): import:deals 자동 파싱 — JSON 없으면 xlsx 직접 파싱(단일 명령)"
+            }
+          ]
+        },
+        {
+          "title": "정합성·원천 추적·멱등성",
+          "summary": "전표 원천 추적과 감사 뷰, external_ref 기반 중복 전기 방지, 역분개의 차원·참조 복사, 정합성 자동 검증 하니스를 추가했다.",
+          "commits": [
+            {
+              "hash": "91a101e605351abf8c2ed4bad991ee6557f90ce2",
+              "date": "2026-06-29",
+              "subject": "feat(source-ref): voucher_line 원천추적 백포트 — source_ref + 감사뷰 (M1)"
+            },
+            {
+              "hash": "a88d37c967b5a5d562f451d57602271d2e651258",
+              "date": "2026-06-29",
+              "subject": "feat(idempotency): 파생·주기·정산 전표 멱등 의무화 — external_ref 배선 (M2)"
+            },
+            {
+              "hash": "ab1a323db55a0d3355d653925ca9ffcb1cf9f9c5",
+              "date": "2026-06-29",
+              "subject": "feat(reversal): 역분개 완전 미러 — 전 차원·참조 필드 복사 (M8)"
+            },
+            {
+              "hash": "6e7b64ec31410df30829cb5cc68e4a9972da4fa9",
+              "date": "2026-06-29",
+              "subject": "feat(invariants): Tier1 자동검증 하니스 (M10)"
+            }
+          ]
+        },
+        {
+          "title": "다른 ERP로 이식하기 위한 조립 계약",
+          "summary": "기능 manifest, 설정 스키마, 가드레일, 서비스 3계층 의존성 및 입력 계약을 작성했다. 교차참조·enum·seed 드리프트 검증과 호스트별 배선·테이블 재사용 지침을 정리했다.",
+          "commits": [
+            {
+              "hash": "bd2941b9cca4a1f1f3577b30c697ffca29e1bab9",
+              "date": "2026-06-24",
+              "subject": "docs(composition): 조립 계약 산출물 — capability manifest·config schema·가드레일·seam"
+            },
+            {
+              "hash": "2262025a3da33ab7efdd650c4ef2cf0c0a1924c5",
+              "date": "2026-06-29",
+              "subject": "docs(composition): 서비스 조립 DAG — base/derived/primitive 3계층 (M9)"
+            },
+            {
+              "hash": "54312ba9961882e7743b49e7241e1ba12f860af1",
+              "date": "2026-06-30",
+              "subject": "feat(composition): 서비스 입력 계약 — inputContracts (httpKind 키) (M12-4)"
+            },
+            {
+              "hash": "98e2ac8385729eb6df3d3606f6a2cc8e25bb7c10",
+              "date": "2026-06-30",
+              "subject": "feat(composition): manifest 교차참조 무결성 — ID 규약 (M12-2)"
+            },
+            {
+              "hash": "110e9c1b3850b2647c7d3a97435b0b936587a700",
+              "date": "2026-06-30",
+              "subject": "feat(composition): enum·seed·httpKind 드리프트 가드 (M12-3)"
+            },
+            {
+              "hash": "d972fff9450aec61601281db8332c278b032db28",
+              "date": "2026-06-30",
+              "subject": "docs: 이식 프롬프트에 테이블 재사용 위계 추가"
+            },
+            {
+              "hash": "fa51d699333689d0fdd97526959862b693160609",
+              "date": "2026-06-30",
+              "subject": "docs: 이식 프롬프트에 host별 커스텀 배선 보강"
+            }
+          ]
+        }
+      ],
+      "latest": [
+        {
+          "hash": "d972fff9450aec61601281db8332c278b032db28",
+          "date": "2026-06-30",
+          "subject": "docs: 이식 프롬프트에 테이블 재사용 위계 추가"
+        },
+        {
+          "hash": "fa51d699333689d0fdd97526959862b693160609",
+          "date": "2026-06-30",
+          "subject": "docs: 이식 프롬프트에 host별 커스텀 배선 보강"
+        },
+        {
+          "hash": "1b3a509421677fbdfa96aebf077b3de856d0c2c7",
+          "date": "2026-06-30",
+          "subject": "docs: README 이식 가이드를 프롬프트 한 블록으로 단순화"
+        },
+        {
+          "hash": "2d848ec6f7ce65c8dc944144725965d82f902310",
+          "date": "2026-06-30",
+          "subject": "docs(composition): 조립 계약 산문을 AI-first·기능 only로 정리"
+        },
+        {
+          "hash": "09d1fd5302e8d6b41af834ce92e6b317dc9629c3",
+          "date": "2026-06-30",
+          "subject": "docs: README를 AI 이식 명령서로 재작성 + 로컬 볼트 의존 제거"
+        }
+      ]
+    }
+  ]
+}
