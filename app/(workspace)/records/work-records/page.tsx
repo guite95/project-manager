@@ -4,7 +4,7 @@ import { loadPersonalWorkRecords } from "@/lib/server/personal-work-records-stor
 import type { WorkCommit } from "@/lib/personal-work-records";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "작업 기록 — 개인 공간" };
+export const metadata: Metadata = { title: "작업 기록 — 기록" };
 
 function CommitList({ commits }: { commits: WorkCommit[] }) {
   return <ul className="mt-3 space-y-2 text-[12px] text-[var(--bi-muted)]">
@@ -15,7 +15,7 @@ function CommitList({ commits }: { commits: WorkCommit[] }) {
   </ul>;
 }
 
-export default async function PersonalWorkRecordsPage() {
+export default async function WorkRecordsPage() {
   const record = await loadPersonalWorkRecords();
   return <div className="mx-auto max-w-[1200px]">
     <PageHeader title="작업 기록" description="Git 이력으로 정리한 프로젝트별 기여와 작업 근거입니다." />

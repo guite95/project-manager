@@ -27,3 +27,11 @@ export function moveSidebarProject(
   next.splice(next.indexOf(target) + (edge === "after" ? 1 : 0), 0, slug);
   return next.every((entry, index) => entry === order[index]) ? order : next;
 }
+
+/** 현재 탭에서 옮긴 순서만 반영하고 다른 탭의 프로젝트 순서는 보존한다. */
+export function mergeSidebarGroupOrder(fullOrder: string[], groupOrder: string[]): string[] {
+  const group = new Set(groupOrder);
+  let index = 0;
+  const merged = fullOrder.map(slug => group.has(slug) ? groupOrder[index++] : slug);
+  return [...merged, ...groupOrder.slice(index)];
+}

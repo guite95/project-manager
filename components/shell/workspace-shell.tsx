@@ -3,25 +3,30 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { HiOutlineChip, HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
+import { HiOutlineBriefcase, HiOutlineDocumentText, HiOutlineCog, HiOutlineChip, HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
 import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
 import { type UiPreferences } from "@/lib/ui-preferences";
 import { AppSidebar } from "./app-sidebar";
 
+import { isPersonalProject } from "@/lib/personal-projects";
+
 const sections = [
-  { id: "ai-ops", href: "/ai-ops", title: "AI 관리", railTitle: "AI 관리", description: "AI 대화 활동과 토큰 사용량", icon: HiOutlineChip },
   { id: "today", href: "/today", title: "할 일", railTitle: "할 일", description: "오늘의 업무와 완료 이력", icon: HiOutlineCalendar },
-  { id: "projects", href: "/flows", title: "풀링", railTitle: "풀링", description: "프로젝트 구조도와 참고 자료", icon: HiOutlineOfficeBuilding },
-  { id: "personal", href: "/personal", title: "개인", railTitle: "개인", description: "개인 기록과 포트폴리오", icon: HiOutlineUser },
+  { id: "projects", href: "/flows", title: "풀링 프로젝트", railTitle: "풀링\n프로젝트", description: "프로젝트 구조도와 참고 자료", icon: HiOutlineOfficeBuilding },
+  { id: "personal", href: "/personal", title: "개인 프로젝트", railTitle: "개인\n프로젝트", description: "개인 프로젝트 목록", icon: HiOutlineUser },
+  { id: "recruitment", href: "/recruitment", title: "채용", railTitle: "채용", description: "포트폴리오와 채용 준비", icon: HiOutlineBriefcase },
+  { id: "records", href: "/records", title: "기록", railTitle: "기록", description: "프로젝트별 작업 기록", icon: HiOutlineDocumentText },
+  { id: "ai-ops", href: "/ai-ops", title: "AI 관리", railTitle: "AI 관리", description: "AI 대화 활동과 토큰 사용량", icon: HiOutlineChip },
+  { id: "settings", href: "/settings", title: "설정", railTitle: "설정", description: "설정 공간", icon: HiOutlineCog },
 ] as const;
 const utilitySections = [
   { id: "guide", href: "/guide", title: "작성 가이드", railTitle: "작성\n가이드", description: "플로우차트 JSON 작성 방법", icon: HiOutlineBookOpen },
 ] as const;
 const allSections = [...sections, ...utilitySections];
 type Section = (typeof allSections)[number]["id"];
-const panelLink = (active: boolean) => `mx-2 flex min-h-11 items-center rounded-[3px] px-3 text-[12px] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${active
+const panelLink = (active: boolean) => `mx-2 flex min-h-10 items-center md:min-h-9 rounded-[3px] px-3 text-[12px] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${active
   ? "bg-[var(--bi-accent)] font-semibold text-white"
   : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
 
@@ -37,7 +42,8 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const portfolioActive = pathname === "/portfolio" || pathname.startsWith("/portfolio/");
-  const currentSection: Section = portfolioActive ? "personal" : allSections.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.id ?? "projects";
+  const personalActive = isPersonalProject(pathname.match(/^\/flows\/([^/]+)/)?.[1] ?? "");
+  const currentSection: Section = personalActive ? "personal" : portfolioActive ? "recruitment" : allSections.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.id ?? "projects";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<Section | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -111,8 +117,8 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
 
   const togglePanel = () => prefs.update({ panelCollapsed: !collapsed });
   const renderSectionMenu = (id: Section, inline = false) => {
-    if (id === "projects") return (
-      <AppSidebar flowProjects={navigationProjects} projectOrder={projectOrder}
+    if (id === "projects" || id === "personal") return (
+      <AppSidebar key={id} personal={id === "personal"} flowProjects={navigationProjects.filter(project => isPersonalProject(project.slug) === (id === "personal"))} projectOrder={projectOrder}
         onProjectOrderChange={setProjectOrder} inline={inline} />
     );
     const menuSection = allSections.find(item => item.id === id)!;
@@ -125,17 +131,17 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         </> : id === "ai-ops" ? <>
           <Link href="/ai-ops/activity" aria-current={pathname === "/ai-ops/activity" ? "page" : undefined} className={panelLink(pathname === "/ai-ops/activity")}>활동 및 대화</Link>
           <Link href="/ai-ops/usage" aria-current={pathname === "/ai-ops/usage" ? "page" : undefined} className={panelLink(pathname === "/ai-ops/usage")}>사용량 통계</Link>
-        </> : id === "personal" ? <>
-          <Link href="/personal" aria-current={pathname === "/personal" ? "page" : undefined} className={panelLink(pathname === "/personal")}>개인 홈</Link>
-          <Link href="/personal/work-records" aria-current={pathname === "/personal/work-records" ? "page" : undefined} className={panelLink(pathname === "/personal/work-records")}>작업 기록</Link>
+        </> : id === "records" ? <>
+          <Link href="/records/work-records" aria-current={pathname === "/records/work-records" ? "page" : undefined} className={panelLink(pathname === "/records/work-records")}>작업 기록</Link>
+        </> : id === "recruitment" ? <>
           <Link href="/portfolio" aria-current={portfolioActive ? "page" : undefined} className={panelLink(portfolioActive)}>포트폴리오</Link>
-        </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className={panelLink(pathname === menuSection.href)}>JSON 작성 가이드</Link>}
+        </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className={panelLink(pathname === menuSection.href)}>{id === "guide" ? "JSON 작성 가이드" : menuSection.title}</Link>}
       </nav>
     );
   };
   const renderRailLink = (item: (typeof allSections)[number]) => (
     <Link key={item.id} href={item.href} title={item.title} aria-current={currentSection === item.id ? "true" : undefined}
-      className={`flex min-h-[72px] flex-col items-center justify-center gap-1 border-l-[3px] px-1 py-2 text-center text-[10px] leading-[1.35] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
+      className={`flex min-h-[60px] flex-col items-center justify-center gap-0.5 border-l-[3px] px-1 py-1.5 text-center text-[10px] leading-[1.35] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
         ? "border-[var(--bi-rail-indicator)] bg-[var(--bi-rail-active)] font-semibold text-white"
         : "border-transparent hover:bg-[var(--bi-rail-active)] hover:text-white"}`}>
       <item.icon size={18} aria-hidden /><span className="max-w-10 whitespace-pre-line break-keep">{item.railTitle}</span>
@@ -188,7 +194,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
                 <h2 className="m-0">
                   <button id={triggerId} type="button" aria-expanded={expanded} aria-controls={contentId}
                     onClick={() => setMobileSection(current => current === item.id ? null : item.id)}
-                    className={`flex min-h-16 w-full items-center gap-3 rounded px-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${expanded ? "bg-[var(--bi-sidebar-active)]" : "hover:bg-[var(--bi-sidebar-active)]"}`}>
+                    className={`flex min-h-14 w-full items-center gap-3 rounded px-3 text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${expanded ? "bg-[var(--bi-sidebar-active)]" : "hover:bg-[var(--bi-sidebar-active)]"}`}>
                     <item.icon size={20} aria-hidden className="shrink-0" />
                     <span className="min-w-0 flex-1"><strong className="block text-[13px]">{item.title}</strong><span className="mt-1 block text-[11px] font-normal text-[var(--bi-muted)]">{item.description}</span></span>
                     {currentSection === item.id ? <span className="text-[10px] font-normal text-[var(--bi-muted)]">현재</span> : null}

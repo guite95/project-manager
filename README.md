@@ -82,9 +82,9 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 | `/flows/[project]/meetings` | 각 프로젝트의 회의록 목록·검색, 등록 전 빈 화면 |
 | `/flows/[project]/meetings/[meeting]` | 회의록 상세 — 요약·논의·결정·태스크과 전사본 원문 탭 |
 | `/flows/common/notes` | 명심할 점 — 4단계 우선순위와 서버 자동 저장. 공통 프로젝트에만 있다 |
-| `/personal` | 개인 홈 — 프로젝트별 작업 기록 진입 |
-| `/personal/work-records` | Git 기반 프로젝트별 기여 요약·기간·대표 근거·최근 커밋 |
-| `/portfolio` | 개인 하위의 포트폴리오 기본 화면 — 편집 기능은 추후 추가 |
+| `/personal` | 개인 프로젝트 목록 — 프로젝트별 자료·기록·회의록 |
+| `/records/work-records` | Git 기반 프로젝트별 기여 요약·기간·대표 근거·최근 커밋 |
+| `/portfolio` | 채용 하위의 포트폴리오 기본 화면 — 편집 기능은 추후 추가 |
 | `/guide` | 플로우차트 작성 가이드 (MDX) |
 
 ## 2단 사이드바와 공유 화면 설정
@@ -397,3 +397,5 @@ Claude Code에서도 `/pm-flow-author`, `/pm-flow-review`로 같은 스킬을 �
 `pnpm ai:agent scan`으로 Mac의 수집 범위를 전송 없이 검사할 수 있습니다.
 운영 반영 후 `pnpm ai:agent install`로 60초 간격 자동수집을 등록합니다.
 수집 경로, 보관 정책, 설치·중지·검증 절차는 [docs/ai-ops.md](docs/ai-ops.md)를 참고하세요.
+
+개인 프로젝트는 `lib/personal-projects.ts`의 식별자로 풀링 프로젝트와 메뉴를 구분하고, 실제 프로젝트·자료는 기존 `flow_project`/`flow_document`, 기록은 `project_note`에 저장한다. `personal-` 식별자를 사용해 기존 프로젝트와 충돌하지 않는다. 각 프로젝트의 자료·기록·회의록은 `/flows/<personal-slug>/...`를 재사용하며 개인 탭을 유지한다. 디렉터리 변경은 자동 동기화하지 않는다. 초기 등록은 공유 DB 백업 후 `pnpm db:shared -- node --experimental-strip-types scripts/register-personal-projects.mjs inspect`로 확인하고 `apply`로 실행한다. 기존 행은 덮어쓰지 않는다. 작업 기록은 `/records/work-records`에서 조회하며, 이전 `/personal/work-records` 주소는 제거했다.

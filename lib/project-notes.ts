@@ -1,3 +1,5 @@
+import { isPersonalProject } from "./personal-projects.ts";
+
 export const PROJECT_NOTE_PRIORITIES = [
   { value: "urgent", label: "긴급" },
   { value: "high", label: "높음" },
@@ -22,16 +24,11 @@ const PRIORITIES = new Set<ProjectNotePriority>(
 /** dataTransfer 종류. 행 드래그가 아닌 것을 끌어와도 표가 반응하지 않게 한다. */
 export const PROJECT_NOTE_DRAG_TYPE = "application/x-project-note";
 
-/**
- * 명심할 점을 두는 프로젝트. 공통 하나뿐이다.
- *
- * 명심할 점은 고객사와 무관하게 반복 적용하는 기준이라 프로젝트마다 나눌 이유가
- * 없다. 사이드바 링크와 라우트가 이 값 하나에서 파생된다.
- */
+/** 공통 기준과 개인 프로젝트별 기록은 같은 편집기를 사용하되 프로젝트별로 저장한다. */
 export const NOTES_PROJECT_SLUG = "common";
 
 export function hasProjectNotes(projectSlug: string): boolean {
-  return projectSlug === NOTES_PROJECT_SLUG;
+  return projectSlug === NOTES_PROJECT_SLUG || isPersonalProject(projectSlug);
 }
 
 export function projectNotesStorageKey(projectSlug: string): string {

@@ -8,7 +8,7 @@ import {
   HiOutlineSearch,
 } from "react-icons/hi";
 import { putSidebarOrder } from "@/lib/api-client";
-import { defaultSidebarOrder, normalizeSidebarOrder, moveSidebarProject } from "@/lib/navigation/sidebar-order";
+import { defaultSidebarOrder, normalizeSidebarOrder, moveSidebarProject, mergeSidebarGroupOrder } from "@/lib/navigation/sidebar-order";
 import { SidebarProject } from "./sidebar-project";
 import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { chartHref, resolveChart } from "@/lib/flows/registry";
@@ -25,18 +25,23 @@ import { searchSidebarProjects } from "@/lib/navigation/sidebar-search";
 import { meetingsHref } from "@/lib/meetings";
 import { materialsHref } from "@/lib/materials";
 
-const ROW = "mx-2 flex min-h-11 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
+import { isPersonalProject } from "@/lib/personal-projects";
+
+const ROW = "mx-2 flex min-h-10 md:min-h-9 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
 const linkCls = (active: boolean) => `${ROW} ${active
   ? "bg-[var(--bi-accent)] font-semibold text-white"
   : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
 
-export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, inline = false }: {
+export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, inline = false, personal = false }: {
   flowProjects: FlowNavigationProject[];
   projectOrder: string[];
   onProjectOrderChange: (order: string[]) => void;
   inline?: boolean;
+  personal?: boolean;
 }) {
   const pathname = usePathname();
+  const visibleExternal = personal ? [] : externalProjects;
+  const overviewHref = personal ? "/personal" : "/flows";
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const setProjectOrder = onProjectOrderChange;
@@ -47,20 +52,21 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   const [announcement, setAnnouncement] = useState("");
   const savingOrderRef = useRef(false);
   const order = normalizeSidebarOrder(
-    defaultSidebarOrder(flowProjects.map((p) => p.slug), externalProjects.map((p) => p.slug)),
+    defaultSidebarOrder(flowProjects.map((p) => p.slug), visibleExternal.map((p) => p.slug)),
     projectOrder,
   );
 
   const saveOrder = async (next: string[]) => {
     if (savingOrderRef.current || next === order) return;
     savingOrderRef.current = true;
-    const previous = order;
-    setProjectOrder(next);
+    const previous = projectOrder;
+    const merged = mergeSidebarGroupOrder(projectOrder, next);
+    setProjectOrder(merged);
     setSavingOrder(true);
     setOrderError("");
     setAnnouncement("프로젝트 순서를 저장하는 중입니다.");
     try {
-      setProjectOrder(await putSidebarOrder(next));
+      setProjectOrder(await putSidebarOrder(merged));
       setAnnouncement("프로젝트 순서를 저장했습니다.");
     } catch {
       setProjectOrder(previous);
@@ -126,8 +132,8 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   const visibleProjects = useMemo(() => searchSidebarProjects(flowProjects, q), [flowProjects, q]);
 
   const visibleExternalProjects = useMemo(
-    () => filterExternalProjects(externalProjects, q),
-    [q]
+    () => filterExternalProjects(personal ? [] : externalProjects, q),
+    [q, personal]
   );
 
   const renderProject = (entry: (typeof visibleProjects)[number]) => {
@@ -159,7 +165,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
               className={linkCls(projectActive && active?.view === "meetings")}>회의록</Link> : null}
             {showNotes ? (
               <Link
-                aria-label={`${project.title} 명심할 점`}
+                aria-label={`${project.title} ${isPersonalProject(project.slug) ? "기록" : "명심할 점"}`}
                 aria-current={
                   projectActive && active?.view === "notes"
                     ? "page"
@@ -172,7 +178,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
                   aria-hidden
                   className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--bi-warning)]"
                 />
-                <span className="truncate">명심할 점</span>
+                <span className="truncate">{isPersonalProject(project.slug) ? "기록" : "명심할 점"}</span>
               </Link>
             ) : null}
             {categories.map((category) => {
@@ -264,8 +270,8 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
         </label>
       </div>
       <div className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
-        {!searching ? <Link href="/flows" aria-current={pathname === "/flows" && searchParams.get("view") !== "components" ? "page" : undefined}
-          className={linkCls(pathname === "/flows" && searchParams.get("view") !== "components")}>전체 프로젝트</Link> : null}
+        {!searching ? <Link href={overviewHref} aria-current={pathname === overviewHref && searchParams.get("view") !== "components" ? "page" : undefined}
+          className={linkCls(pathname === overviewHref && searchParams.get("view") !== "components")}>전체 프로젝트</Link> : null}
       {searching &&
       visibleProjects.length === 0 &&
       visibleExternalProjects.length === 0 ? (

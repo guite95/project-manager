@@ -8,6 +8,7 @@ import {
   HiOutlineSelector,
   HiOutlineTrash,
 } from "react-icons/hi";
+import { isPersonalProject } from "@/lib/personal-projects";
 import { Dropdown } from "@/components/erp/dropdown";
 import { Button } from "@/components/erp/button";
 import { EditButton, InlineEdit } from "@/components/inline-edit";
@@ -218,7 +219,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[784px] table-fixed border-collapse text-[12px]">
-          <caption className="sr-only">프로젝트 진행 시 명심할 점</caption>
+          <caption className="sr-only">{isPersonalProject(projectSlug) ? "프로젝트 기록" : "프로젝트 진행 시 명심할 점"}</caption>
           <colgroup>
             <col className="w-[64px]" />
             <col className="w-[140px]" />
@@ -235,7 +236,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                 우선순위
               </th>
               <th className="border-b border-[var(--bi-border)] px-4 py-3 text-left text-[11px] font-semibold" scope="col">
-                명심할 점
+                {isPersonalProject(projectSlug) ? "기록" : "명심할 점"}
               </th>
               <th className="border-b border-[var(--bi-border)] px-4 py-3 text-left text-[11px] font-semibold" scope="col">
                 수정 시각
@@ -377,7 +378,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                     <InlineEdit
                       editing={editingId === note.id}
                       inputClassName="h-[30px] w-full rounded-[4px] border border-[var(--bi-accent)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)]"
-                      label={`${index + 1}번째 명심할 점`}
+                      label={`${index + 1}번째 ${isPersonalProject(projectSlug) ? "기록" : "명심할 점"}`}
                       maxLength={500}
                       onCancel={() => setEditingId(null)}
                       onCommit={(next) => {
