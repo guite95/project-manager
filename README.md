@@ -16,7 +16,7 @@
 | 테스트 | `node --test` (`lib/**/*.test.mjs`) |
 
 플로우차트 구성 방식은 artisan 프로젝트의 `Web/app/docs/architecture/flow-guide`
-방식을 그대로 따왔다. 핵심은 **좌표를 데이터에 넣지 않고 Dagre 에 위임**하는 것.
+방식을 바탕으로 한다. 기본 배치는 Dagre가 계산하고, 사용자가 UI에서 조정한 좌표·연결 면·경유점은 차트 JSON의 `layout`에 저장한다.
 
 ## 환경변수
 
@@ -334,3 +334,59 @@ Next.js 프록시의 본문 한도는 multipart 부가 정보를 포함해 11MB�
 
 `node skills/work-sum/scripts/install.mjs`로 Codex와 Claude에 함께 설치한다.
 사용법과 저장·검증 기준은 [docs/work-summary.md](docs/work-summary.md)를 참고한다.
+
+## 범용 플로우 작성 CLI와 스킬
+
+```bash
+node scripts/install-flow-tools.mjs
+~/.local/bin/pm-flow list
+~/.local/bin/pm-flow pull tns/finance/finance-sales --out draft.json
+~/.local/bin/pm-flow validate draft.json
+~/.local/bin/pm-flow diff draft.json
+~/.local/bin/pm-flow apply draft.json
+```
+
+Node 22.6 이상이 필요하다. CLI는 다른 프로젝트의 작업 디렉터리에서도 이 저장소의
+개인 SSH 설정을 사용한다. 출력 파일은 호출한 디렉터리 기준이다. 기존 프로젝트/카테고리에서
+`new project/category/chart --out draft.json`으로 신규 차트를 준비할 수 있다.
+프로젝트·카테고리 생성/이동, ERD와 콘텐츠 문서는 이 CLI 범위에 포함되지 않는다.
+
+`apply`는 `~/.pm-backups/` 원문 백업과 SHA-256 재검증, 행 잠금, revision 조건 저장,
+DB 재조회 대조를 수행한다. revision 0은 신규 생성 전용이다. 충돌 시 최신 문서를 pull해
+변경을 다시 적용한다. 파일의 revision을 임의로 올려 재시도하지 않는다.
+
+설치기는 `pm-flow-author`, `pm-flow-review`를 `$CODEX_HOME/skills` (기본 `~/.codex/skills`)와
+Claude Code의 `~/.claude/skills` (`CLAUDE_CONFIG_DIR` 반영)에
+심볼릭 링크로 연결한다. 기존 설치는 덮어쓰지 않는다. 새 세션에서 스킬을 사용할 수 있다.
+작성가이드 `/guide`에는 스킬 목록, 예시와 JSON 기준을 안내한다.
+
+일반 차트의 **배치 편집**은 보기 모드와 분리된다. 저장 시 기존 PUT API와 revision을 사용한다.
+내용 수정에서 layout을 생략하면 살아 있는 노드 ID의 위치를 보존하고 삭제된 ID·대상이 바뀐 선의
+배치는 제거한다. 명시적 빈 layout은 자동 배치 초기화다. ERD의 app_setting 배치 저장은 별도다.
+
+### 원격 설치 / 업데이트
+
+개인용 SSH 방식을 유지한다. Node 22.12+, pnpm, Git, curl이 필요하다.
+
+```bash
+installer_dir="$(mktemp -d)"
+curl -fsSL \
+  'https://raw.githubusercontent.com/guite95/project-manager/main/scripts/install-flow-remote.mjs' \
+  -o "$installer_dir/install.mjs" && node "$installer_dir/install.mjs" --ref main
+rm -f "$installer_dir/install.mjs"
+rmdir "$installer_dir"
+```
+
+공개 저장소는 HTTPS로 내려받으며, 서버 개인 SSH 인증은 별도로 필요하다.
+설치 후 `~/.config/pm-flow/ssh.env`의 SSH 메타데이터를 채운다. 개인키/호스트 신뢰는
+각 컴퓨터에서 준비한다. 자격증명을 배포 파일에 포함하지 않는다.
+같은 명령을 반복하면 업데이트한다. ref를 커밋/태그로 고정할 수 있으며 이전 버전도 보관한다.
+설치 경로는 `~/.local/share/pm-flow/releases/<commit>`, 진입점은 `current` 심볼릭 링크다.
+`PM_FLOW_SSH_CONFIG`는 별도 SSH 설정 파일을 지정한다. 환경변수 > 개인 설정 > 개발 `.env` 순이다.
+설치 자체는 DB 연결, 마이그레이션, 앱 배포를 수행하지 않는다.
+
+설치기 테스트에서는 `PM_FLOW_INSTALL_HOME`, `PM_FLOW_SKILLS_DIR`로 임시 경로를 지정해
+실제 HOME/CODEX_HOME이나 사용자 설치를 변경하지 않는다.
+
+Claude Code에서도 `/pm-flow-author`, `/pm-flow-review`로 같은 스킬을 호출할 수 있다.
+설치기 테스트의 `PM_FLOW_CLAUDE_SKILLS_DIR`는 Claude 스킬 경로를 임시 디렉터리로 분리한다.

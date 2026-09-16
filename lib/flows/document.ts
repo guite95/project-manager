@@ -55,6 +55,7 @@ export function parseFlowChart(value: unknown): FlowChart {
   const edges = uniqueRows(c.edges, 'edges');
   for (const g of groups.rows) {
     string(g.label, 'groups.label');
+    requireValue(g.layoutOnly === undefined || typeof g.layoutOnly === 'boolean', 'groups.layoutOnly');
     requireValue(g.kind === undefined || nodeKinds.has(g.kind as string), 'groups.kind');
   }
   for (const n of nodes.rows) {
@@ -62,6 +63,18 @@ export function parseFlowChart(value: unknown): FlowChart {
     requireValue(n.group === undefined || groups.ids.has(n.group as string), 'nodes.group');
     const d = object(n.data, 'nodes.data');
     string(d.label, 'nodes.data.label');
+    requireValue(d.role === undefined || d.role === 'screen' || d.role === 'logic', 'nodes.data.role');
+    optionalString(d.screen, 'nodes.data.screen');
+    requireValue(d.role !== 'logic' || d.screen === undefined, 'logic 노드에는 screen을 넣을 수 없습니다');
+    requireValue(d.sectioned === undefined || typeof d.sectioned === 'boolean', 'nodes.data.sectioned');
+    if (d.sections !== undefined) {
+      requireValue(Array.isArray(d.sections), 'nodes.data.sections');
+      for (const section of d.sections) {
+        const s = object(section, 'nodes.data.sections[]');
+        string(s.title, 'sections.title');
+        strings(s.lines, 'sections.lines');
+      }
+    }
     requireValue(nodeKinds.has(d.kind as string), 'nodes.data.kind');
     if (d.sub !== undefined && typeof d.sub !== 'string') strings(d.sub, 'nodes.data.sub');
     for (const key of ['timing','doc']) optionalString(d[key], `nodes.data.${key}`);
@@ -82,6 +95,28 @@ export function parseFlowChart(value: unknown): FlowChart {
     requireValue(edgeKinds.has(e.kind as string), 'edges.kind');
     requireValue(e.tone === undefined || nodeKinds.has(e.tone as string), 'edges.tone');
     optionalString(e.label, 'edges.label');
+  }
+  if (c.layout !== undefined) {
+    requireValue(c.erdDomain === undefined && c.content === undefined, '일반 플로우만 layout을 저장할 수 있습니다');
+    const layout = object(c.layout, 'layout');
+    const positions = object(layout.nodes, 'layout.nodes');
+    const routes = object(layout.edges, 'layout.edges');
+    const point = (v: unknown) => {
+      const p = object(v, 'layout.point');
+      requireValue(['x','y'].every(k => typeof p[k] === 'number' && Number.isFinite(p[k]) && Math.abs(p[k] as number) <= 1000000), 'layout.point.x/y');
+    };
+    for (const [id, p] of Object.entries(positions)) {
+      requireValue(nodes.ids.has(id), 'layout.nodes: 존재하지 않는 id'); point(p);
+    }
+    for (const [id, value] of Object.entries(routes)) {
+      requireValue(edges.ids.has(id), 'layout.edges: 존재하지 않는 id');
+      const route = object(value, 'layout.edges.route');
+      for (const key of ['sourcePort','targetPort']) requireValue(route[key] === undefined || ['left','right','top','bottom'].includes(route[key] as string), 'layout.port');
+      if (route.waypoints !== undefined) {
+        requireValue(Array.isArray(route.waypoints) && route.waypoints.length <= 100, 'layout.waypoints');
+        route.waypoints.forEach(point);
+      }
+    }
   }
   return c as FlowChart;
 }

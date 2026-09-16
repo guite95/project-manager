@@ -4,7 +4,7 @@ import type { ProjectContent } from "../../lib/flows/content";
  * 플로우차트 선언 타입.
  *
  * 설계 원칙 (artisan `/docs/architecture/flow-guide` 방식 그대로):
- *  - 좌표를 데이터에 넣지 않는다. 배치는 전부 Dagre 에 위임한다.
+ *  - 기본 배치는 Dagre, 사용자 배치는 layout JSON에 저장한다.
  *  - 데이터(노드·엣지 선언) 와 렌더(스타일) 를 분리한다.
  *    흐름이 바뀌면 배열만 고치고 스타일 코드는 건드리지 않는다.
  *  - 노드의 `kind` 는 "종류" 하나만 정한다. 시점·산출물 같은 직교 정보는
@@ -66,10 +66,16 @@ export type FlowNodeData = {
     fieldCount: number;
     fields: { name: string; type: string; optional: boolean; keys: string[] }[];
   };
+  /** 업무 역할. 기존 차트는 생략 가능. */
+  role?: "screen" | "logic";
+  screen?: string;
   /** 카드 제목 */
   label: string;
   /** 카드 본문. 배열이면 줄바꿈해서 여러 줄로 쌓는다. */
   sub?: string | string[];
+  /** 제목과 화면·기능 본문을 구분선으로 나눈다. */
+  sectioned?: boolean;
+  sections?: { title: string; lines: string[] }[];
   /** 카드 색/모양 */
   kind: NodeKind;
   /** 초록 ⏱ 배지 — 이 단계가 도는 시점 (예: "매주 월요일", "월 마감"). */
@@ -90,6 +96,8 @@ export type FlowNodeDef = {
 export type FlowGroupDef = {
   id: string;
   label: string;
+  /** 배치만 묶고 그룹 박스·제목은 표시하지 않는다. */
+  layoutOnly?: boolean;
   /** 박스 테두리 색조. 생략하면 중립 회색. */
   kind?: NodeKind;
 };
@@ -108,8 +116,17 @@ export type FlowEdgeDef = {
 /** Dagre 배치 방향. LR = 좌→우(기본), TB = 위→아래. */
 export type FlowDirection = "LR" | "TB";
 
+export type FlowPoint = { x: number; y: number };
+export type FlowPort = "left" | "right" | "top" | "bottom";
+export type FlowLayout = {
+  nodes: Record<string, FlowPoint>;
+  edges: Record<string, { sourcePort?: FlowPort; targetPort?: FlowPort; waypoints?: FlowPoint[] }>;
+};
+
 /** 플로우차트 한 장. */
 export type FlowChart = {
+  /** 절대 좌표. 생략하면 기존 사용자 배치를 보존, 빈 객체 쌍이면 자동 배치로 초기화. */
+  layout?: FlowLayout;
   content?: ProjectContent;
   source?: { url: string; capturedAt: string };
   erdDomain?: string;

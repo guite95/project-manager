@@ -15,6 +15,8 @@ import { HiOutlineArrowsExpand, HiOutlineX } from "react-icons/hi";
 import { ExportSvgButton } from "./export-svg-button";
 import { FlowNode } from "./flow-node";
 import { GroupNode } from "./group-node";
+import { LayoutEditor } from "./layout-editor";
+import { RouteEdge } from "./route-edge";
 import { ErdEdge } from "./erd-edge";
 import { layoutChart } from "./layout";
 import { erdSelection } from "../../lib/erd/selection";
@@ -25,14 +27,14 @@ import type { FlowChart } from "./types";
  * 읽기 전용 플로우차트 뷰어.
  *
  * 인라인과 전체화면이 **같은 <FlowCanvas/>** 를 재사용한다 (두 벌 관리 금지).
- * 노드 드래그/선택/연결은 전부 끈다 — 이건 다이어그램이지 편집기가 아니다.
+ * 보기 모드와 별도 배치 편집기를 분리한다.
  * ---------------------------------------------------------------------- */
 
 // 타입 키는 CSS 클래스(`.react-flow__node-<type>`)가 되므로 React Flow 기본
 // 타입 이름(default/input/output/group)과 겹치면 안 된다 — 기본 스타일이 래퍼에
 // 붙어 커스텀 노드 위에 테두리·배경이 한 겹 더 그려진다.
 const nodeTypes = { flow: FlowNode, flowGroup: GroupNode };
-const edgeTypes = { erdRelation: ErdEdge };
+const edgeTypes = { erdRelation: ErdEdge, flowRoute: RouteEdge };
 
 const HINT = "두 손가락 스크롤=이동 · 핀치/Cmd+스크롤=확대";
 
@@ -99,8 +101,10 @@ export function ProcessFlow({
   onEntitySelect,
   selectedEntity,
   erdLayout,
+  projectSlug,
 }: {
   chart: FlowChart;
+  projectSlug?: string;
   onEntitySelect?: (id: string) => void;
   selectedEntity?: string;
   erdLayout?: SavedErdLayout;
@@ -109,6 +113,10 @@ export function ProcessFlow({
   /** true 면 부모 높이를 꽉 채운다 (전용 페이지용). 부모가 flex 컨테이너여야 한다. */
   fill?: boolean;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState<FlowChart>();
+  const visibleChart = saved ?? chart;
+  useEffect(() => { setSaved(undefined); setEditing(false); }, [chart]);
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -152,6 +160,7 @@ export function ProcessFlow({
               {chart.caption ?? chart.title} · {HINT}
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
+              {projectSlug && !chart.erdDomain && !chart.content && <button type="button" className="rounded border px-2 py-0.5" onClick={() => setEditing(true)}>배치 편집</button>}
               <ExportSvgButton slug={chart.slug} wrapper={wrapperRef} />
               <button
                 type="button"
@@ -169,11 +178,12 @@ export function ProcessFlow({
             className={fill ? "min-h-0 flex-1" : undefined}
             style={fill ? undefined : { height }}
           >
-            <FlowCanvas chart={chart} onEntitySelect={onEntitySelect} selectedEntity={selectedEntity} erdLayout={erdLayout} />
+            <FlowCanvas chart={visibleChart} onEntitySelect={onEntitySelect} selectedEntity={selectedEntity} erdLayout={erdLayout} />
           </div>
         </ReactFlowProvider>
       </figure>
 
+      {editing && projectSlug && <LayoutEditor chart={visibleChart} projectSlug={projectSlug} onClose={() => setEditing(false)} onSaved={setSaved} />}
       {open && typeof document !== "undefined"
         ? createPortal(
             <div
@@ -202,7 +212,7 @@ export function ProcessFlow({
                 </button>
               </div>
               <div className="relative flex-1">
-                <FlowCanvas key={chart.slug} chart={chart} onEntitySelect={onEntitySelect} selectedEntity={selectedEntity} erdLayout={erdLayout} />
+                <FlowCanvas key={chart.slug} chart={visibleChart} onEntitySelect={onEntitySelect} selectedEntity={selectedEntity} erdLayout={erdLayout} />
               </div>
             </div>,
             document.body

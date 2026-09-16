@@ -20,12 +20,14 @@ export const GROUP_LABEL_H = 24;
 
 export type GroupRenderData = {
   label: string;
+  layoutOnly?: boolean;
   kind?: NodeKind;
   w: number;
   h: number;
 };
 
 export function GroupNode({ data }: NodeProps<Node<GroupRenderData>>) {
+  if (data.layoutOnly) return null;
   const line = data.kind
     ? KIND_STYLE[data.kind].border
     : "var(--bi-border-strong)";

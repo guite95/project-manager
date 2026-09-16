@@ -81,7 +81,7 @@ try {
     if(rows[0].db!=='project_management'||rows[0].role!=='project_management_app') throw new Error('공유 DB 또는 앱 계정이 예상과 다릅니다.');
   } finally {await probe.end();}
   if(stopping) throw new Error('실행이 중단되었습니다.');
-  console.log(`[shared-db] 서버 project_management 연결 확인 · 로컬 포트 ${port}`);
+  console.error(`[shared-db] 서버 project_management 연결 확인 · 로컬 포트 ${port}`);
   child=spawn(args[0],args.slice(1),{stdio:'inherit',detached:true,env:{...process.env,DATABASE_URL:databaseUrl,SHARED_DATABASE:'1',REQUIRE_LOGIN:'1'}});
   const childExit=once(child,'exit');
   tunnel.once('exit',()=>{if(!stopping){console.error('[shared-db] 터널이 종료되어 실행 중인 명령을 중단합니다.');stopProcess(child);}});

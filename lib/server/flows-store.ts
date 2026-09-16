@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import type { FlowProject } from '../../components/flow/types.ts';
 import { prisma } from '../db.ts';
 import { FlowDocumentError, parseFlowChart } from '../flows/document.ts';
+import { preserveFlowLayout } from '../flows/layout.ts';
 import type { ErdSnapshot } from '../erd/chart.ts';
 
 /** No process/global cache: a new request must see DB edits without redeployment. */
@@ -36,7 +37,7 @@ export async function updateFlowDocument(projectSlug: string, slug: string, inpu
     // The ERD renderer derives its graph from the shared schema snapshot. Do not accept
     // graph-only edits that would disagree with its table detail/drill-down data.
     if(parseFlowChart(current.document).erdDomain !== undefined || chart.erdDomain !== undefined) throw new FlowDocumentError('ERD는 전체 스키마 스냅샷과 함께 갱신해야 합니다.');
-    const result = await tx.flowDocument.updateMany({where:{projectSlug,slug,revision},data:{document:chart as unknown as Prisma.InputJsonValue,revision:{increment:1}}});
+    const result = await tx.flowDocument.updateMany({where:{projectSlug,slug,revision},data:{document:preserveFlowLayout(parseFlowChart(current.document), chart) as unknown as Prisma.InputJsonValue,revision:{increment:1}}});
     if(result.count === 0) return {status:'conflict' as const};
     return {status:'updated' as const,revision:revision+1};
   });

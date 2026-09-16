@@ -13,7 +13,7 @@ import {
   toLines,
   type FlowRenderData,
 } from "./flow-node";
-import { GROUP_PAD, type GroupRenderData } from "./group-node";
+import { GROUP_LABEL_H, GROUP_PAD, type GroupRenderData } from "./group-node";
 import { KIND_STYLE } from "./kind-style";
 import {
   EDGE_ACCENT,
@@ -33,7 +33,7 @@ import type {
 /* -------------------------------------------------------------------------
  * 선언 배열(FlowChart) → React Flow 의 nodes/edges 변환.
  *
- * 좌표는 Dagre 가 계산한다. 선언 쪽에는 좌표가 존재하지 않는다.
+ * 기본 좌표는 Dagre가 계산하고 chart.layout의 저장 좌표로 덮어쓴다.
  * 그룹이 있으면 Dagre 의 compound(클러스터) 그래프로 배치한다.
  * ---------------------------------------------------------------------- */
 
@@ -72,8 +72,21 @@ function estimateHeight(data: FlowNodeData, width: number): number {
   h += wrapCount(data.label, width, LABEL_FONT) * LABEL_LH;
 
   const lines = toLines(data.sub);
-  if (lines.length) {
-    h += 3;
+  {
+    const screens = data.role === 'logic' ? [] : data.screen ? [data.screen] : (data.sections ?? []).filter(section => section.title === '화면').flatMap(section => section.lines);
+    if (screens.length) {
+      h += 13;
+      for (const screen of screens) h += wrapCount(screen, width, SUB_FONT) * SUB_LH;
+    }
+  }
+  if (data.sections?.length) {
+    for (const section of data.sections) {
+      if (section.title === '화면') continue;
+      h += 17 + 4 + wrapCount(section.title, width, SUB_FONT) * SUB_LH;
+      for (const line of section.lines) h += wrapCount(line, width, SUB_FONT) * SUB_LH;
+    }
+  } else if (lines.length) {
+    h += data.sectioned || data.role ? 15 : 3;
     for (const line of lines) h += wrapCount(line, width, SUB_FONT) * SUB_LH;
   }
   if (style.pending || data.timing || data.doc) h += 6 + BADGE_H;
@@ -290,13 +303,15 @@ function sanitize(chart: FlowChart): SanitizedChart {
 }
 
 /** Dagre 로 좌표를 계산해 React Flow 가 바로 먹을 수 있는 형태로 돌려준다. */
-export function layoutChart(chart: FlowChart, savedLayout?: SavedErdLayout): LayoutResult {
+function automaticLayoutChart(chart: FlowChart, savedLayout?: SavedErdLayout): LayoutResult {
   const rankdir = chart.direction ?? "LR";
   const nodeW = chart.nodeWidth ?? DEFAULT_NODE_W;
 
   // 이 아래로는 chart.nodes / chart.edges / chart.groups 를 직접 쓰지 않는다.
   // 걸러낸 배열만 쓴다 — 선언 오류가 배치 계산까지 흘러가지 않게.
   const { nodes, edges, groups } = sanitize(chart);
+  const sectioned = nodes.some(n => n.data.sectioned || n.data.sections?.length);
+  const logicGap = sectioned ? Math.max(90, ...edges.map(e => visualLen(e.label ?? '') * 10 + 40)) : 90;
   if (chart.erdDomain && nodes.every(n => n.data.entity)) {
     if (!savedLayout) throw new Error("DB에 저장된 ERD 배치가 필요합니다.");
     return layoutErdChart(nodes, edges, parseSavedErdLayout(savedLayout, chart));
@@ -323,7 +338,8 @@ export function layoutChart(chart: FlowChart, savedLayout?: SavedErdLayout): Lay
     const members = nodes.filter((n) => n.group === gr.id);
     const ig = new Dagre.graphlib.Graph();
     ig.setDefaultEdgeLabel(() => ({}));
-    ig.setGraph({ rankdir: innerDir, ranksep: 70, nodesep: 34, edgesep: 20 });
+    // 화면 설명형 차트는 연결선의 처리 로직이 카드와 겹치지 않게 간격을 확보한다.
+    ig.setGraph({ rankdir: innerDir, ranksep: sectioned ? logicGap : 70, nodesep: gr.layoutOnly ? 24 : sectioned ? 65 : 34, edgesep: 20 });
 
     for (const m of members) {
       const s = size.get(m.id)!;
@@ -417,8 +433,8 @@ export function layoutChart(chart: FlowChart, savedLayout?: SavedErdLayout): Lay
   og.setDefaultEdgeLabel(() => ({}));
   og.setGraph({
     rankdir,
-    ranksep: hasGroups ? 110 : 90,
-    nodesep: hasGroups ? 60 : 38,
+    ranksep: sectioned ? logicGap : hasGroups ? 110 : 90,
+    nodesep: sectioned ? 65 : hasGroups ? 60 : 38,
     edgesep: 24,
     marginx: 12,
     marginy: 12,
@@ -495,7 +511,7 @@ export function layoutChart(chart: FlowChart, savedLayout?: SavedErdLayout): Lay
       // 래퍼에 붙어서, GroupNode 가 그리는 테두리와 겹쳐 박스가 두 개로 보인다.
       type: "flowGroup",
       position: { x: b.x, y: b.y },
-      data: { label: gr.label, kind: gr.kind, w: b.w, h: b.h },
+      data: { label: gr.label, kind: gr.kind, layoutOnly: gr.layoutOnly, w: b.w, h: b.h },
       draggable: false,
       selectable: false,
       connectable: false,
@@ -579,4 +595,32 @@ function layoutErdChart(nodes: FlowNodeDef[], edges: FlowEdgeDef[], saved: Saved
       };
     }),
   };
+}
+
+/** 사용자 배치를 절대 좌표로 복원하고 그룹 외곽을 다시 계산한다. */
+export function layoutChart(chart: FlowChart, savedLayout?: SavedErdLayout): LayoutResult {
+  const result = automaticLayoutChart(chart, savedLayout);
+  if (!chart.layout || chart.erdDomain) return result;
+  const parents = new Map(result.nodes.filter(n => n.type === "flowGroup").map(n => [n.id, n]));
+  const nodes = result.nodes.filter(n => n.type !== "flowGroup").map(n => {
+    const parent = n.parentId ? parents.get(n.parentId) : undefined;
+    return { ...n, parentId: undefined, position: chart.layout!.nodes[n.id] ?? {
+      x: n.position.x + (parent?.position.x ?? 0), y: n.position.y + (parent?.position.y ?? 0),
+    } };
+  });
+  const groups = [...parents.values()].map(group => {
+    const members = nodes.filter(n => chart.nodes.find(d => d.id === n.id)?.group === group.id);
+    if (!members.length) return group;
+    const x = Math.min(...members.map(n => n.position.x)) - GROUP_PAD;
+    const y = Math.min(...members.map(n => n.position.y)) - GROUP_PAD - GROUP_LABEL_H;
+    const w = Math.max(...members.map(n => n.position.x + Number(n.data.w))) - x + GROUP_PAD;
+    const h = Math.max(...members.map(n => n.position.y + estimateHeight(n.data as FlowRenderData, Number(n.data.w)))) - y + GROUP_PAD;
+    return { ...group, position: { x, y }, data: { ...group.data, w, h }, style: { ...group.style, width: w, height: h } };
+  });
+  const edges = result.edges.map(e => {
+    const route = chart.layout!.edges[e.id];
+    return route ? { ...e, type: 'flowRoute', sourceHandle: route.sourcePort ? `out-${route.sourcePort}` : e.sourceHandle,
+      targetHandle: route.targetPort ? `in-${route.targetPort}` : e.targetHandle, data: { ...e.data, waypoints: route.waypoints } } : e;
+  });
+  return { nodes: [...groups, ...nodes], edges };
 }

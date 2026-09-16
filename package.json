@@ -16,7 +16,9 @@
     "dev:local": "next dev -p 30001",
     "db:shared": "node scripts/with-shared-db.mjs",
     "db:shared:status": "node scripts/with-shared-db.mjs -- pnpm exec prisma migrate status",
-    "db:shared:deploy": "node scripts/with-shared-db.mjs -- pnpm exec prisma migrate deploy"
+    "db:shared:deploy": "node scripts/with-shared-db.mjs -- pnpm exec prisma migrate deploy",
+    "flow": "node --experimental-strip-types scripts/pm-flow.mjs",
+    "flow:install": "node scripts/install-flow-tools.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",

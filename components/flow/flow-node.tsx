@@ -42,6 +42,10 @@ export function FlowNode({ data }: NodeProps<Node<FlowRenderData>>) {
   const horizontal = data.dir === "LR";
   const lines = toLines(data.sub);
   const compact = s.compact === true;
+  const sections = data.sections?.length ? data.sections : undefined;
+  const screens = data.role === 'logic' ? [] : data.screen ? [data.screen] : sections?.filter(section => section.title === '화면').flatMap(section => section.lines) ?? [];
+  const bodySections = sections?.filter(section => section.title !== '화면');
+  const split = data.role !== undefined || data.sectioned || Boolean(sections);
 
   const handleStyle = {
     background: s.handle,
@@ -56,7 +60,7 @@ export function FlowNode({ data }: NodeProps<Node<FlowRenderData>>) {
         width: data.w,
         padding: compact ? "6px 12px" : `${PAD_Y}px ${PAD_X}px`,
         borderRadius: 2,
-        backgroundColor: s.bg,
+        backgroundColor: split ? '#fff' : s.bg,
         border: `${s.borderWidth}px ${s.borderStyle} ${s.border}`,
         color: s.fg,
       }}
@@ -75,25 +79,50 @@ export function FlowNode({ data }: NodeProps<Node<FlowRenderData>>) {
         />
       ) : null}
 
+      {screens.length > 0 ? (
+        <div aria-label="화면" style={{
+          margin: `-${PAD_Y}px -${PAD_X}px 0`, padding: `6px ${PAD_X}px`,
+          backgroundColor: '#eef2f6', color: '#000', borderBottom: `1px solid ${s.border}`,
+          fontSize: SUB_FONT, lineHeight: `${SUB_LH}px`, fontWeight: 600, textAlign: 'left',
+        }}>
+          {screens.map((screen, index) => <div key={index}>{screen}</div>)}
+        </div>
+      ) : null}
+
       <div
         style={{
           fontSize: compact ? 11 : LABEL_FONT,
           fontWeight: 700,
           color: s.fg,
           lineHeight: `${LABEL_LH}px`,
+          ...(split ? { backgroundColor: s.bg, margin: `${screens.length ? 0 : -PAD_Y}px -${PAD_X}px 0`, padding: `${PAD_Y}px ${PAD_X}px` } : {}),
         }}
       >
         {data.label}
       </div>
 
-      {lines.length ? (
-        <div style={{ marginTop: 3 }}>
+      {sections ? (
+        <div style={{ color: '#000', backgroundColor: '#fff', margin: `0 -${PAD_X}px -${PAD_Y}px` }}>
+          {bodySections?.map((section, index) => (
+            <section key={index} style={{ padding: `8px ${PAD_X}px`, borderTop: '1px solid #d1d5db' }}>
+              <div style={{ fontSize: SUB_FONT, lineHeight: `${SUB_LH}px`, fontWeight: 700, marginBottom: 4 }}>{section.title}</div>
+              {section.lines.map((line, i) => (
+                <div key={i} style={{ fontSize: SUB_FONT, lineHeight: `${SUB_LH}px` }}>{line}</div>
+              ))}
+            </section>
+          ))}
+        </div>
+      ) : lines.length ? (
+        <div style={data.sectioned ? {
+          marginTop: 7, paddingTop: 7, borderTop: `1px solid ${s.border}`,
+          marginLeft: -PAD_X, marginRight: -PAD_X, paddingLeft: PAD_X, paddingRight: PAD_X,
+        } : { marginTop: 3 }}>
           {lines.map((line, i) => (
             <div
               key={i}
               style={{
                 fontSize: SUB_FONT,
-                color: s.subFg,
+                color: split ? '#000' : s.subFg,
                 lineHeight: `${SUB_LH}px`,
               }}
             >
@@ -126,6 +155,10 @@ export function FlowNode({ data }: NodeProps<Node<FlowRenderData>>) {
           style={handleStyle}
         />
       ) : null}
+      {Object.values(Position).flatMap(position => [
+        <Handle key={`in-${position}`} id={`in-${position}`} type="target" position={position} style={{ ...handleStyle, opacity: 0 }} />,
+        <Handle key={`out-${position}`} id={`out-${position}`} type="source" position={position} style={{ ...handleStyle, opacity: 0 }} />,
+      ])}
     </div>
   );
 }

@@ -87,7 +87,7 @@ export default async function ProjectFlowsPage({
       ) : (
         <>
           <div className="mb-3"><FlowLegend chart={chart} /></div>
-          <ProcessFlow chart={chart} height={560} />
+          <ProcessFlow chart={chart} projectSlug={project.slug} height={560} />
         </>
       )}
 
