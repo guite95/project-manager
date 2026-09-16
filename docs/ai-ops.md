@@ -4,7 +4,7 @@
 
 ## 수집 대상과 제외
 
-Mac의 `~/uk` 자신 또는 하위 cwd에서 실행한 Codex/Claude Code 세션을 수집한다. 로그가 `~/uk`에 저장되어 있어야 하는 것은 아니다.
+Mac의 아래 기본·추가 로그 경로에 있는 Codex/Claude Code 세션을 작업 디렉터리(cwd)와 관계없이 수집한다. `~/uk`는 추가 로그 탐색 경로이며 수집 범위 제한이 아니다. cwd가 없는 기록도 세션 ID가 있으면 `(unknown)`으로 수집한다.
 
 기본 로그 위치:
 - `~/.codex/sessions`, `~/.codex/archived_sessions`
@@ -13,7 +13,7 @@ Mac의 `~/uk` 자신 또는 하위 cwd에서 실행한 Codex/Claude Code 세션�
 - 설치 당시 `CODEX_HOME`, `CLAUDE_CONFIG_DIR`
 - `~/uk` 하위 `.codex`, `.claude` 및 커스텀 `sessions`/`archived_sessions` 폴더
 
-심볼릭 링크는 실제 경로로 중복 제거한다. `node_modules`, `.git`, `.next`, `.venv`, 캐시·빌드 폴더는 탐색하지 않는다. 추가 루트는 설치 설정의 `extraRoots: [{"source":"CODEX","path":"/absolute/log/root"}]`로 지정한다. cwd가 대상 범위 밖이면 전송하지 않는다. 프로젝트 폴더 전체나 다른 앱 데이터는 업로드하지 않는다.
+심볼릭 링크는 실제 경로로 중복 제거한다. `node_modules`, `.git`, `.next`, `.venv`, 캐시·빌드 폴더는 탐색하지 않는다. 추가 루트는 설치 설정의 `extraRoots: [{"source":"CODEX","path":"/absolute/log/root"}]`로 지정한다. 기존 `~/uk` 제한 버전에서 갱신하면 체크포인트를 한 번 초기화하여 과거에 제외한 기록도 재수집한다. 장치·세션·이벤트 ID는 유지하므로 서버에서 중복 저장하지 않는다. 프로젝트 폴더 전체나 다른 앱 데이터는 업로드하지 않는다.
 
 사용자 메시지·공개 AI 응답·모델·시간·토큰·cwd를 수집한다. 도구 실행 본문, 시스템/개발자 메시지, 추론 본문과 알려진 자동 문맥은 제외한다. 원천이 미지원 형식으로 바뀌면 파서 업데이트가 필요하다. 비밀값 패턴은 전송 전과 서버에서 두 번 마스킹하지만, 임의의 민감한 자연어 문장까지 탐지하는 기능은 아니다. Poooling Agent는 변경하지 않으며 별도 Agent/서버로 동작한다.
 
@@ -45,7 +45,7 @@ pnpm ai:agent install
 pnpm ai:agent status
 ```
 
-기존 `~/.config/oci-ssh/config.json`의 개인 SSH 설정과 strict known-host 검증을 재사용한다. 다른 설정은 `install --ssh-config /absolute/config.json`, 다른 작업 루트는 `install --workspace /absolute/workspace`로 지정한다. 장기 API 키를 만들거나 운영 DB 비밀번호를 Mac에 복사하지 않는다.
+기존 `~/.config/oci-ssh/config.json`의 개인 SSH 설정과 strict known-host 검증을 재사용한다. 다른 설정은 `install --ssh-config /absolute/config.json`, 다른 추가 탐색 루트는 `install --workspace /absolute/workspace`로 지정한다. 장기 API 키를 만들거나 운영 DB 비밀번호를 Mac에 복사하지 않는다.
 
 설치는 수신 명령/테이블 존재를 읽기 전용 probe로 확인한 뒤 진행한다. 설치 후 사용자 LaunchAgent `com.project-management.ai-agent`가 로그인 시와 60초 간격으로 실행된다. 절전 중에는 실행되지 않고 Mac이 깨어나면 이어서 수집한다. 최초에는 과거 로그를 따라잡는 데 시간이 걸릴 수 있다. 별도 상주 개발 서버는 필요 없다.
 

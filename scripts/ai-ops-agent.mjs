@@ -185,7 +185,7 @@ async function main() {
       discovery: found,
       state,
       device: c.device,
-      allowedCwd: c.workspace,
+      allowedCwd: null,
       send: scan
         ? async (b) => {
             for (const s of b.sessions) sessions.add(s.id);
@@ -196,6 +196,7 @@ async function main() {
     });
     const status = {
       state: counts.errors ? "PARTIAL" : counts.limited ? "SYNCING" : "SYNCED",
+      collectionScope: "ALL",
       lastSuccessAt: new Date().toISOString(),
       ...counts,
     };
@@ -204,6 +205,7 @@ async function main() {
         JSON.stringify(
           {
             mode: "READ_ONLY",
+            collectionScope: "ALL",
             workspace: c.workspace,
             roots: found.roots,
             sessions: sessions.size,
