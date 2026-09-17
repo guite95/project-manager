@@ -32,6 +32,9 @@ sudo systemctl enable --now project-management-wif.timer
 ```
 
 The timer refreshes every ten minutes and recreates runtime files after reboot.
+Enable `project-management-runtime.service` to start the existing app container after
+Docker and initial certificate preparation at boot. This also recovers a container whose
+runtime bind mount was unavailable when Docker first restored its containers.
 The inspected intermediate CA expires in September 2027. If OCI changes that CA,
 renewal fails closed: inspect the new public certificate through personal SSH, update
 the GCP provider trust store and the pinned hash together, then restart the service.

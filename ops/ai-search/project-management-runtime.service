@@ -1,0 +1,14 @@
+[Unit]
+Description=Start Project Management after OCI runtime identity is prepared
+Wants=network-online.target project-management-wif.service
+Requires=docker.service
+After=network-online.target docker.service project-management-wif.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/usr/bin/docker start project-management
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
