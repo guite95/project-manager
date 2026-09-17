@@ -31,10 +31,11 @@ def openssl(args, data=None):
                           stderr=subprocess.DEVNULL, check=True).stdout
 
 
-def validate_identity(cert, key, ca, subject, ca_hash):
-    ca_der = openssl(["x509", "-outform", "DER"], ca)
+def validate_identity(cert, key, ca, subject, ca_hash, root=None):
+    root = ca if root is None else root
+    ca_der = openssl(["x509", "-outform", "DER"], root)
     if hashlib.sha256(ca_der).hexdigest() != ca_hash:
-        raise ValueError("OCI CA changed; review WIF trust before accepting it")
+        raise ValueError("OCI CA changed; review WIF root trust before accepting it")
     dn = openssl(["x509", "-noout", "-subject", "-nameopt", "RFC2253"], cert).decode().strip()
     if dn.split("CN=")[-1] != subject:
         raise ValueError("Unexpected OCI instance identity")
@@ -43,17 +44,25 @@ def validate_identity(cert, key, ca, subject, ca_hash):
     key_public = openssl(["pkey", "-pubout"], key)
     if cert_public != key_public:
         raise ValueError("OCI rotation in progress; certificate/key do not match")
+    # Verify the complete chain; intermediate CAs can rotate independently.
+    with tempfile.TemporaryDirectory() as directory:
+        paths = {name: Path(directory) / name for name in ["root.pem", "ca.pem", "cert.pem"]}
+        for name, value in [("root.pem", root), ("ca.pem", ca), ("cert.pem", cert)]:
+            paths[name].write_bytes(value)
+        openssl(["verify", "-CAfile", str(paths["root.pem"]), "-untrusted",
+                 str(paths["ca.pem"]), str(paths["cert.pem"])])
     return hashlib.sha256(openssl(["x509", "-outform", "DER"], cert)).hexdigest()
 
 
-def refresh(output, subject, ca_hash, adc_template):
+def refresh(output, subject, ca_hash, adc_template, root_path="/etc/project-management-oci-root.pem"):
     output = Path(output)
     if not str(output).startswith("/run/"):
         raise ValueError("Identity material must remain in /run")
     os.umask(0o077)
     output.mkdir(parents=True, exist_ok=True, mode=0o700)
     cert, key, ca = metadata("cert.pem"), metadata("key.pem"), metadata("intermediate.pem")
-    fingerprint = validate_identity(cert, key, ca, subject, ca_hash)
+    root = Path(root_path).read_bytes()
+    fingerprint = validate_identity(cert, key, ca, subject, ca_hash, root)
     generation = output / "generations" / fingerprint
     generation.mkdir(parents=True, exist_ok=True, mode=0o700)
     for name, data in [("cert.pem", cert + b"\n" + ca), ("key.pem", key)]:
@@ -62,6 +71,12 @@ def refresh(output, subject, ca_hash, adc_template):
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             with os.fdopen(fd, "wb") as stream:
                 stream.write(data)
+    # The SDK reads the chain separately. Publish only validated chains atomically;
+    # a concurrent rotation may fail one token exchange and retry on the next run.
+    fd, temporary = tempfile.mkstemp(dir=output, prefix=".chain-")
+    with os.fdopen(fd, "wb") as stream:
+        stream.write(ca + b"\n" + root)
+    os.replace(temporary, output / "trust-chain.pem")
     # Publish one config referencing immutable generation paths, avoiding torn key/cert reads.
     config = {"cert_configs": {"workload": {
         "cert_path": str(generation / "cert.pem"), "key_path": str(generation / "key.pem")}}}

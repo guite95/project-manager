@@ -50,6 +50,29 @@ class IdentityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "remain in /run"):
             refresh.refresh("/tmp/identity", "test-instance", self.ca_hash, "/unused")
 
+    def test_accepts_rotating_intermediates_but_rejects_untrusted_chain(self):
+        p = Path(self.directory.name)
+        def run(*args):
+            subprocess.run(["openssl", *map(str, args)], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        (p / "ca.ext").write_text("basicConstraints=critical,CA:TRUE\nkeyUsage=critical,keyCertSign,cRLSign\n")
+        (p / "leaf.ext").write_text("basicConstraints=critical,CA:FALSE\nkeyUsage=digitalSignature\n")
+        for serial in [10, 20]:
+            ca = p / f"ca{serial}"
+            leaf = p / f"leaf{serial}"
+            for target, subject in [(ca, "intermediate"), (leaf, "test-instance")]:
+                run("req", "-new", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256",
+                    "-nodes", "-subj", f"/CN={subject}", "-keyout", f"{target}.key", "-out", f"{target}.csr")
+            run("x509", "-req", "-in", f"{ca}.csr", "-CA", p / "first.pem", "-CAkey", p / "first.key",
+                "-set_serial", serial, "-days", 1, "-extfile", p / "ca.ext", "-out", f"{ca}.pem")
+            run("x509", "-req", "-in", f"{leaf}.csr", "-CA", f"{ca}.pem", "-CAkey", f"{ca}.key",
+                "-set_serial", serial + 1, "-days", 1, "-extfile", p / "leaf.ext", "-out", f"{leaf}.pem")
+            cert, key, intermediate = [Path(name).read_bytes() for name in [f"{leaf}.pem", f"{leaf}.key", f"{ca}.pem"]]
+            self.assertTrue(refresh.validate_identity(cert, key, intermediate, "test-instance", self.ca_hash, self.cert))
+            with self.assertRaises(subprocess.CalledProcessError):
+                refresh.validate_identity(cert, key, (p / "second.pem").read_bytes(),
+                                          "test-instance", self.ca_hash, self.cert)
+
 
 if __name__ == "__main__":
     unittest.main()

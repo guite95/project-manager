@@ -6,6 +6,7 @@
   "token_url": "https://sts.mtls.googleapis.com/v1/token",
   "credential_source": {
     "certificate": {
+      "trust_chain_path": "/run/project-management-wif/trust-chain.pem",
       "certificate_config_location": "/run/project-management-wif/certificate-config.json"
     }
   },

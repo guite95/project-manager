@@ -33,6 +33,12 @@ flowchart TD
 - `ai_ops_document_embedding`: 검색 문서와 profile별 content-addressed 결과의 연결. 같은 내용의 여러 문서가 벡터를 재사용한다.
 - `ai_ops_embedding_vector`: 선택 활성화되는 SQL 소유 테이블. 가변 `vector` + dimension CHECK + profile/dimension FK. 기본 1536차원은 partial expression HNSW `vector_cosine_ops`; 3072는 저장 및 exact cosine 비교가 가능하지만 ANN 최적화는 하지 않는다. Prisma만으로 이 테이블을 재생성하지 않는다.
 
+재수집은 안정적인 메시지 ID로 중복을 제거한다. 현재 수집기는 이미 저장된 본문을
+수정본으로 덮어쓰지 않고, 기존 본문이 NULL인 경우만 복원한다. 따라서 "원문이
+달라졌으면 UPDATE"하는 수정 동기화 기능과는 구별해야 한다. 실제 DB의 본문이
+변경되거나 메시지가 추가되면 revision 인덱서가 파생 문서를 다시 만들며,
+같은 profile + SHA-256(title, content)의 성공 임베딩은 재사용한다.
+
 ## 검색 정책과 chunking
 
 USER/ASSISTANT 대화와 코드 설명을 우선한다. usage/cache/system은 의미 검색에서 제외한다. 현재 raw tool/system/reasoning 수집 금지는 그대로다. 향후 승인된 tool 수집에는 정책 함수를 재사용할 수 있지만 이번 변경으로 도구 원문 수집을 확대하지 않는다.
@@ -53,7 +59,7 @@ EMBEDDING_MODEL=gemini-embedding-2
 EMBEDDING_DIMENSIONS=1536
 EMBEDDING_VERSION=1
 GOOGLE_CLOUD_PROJECT=<embedding 호출을 청구할 프로젝트>
-GOOGLE_CLOUD_LOCATION=us
+GOOGLE_CLOUD_LOCATION=global
 ```
 
 기존 환경변수 설정 방식을 사용한다. `@google/genai` 2.23.0을 설치하고 실제 SDK에서 Vertex `:embedContent`와 `us` multi-region endpoint 처리를 확인했다. ADC 또는 workload identity를 사용한다. 새 API key나 service-account key를 생성하지 않는다. OCI 앱/DB를 GCP로 이전하는 변경은 없다. compose는 비밀값이 아닌 embedding 설정을 앱 컨테이너에 전달한다. OCI에서 실행할 때는 서비스용 WIF 등 적절한 ADC를 별도로 구성해야 한다. GOOGLE_APPLICATION_CREDENTIALS를 쓴다면 credential 설정 파일과 그 원천을 별도 승인된 read-only mount/identity 경로로 제공해야 한다. 경로 변수만 설정해서는 인증이 되지 않는다. 개인 관리자 credential을 서버로 복사하지 않는다.
@@ -98,18 +104,20 @@ pnpm ai:search inspect
 pnpm ai:search retry --apply
 ```
 
-`--apply` 없는 쓰기 명령은 상태만 출력한다. backfill은 API 호출 없이 한 번에 20 sessions의 파생 문서와 PENDING 작업을 준비한다. worker는 같은 증분 인덱서와 최대 4개 작업을 한 배치로 처리한다. PENDING 재시도 시각이 미래라면 종료하므로 cron/systemd 등으로 주기적으로 재실행한다. 영구 실패는 수동 retry 대상이다. 자동 스케줄 등록은 이번 변경에 포함하지 않는다. 완료 기준은 현재 profile의 활성 job count에서 PENDING/PROCESSING/FAILED가 0이고 pendingSessions가 0인지 inspect로 확인하는 것이다. pendingSessions는 원문 revision 변경뿐 아니라 현재 profile 연결이 없는 세션도 포함한다. 원문이 바뀌어 더 이상 현재 문서에서 참조하지 않는 cache/job은 inactiveCount로 별도 표시하고 처리 대상에서 제외한다. 같은 내용이 다시 나타나면 재사용할 수 있도록 보존한다.
+`--apply` 없는 쓰기 명령은 상태만 출력한다. backfill은 API 호출 없이 한 번에 20 sessions의 파생 문서와 PENDING 작업을 준비한다. worker는 같은 증분 인덱서와 최대 4개 작업을 한 배치로 처리한다. PENDING 재시도 시각이 미래라면 종료하므로 cron/systemd 등으로 주기적으로 재실행한다. 영구 실패는 수동 retry 대상이다. OCI 운영에서는 아래 systemd timer를 설치해 자동 처리한다. 완료 기준은 현재 profile의 활성 job count에서 PENDING/PROCESSING/FAILED가 0이고 pendingSessions가 0인지 inspect로 확인하는 것이다. pendingSessions는 원문 revision 변경뿐 아니라 현재 profile 연결이 없는 세션도 포함한다. 원문이 바뀌어 더 이상 현재 문서에서 참조하지 않는 cache/job은 inactiveCount로 별도 표시하고 처리 대상에서 제외한다. 같은 내용이 다시 나타나면 재사용할 수 있도록 보존한다.
 
 Mac에서 공유 DB를 대상으로 실행할 때는 기존 `pnpm db:shared -- node scripts/ai-ops-search.mjs ...` 터널 래퍼를 사용한다. 쓰기 실행은 별도 승인된 운영 절차에서만 한다. DB 자격증명을 로컬에 복사하지 않는다.
 
 새 모델·차원·전처리 적용 시 새 profile/version으로 backfill하고 평가한 뒤 검색 설정을 전환한다. 이전 원문과 embedding profile은 보존한다. 검색 문서를 재생성해도 내용 hash가 같은 성공 job/vector는 재사용한다. vector 테이블만 재구축한 경우 worker가 누락된 SUCCESS vector를 다시 PENDING으로 바꿔 복구한다.
 
-## 평가
+## OCI 서버 운영
 
 OCI 상시 실행 구성은 `ops/ai-search/README.md`를 따른다. 서버는 개인 ADC 대신
 OCI의 자동 갱신 인스턴스 인증서와 GCP X.509 WIF를 사용한다. 선택적
 `docker-compose.wif.yml`과 systemd 인증서 갱신·embedding worker timer로 운영한다.
 현재 운영 기본 호출 위치는 `global`이며 프로젝트 설정은 서버 환경변수로 유지한다.
+
+## 평가
 
 사용자가 직접 관련 세션을 판정한 작은 JSON 파일로 시작한다. 본문·실제 session ID가 담긴 평가 파일을 공개 Git에 커밋하지 않는다.
 

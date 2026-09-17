@@ -6,20 +6,21 @@ No personal ADC, service-account JSON key, new DB container, or public DB port i
 ## Identity
 
 `adc.json` is a **non-secret** external-account configuration generated with gcloud.
-GCP pool `pm-oci`, provider `oci-instance`, trusts the inspected OCI intermediate CA and
+GCP pool `pm-oci`, provider `oci-instance`, trusts the verified OCI regional root CA and
 restricts `assertion.subject.dn.cn` to this instance's exact OCID. Only that subject has
 `roles/iam.workloadIdentityUser` on the embedding service account. Its project role is
 `roles/aiplatform.user`.
 
 `refresh-oci-certificate.py` fetches short-lived identity material from OCI IMDSv2 on the
-same host. It checks the instance, pinned CA, expiry and key/certificate match, then
+same host. It checks the instance, pinned root CA, full signature chain, expiry and key/certificate match, then
 atomically publishes immutable generation paths in `/run/project-management-wif`.
 This root-only directory is runtime memory storage and is mounted read-only in the app.
 The Google auth library reads the latest certificate when refreshing tokens. Expired
 runtime certificate generations are removed; original AI sessions are unaffected.
 
 Install the Python script at `/usr/local/lib/project-management/refresh-oci-certificate.py`
-and `adc.json` at `/etc/project-management-wif-adc.json`. The root-owned, mode-600 file
+and `adc.json` at `/etc/project-management-wif-adc.json`. Install the verified public
+regional root at `/etc/project-management-oci-root.pem`. The root-owned, mode-600 file
 `/etc/project-management-wif.conf` contains the **non-secret** `OCI_INSTANCE_ID` and
 `OCI_CA_SHA256` verified during provisioning. Install the accompanying systemd service
 and timer under `/etc/systemd/system`, then:
@@ -35,9 +36,12 @@ The timer refreshes every ten minutes and recreates runtime files after reboot.
 Enable `project-management-runtime.service` to start the existing app container after
 Docker and initial certificate preparation at boot. This also recovers a container whose
 runtime bind mount was unavailable when Docker first restored its containers.
-The inspected intermediate CA expires in September 2027. If OCI changes that CA,
-renewal fails closed: inspect the new public certificate through personal SSH, update
-the GCP provider trust store and the pinned hash together, then restart the service.
+Intermediate CA rotation is accepted only when the new chain verifies against the
+pinned root. Retrieve the regional root through Oracle's authenticated
+`https://auth.ap-chuncheon-1.oraclecloud.com/v1/instancePrincipalRootCACertificates`
+API with the instance principal ([Oracle documentation](https://docs.oracle.com/en-us/iaas/Content/Identity/defaultsettings/overview-retrieve-instance-identity-root-ca-certificate.htm)). The verified root expires in August 2029. A root
+change requires reviewing the official certificate and updating the GCP trust store,
+root PEM and pinned hash together. Never disable chain validation.
 For GCP's trust-store input, remove the final newline from each PEM certificate
 (`pem.strip()`); other certificate consumers still use normal PEM files.
 
