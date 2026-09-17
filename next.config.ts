@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // 컨테이너 이미지를 가볍게 한다. 실행에 필요한 것만 .next/standalone 에 모인다.
   output: "standalone",
+  serverExternalPackages: ['oci-common', 'oci-objectstorage'],
 };
 
 export default withMDX(nextConfig);

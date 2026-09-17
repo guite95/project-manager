@@ -4,6 +4,7 @@ import { prisma } from '../db.ts';
 import { FlowDocumentError, parseFlowChart } from '../flows/document.ts';
 import { preserveFlowLayout } from '../flows/layout.ts';
 import type { ErdSnapshot } from '../erd/chart.ts';
+import { restoreMaterial } from './material-storage.mjs';
 
 /** No process/global cache: a new request must see DB edits without redeployment. */
 export async function listFlowProjects(projectSlug?: string): Promise<FlowProject[]> {
@@ -12,7 +13,13 @@ export async function listFlowProjects(projectSlug?: string): Promise<FlowProjec
     orderBy: [{position:'asc'},{slug:'asc'}],
     include:{categories:{orderBy:[{position:'asc'},{slug:'asc'}],include:{charts:{orderBy:[{position:'asc'},{slug:'asc'}]}}}},
   });
-  return rows.map(p=>({slug:p.slug,title:p.title,...(p.intro===null?{}:{intro:p.intro}),categories:p.categories.map(c=>({slug:c.slug,title:c.title,charts:c.charts.map(ch=>parseFlowChart(ch.document))}))}));
+  return Promise.all(rows.map(async p => ({
+    slug: p.slug, title: p.title, ...(p.intro === null ? {} : { intro: p.intro }),
+    categories: await Promise.all(p.categories.map(async c => ({
+      slug: c.slug, title: c.title,
+      charts: await Promise.all(c.charts.map(async ch => parseFlowChart(await restoreMaterial(ch.document, p.slug, ch.slug)))),
+    }))),
+  })));
 }
 
 export async function getFlowProject(slug: string): Promise<FlowProject | undefined> {
@@ -25,15 +32,17 @@ export async function listFlowProjectNames() {
 
 export async function getFlowDocument(projectSlug: string, slug: string) {
   const row = await prisma.flowDocument.findUnique({where:{projectSlug_slug:{projectSlug,slug}}});
-  return row ? {projectSlug,categorySlug:row.categorySlug,chart:parseFlowChart(row.document),revision:row.revision,updatedAt:row.updatedAt.toISOString()} : null;
+  return row ? {projectSlug,categorySlug:row.categorySlug,chart:parseFlowChart(await restoreMaterial(row.document,projectSlug,slug)),revision:row.revision,updatedAt:row.updatedAt.toISOString()} : null;
 }
 
 export async function updateFlowDocument(projectSlug: string, slug: string, input: unknown, revision: number) {
+  if ((input as {content?: {storage?: unknown}})?.content?.storage) throw new FlowDocumentError('자료 저장소 참조는 직접 수정할 수 없습니다.');
   const chart = parseFlowChart(input);
   if(chart.slug !== slug || !Number.isSafeInteger(revision) || revision < 1) throw new FlowDocumentError('차트 식별자 또는 revision이 올바르지 않습니다.');
   return prisma.$transaction(async tx=>{
     const current = await tx.flowDocument.findUnique({where:{projectSlug_slug:{projectSlug,slug}}});
     if(!current) return {status:'missing' as const};
+    if ((current.document as {content?: {storage?: unknown}})?.content?.storage) throw new FlowDocumentError('OCI 자료는 자료 메뉴에서 삭제 후 다시 업로드하세요.');
     // The ERD renderer derives its graph from the shared schema snapshot. Do not accept
     // graph-only edits that would disagree with its table detail/drill-down data.
     if(parseFlowChart(current.document).erdDomain !== undefined || chart.erdDomain !== undefined) throw new FlowDocumentError('ERD는 전체 스키마 스냅샷과 함께 갱신해야 합니다.');

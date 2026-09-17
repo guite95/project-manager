@@ -150,12 +150,8 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
   const selectSession = (id: string, messageId?: string) => { scrolledAnchor.current = null; setSelected(id); setAnchor(messageId ?? null); setMessagePages([]); requestAnimationFrame(() => detailRef.current?.focus()); };
   const runSearch = () => {
     if (!query.trim()) { setSearchValidation("검색할 내용을 입력해 주세요."); return; }
-    const now = new Date();
-    const today = now.toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
-    const earliest = new Date(now.getTime() - 89 * 86400000).toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
-    const from = filters.from && filters.from > earliest ? filters.from : earliest;
-    const to = filters.to && filters.to < today ? filters.to : today;
-    if (from > to) { setSearchValidation("본문 검색은 최근 90일 이내 기간에서 가능합니다."); return; }
+    const { from, to } = filters;
+    if (from && to && from > to) { setSearchValidation("시작일은 종료일보다 늦을 수 없습니다."); return; }
     setSearchValidation(null); setSearchPages([]); setSearchRevision(value => value + 1); setSearchBody(JSON.stringify({ ...filters, from, to, query: query.trim(), ...(kind ? { kind } : {}) }));
   };
   const data = overview.data;
@@ -189,11 +185,11 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
               <Button type="submit" disabled={search.loading}>검색</Button>
               {searchBody ? <Button variant="ghost" onClick={() => { setSearchBody(undefined); setSearchPages([]); }}>검색 닫기</Button> : null}
             </form>
-            <p className={`mt-2 text-xs ${muted}`}>선택한 필터를 적용하며 본문은 최근 90일 안에서 검색합니다. 검색어는 URL에 저장하지 않습니다.</p>
+            <p className={`mt-2 text-xs ${muted}`}>선택한 기간의 전체 본문을 검색합니다. 검색어는 URL에 저장하지 않습니다.</p>
             {searchValidation || search.error ? <p role="alert" className="mt-3 text-[var(--bi-error)]">{searchValidation ?? search.error}</p> : null}
             {search.loading ? <p role="status" className="mt-3">본문을 검색하는 중…</p> : null}
             {search.data ? <div className="mt-4">
-              {!search.data.messages.length ? <p className={muted}>일치하는 대화가 없습니다.</p> : <ul className="divide-y divide-[var(--bi-border)]">{search.data.messages.map(message => <li key={message.id} className="py-3"><button type="button" className="w-full rounded text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]" onClick={() => selectSession(message.sessionId, message.id)}><span className="font-semibold text-[var(--bi-accent)]">{message.title || "제목 없는 세션"}</span><span className={`mt-1 block text-xs ${muted}`}>{message.role === "USER" ? "프롬프트" : "응답"} · {sourceName(message.source)} · {message.deviceName} · {date(message.occurredAt)}</span><span className="mt-2 block line-clamp-3 whitespace-pre-wrap break-words">{message.body ?? "본문 보관 기간 만료"}</span></button></li>)}</ul>}
+              {!search.data.messages.length ? <p className={muted}>일치하는 대화가 없습니다.</p> : <ul className="divide-y divide-[var(--bi-border)]">{search.data.messages.map(message => <li key={message.id} className="py-3"><button type="button" className="w-full rounded text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]" onClick={() => selectSession(message.sessionId, message.id)}><span className="font-semibold text-[var(--bi-accent)]">{message.title || "제목 없는 세션"}</span><span className={`mt-1 block text-xs ${muted}`}>{message.role === "USER" ? "프롬프트" : "응답"} · {sourceName(message.source)} · {message.deviceName} · {date(message.occurredAt)}</span><span className="mt-2 block line-clamp-3 whitespace-pre-wrap break-words">{message.body ?? "본문 없음"}</span></button></li>)}</ul>}
               <Pagination pages={searchPages} next={search.data.nextCursor} onChange={setSearchPages} loading={search.loading} />
             </div> : null}
           </section>
@@ -210,9 +206,9 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
                 {detail.data ? <>
                   <p className="mt-3 break-words font-semibold">{detail.data.session.title || "제목 없는 세션"}</p>
                   <p className={`mt-1 break-all text-xs ${muted}`}>{detail.data.session.cwd} · {sourceName(detail.data.session.source)} · {detail.data.session.deviceName}</p>
-                  <p className={`mt-2 text-xs ${muted}`}>본문 보관 90일 · 메타데이터 및 사용량 보관 365일</p>
+                  <p className={`mt-2 text-xs ${muted}`}>대화 본문·메타데이터·사용량 영구 보관</p>
                   {anchor ? <Button variant="ghost" className="mt-2" onClick={() => { setAnchor(null); setMessagePages([]); }}>검색 위치에서 세션 처음으로 이동</Button> : null}
-                  {!detail.data.messages.length ? <p className={`mt-4 ${muted}`}>이 세션에 수집된 공개 대화가 없습니다.</p> : <ol className="mt-4 space-y-4">{detail.data.messages.map(message => <li id={`message-${message.id}`} key={message.id} className={`rounded border p-3 ${message.id === anchor ? "border-[var(--bi-accent)]" : "border-[var(--bi-border)]"}`}><div className="flex flex-wrap items-center gap-2"><strong>{message.role === "USER" ? "프롬프트" : "응답"}</strong><time dateTime={message.occurredAt} className={`text-xs ${muted}`}>{date(message.occurredAt)}</time><span className={`text-xs ${muted}`}>{message.model ?? "모델 미제공"}</span></div><p className={`mt-3 whitespace-pre-wrap break-words leading-6 [overflow-wrap:anywhere] ${message.body === null ? muted : ""}`}>{message.body ?? "보관 기간이 지나 본문이 삭제되었습니다."}</p></li>)}</ol>}
+                  {!detail.data.messages.length ? <p className={`mt-4 ${muted}`}>이 세션에 수집된 공개 대화가 없습니다.</p> : <ol className="mt-4 space-y-4">{detail.data.messages.map(message => <li id={`message-${message.id}`} key={message.id} className={`rounded border p-3 ${message.id === anchor ? "border-[var(--bi-accent)]" : "border-[var(--bi-border)]"}`}><div className="flex flex-wrap items-center gap-2"><strong>{message.role === "USER" ? "프롬프트" : "응답"}</strong><time dateTime={message.occurredAt} className={`text-xs ${muted}`}>{date(message.occurredAt)}</time><span className={`text-xs ${muted}`}>{message.model ?? "모델 미제공"}</span></div><p className={`mt-3 whitespace-pre-wrap break-words leading-6 [overflow-wrap:anywhere] ${message.body === null ? muted : ""}`}>{message.body ?? "저장된 본문이 없습니다."}</p></li>)}</ol>}
                   <Pagination pages={messagePages} next={detail.data.nextCursor} onChange={setMessagePages} loading={detail.loading} />
                 </> : null}
               </>}
