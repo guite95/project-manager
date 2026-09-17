@@ -36,8 +36,6 @@
     "next": "16.3.5",
     "oci-common": "^2.141.0",
     "oci-objectstorage": "^2.141.0",
-    "oci-secrets": "2.141.0",
-    "oci-vault": "2.141.0",
     "pg": "^8.23.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
