@@ -19,6 +19,7 @@ import {
 } from "@/lib/import-legacy";
 import {
   groupIssuesByProject,
+  splitIssuePoolGroups,
   PERSONAL_ISSUES_SLUG,
   moveProject,
   removeIssue,
@@ -137,24 +138,29 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
     return map;
   }, [projects, customProjects]);
 
-  const groups = useMemo(
+  const allGroups = useMemo(
     () =>
       groupIssuesByProject(
         board?.issues ?? [],
         projects,
         customProjects,
         board?.projectOrder ?? [],
-      ).filter(group => group.slug !== PERSONAL_ISSUES_SLUG),
+      ),
     [board?.issues, board?.projectOrder, projects, customProjects],
   );
 
-  // 미분류는 순서를 바꿀 수 없어 제외한다. moveProject 가 기준으로 삼는 현재 순서다.
+  const { projectGroups: groups, personalGroups } = useMemo(
+    () => splitIssuePoolGroups(allGroups),
+    [allGroups],
+  );
+
+  // 두 탭의 프로젝트 순서를 함께 보존한다. 미분류와 개인 공용 목록은 고정한다.
   const orderedSlugs = useMemo(
     () =>
-      groups
+      allGroups
         .map((group) => group.slug)
-        .filter((slug): slug is string => slug !== null),
-    [groups],
+        .filter((slug): slug is string => slug !== null && slug !== PERSONAL_ISSUES_SLUG),
+    [allGroups],
   );
 
   // 서버가 id 를 만드므로 응답을 받은 뒤 상태에 넣는다.
@@ -177,6 +183,8 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
     position: "before" | "after",
   ) => {
     if (!board) return;
+    const tabGroups = personalGroups.some(group => group.slug === slug) ? personalGroups : groups;
+    if (!tabGroups.some(group => group.slug === targetSlug)) return;
     const next = moveProject(board, orderedSlugs, slug, targetSlug, position);
     setBoard(next);
     void sync(() =>
@@ -189,8 +197,11 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
 
   /** 위/아래 버튼 — 한 칸 옮기기를 이웃 기준 이동으로 옮겨 적는다. */
   const handleStepProject = (slug: string, delta: -1 | 1) => {
-    const from = orderedSlugs.indexOf(slug);
-    const neighbour = orderedSlugs[from + delta];
+    const tabGroups = personalGroups.some(group => group.slug === slug) ? personalGroups : groups;
+    const tabSlugs = tabGroups.map(group => group.slug)
+      .filter((entry): entry is string => entry !== null && entry !== PERSONAL_ISSUES_SLUG);
+    const from = tabSlugs.indexOf(slug);
+    const neighbour = tabSlugs[from + delta];
     if (from === -1 || !neighbour) return;
     handleMoveProject(slug, neighbour, delta === -1 ? "before" : "after");
     setAnnouncement(
@@ -295,10 +306,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
         <IssuePool
           collapsedSlugs={board.collapsedProjects}
           groups={groups}
-          personalGroups={[{
-            slug: PERSONAL_ISSUES_SLUG, title: "개인", canAdd: true, removable: false,
-            issues: board.issues.filter(issue => issue.projectSlug === PERSONAL_ISSUES_SLUG),
-          }]}
+          personalGroups={personalGroups}
           onAdd={handleAdd}
           onMoveProject={handleMoveProject}
           onRemove={handleRemove}

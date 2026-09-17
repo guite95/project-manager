@@ -6,6 +6,7 @@ import { getFlowCatalog } from "@/lib/server/flow-catalog-store";
 import { materialsHref } from "@/lib/materials";
 import { projectNotesHref } from "@/lib/project-notes";
 import { meetingsHref } from "@/lib/meetings";
+import { GitHubRepositoryForm, PersonalGitHubConnection } from "@/components/personal/github-connection";
 
 export const metadata: Metadata = {
   title: "개인 프로젝트 — 프로젝트 매니지먼트",
@@ -18,6 +19,7 @@ export default async function PersonalPage() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader title="개인 프로젝트" description="개인 프로젝트 목록입니다." />
       <section aria-label="개인 프로젝트 목록" className="px-6 py-5">
+        <PersonalGitHubConnection>
         <p className="mb-3 text-[12px] text-[var(--bi-muted)]">전체 {personalProjects.length}개</p>
         <ul className="m-0 list-none divide-y divide-[var(--bi-border)] rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-0">
           {personalProjects.map(project => (
@@ -28,9 +30,11 @@ export default async function PersonalPage() {
                 <Link href={projectNotesHref(project.slug)} className="hover:underline">기록</Link>
                 <Link href={meetingsHref(project.slug)} className="hover:underline">회의록</Link>
               </nav>
+              <GitHubRepositoryForm projectSlug={project.slug} title={project.title} />
             </li>
           ))}
         </ul>
+        </PersonalGitHubConnection>
       </section>
     </div>
   );

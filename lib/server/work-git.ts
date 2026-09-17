@@ -92,7 +92,7 @@ export async function collectGit(
       );
     mappingByCommon.set(common, slug);
   }
-  const seen = new Set<string>();
+  const seen = new Map<string, string>();
   const start = Date.parse(`${date}T00:00:00+09:00`);
   const end = start + 86400000;
   for (const path of paths) {
@@ -108,22 +108,7 @@ export async function collectGit(
           status: "skipped",
           authorEmails: [],
           reason: "같은 Git 저장소의 추가 워크트리입니다.",
-        });
-        continue;
-      }
-      seen.add(common);
-      if (!authorEmails.length) {
-        const email = await git(path, ["config", "--get", "user.email"]).catch(
-          () => "",
-        );
-        authorEmails = email ? [email] : [];
-      }
-      if (!authorEmails.length) {
-        repositories.push({
-          path: repo,
-          status: "skipped",
-          authorEmails: [],
-          reason: "작성자 이메일이 없습니다. --authors로 지정하세요.",
+          projectKey: seen.get(common),
         });
         continue;
       }
@@ -141,13 +126,30 @@ export async function collectGit(
           key: projectKey,
           title: `${repo} (프로젝트 미연결)`,
         });
+      seen.set(common, projectKey);
+      if (!authorEmails.length) {
+        const email = await git(path, ["config", "--get", "user.email"]).catch(
+          () => "",
+        );
+        authorEmails = email ? [email] : [];
+      }
+      if (!authorEmails.length) {
+        repositories.push({
+          path: repo,
+          status: "skipped",
+          authorEmails: [],
+          reason: "작성자 이메일이 없습니다. --authors로 지정하세요.",
+          projectKey,
+        });
+        continue;
+      }
       // HEAD가 없는 초기 저장소는 작업 0건이다. 다른 Git 오류는 아래에서 별도로 표시한다.
       const head = await git(path, ["rev-parse", "--verify", "HEAD"]).catch(
         () => "",
       );
       const refs = await git(path, ["for-each-ref", "--format=%(refname)"]);
       if (!head && !refs) {
-        repositories.push({ path: repo, status: "ok", authorEmails });
+        repositories.push({ path: repo, status: "ok", authorEmails, projectKey });
         continue;
       }
       const raw = await git(path, [
@@ -187,7 +189,7 @@ export async function collectGit(
           merge: parents.trim().split(/\s+/).length > 1,
         });
       }
-      repositories.push({ path: repo, status: "ok", authorEmails });
+      repositories.push({ path: repo, status: "ok", authorEmails, projectKey });
     } catch {
       repositories.push({
         path: repo,

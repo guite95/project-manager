@@ -1,4 +1,4 @@
 interface:
   display_name: "work-sum"
-  short_description: "Git과 완료 체크를 합쳐 작업 정리 저장"
+  short_description: "Git·완료 체크·당일 AI 대화를 합쳐 작업 정리 저장"
   default_prompt: "$work-sum 오늘 작업을 정리해서 완료 이력에 저장해줘."

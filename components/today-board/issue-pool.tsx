@@ -56,6 +56,7 @@ export function IssuePool({
   const tabs = [{ id: "project", title: "프로젝트 이슈" }, { id: "personal", title: "개인 이슈" }] as const;
   // 순서를 바꿀 수 있는 그룹만 센다 (미분류는 항상 마지막이라 제외).
   const movable = groups.filter((group) => group.slug !== null);
+  const personalMovable = personalGroups.filter(group => group.slug !== null && group.slug !== PERSONAL_ISSUES_SLUG);
 
   return (
     <section
@@ -109,10 +110,15 @@ export function IssuePool({
       </div>
       <div role="tabpanel" id={`${tabId}-personal-panel`} aria-labelledby={`${tabId}-personal-tab`}
         className={activeTab === "personal" ? "flex min-h-0 flex-col gap-3 lg:flex-1 lg:overflow-y-auto" : "hidden"}>
-        {personalGroups.map(group => <ProjectGroup key={group.slug ?? "__personal__"} group={group}
-          collapsed={false} isFirst isLast onAdd={onAdd} onRemove={onRemove} onRename={onRename}
-          onSendToToday={onSendToToday} onMoveProject={onMoveProject} onRemoveProject={onRemoveProject}
-          onStepProject={onStepProject} onToggleCollapsed={onToggleCollapsed} />)}
+        {personalGroups.map(group => {
+          const index = personalMovable.findIndex(entry => entry.slug === group.slug);
+          return <ProjectGroup key={group.slug ?? "__personal__"} group={group}
+            collapsed={group.slug !== null && group.slug !== PERSONAL_ISSUES_SLUG && collapsedSlugs.includes(group.slug)}
+            isFirst={index === 0} isLast={index === personalMovable.length - 1}
+            onAdd={onAdd} onRemove={onRemove} onRename={onRename}
+            onSendToToday={onSendToToday} onMoveProject={onMoveProject} onRemoveProject={onRemoveProject}
+            onStepProject={onStepProject} onToggleCollapsed={onToggleCollapsed} />;
+        })}
       </div>
     </section>
   );

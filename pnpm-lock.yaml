@@ -44,6 +44,12 @@ importers:
       oci-objectstorage:
         specifier: ^2.141.0
         version: 2.141.0
+      oci-secrets:
+        specifier: 2.141.0
+        version: 2.141.0
+      oci-vault:
+        specifier: 2.141.0
+        version: 2.141.0
       pg:
         specifier: ^8.23.0
         version: 8.23.0
@@ -1550,6 +1556,15 @@ packages:
 
   oci-objectstorage@2.141.0:
     resolution: {integrity: sha512-XAnaS0n28pcu1+eYhlwfGy3HfHTLvXD8hk6SLF7jIfPN+MZJxfdsHS16w7MLalwUhedjh+txoNr6gZRonlEjsg==}
+
+  oci-secrets@2.141.0:
+    resolution: {integrity: sha512-Q6fy61/IInYFTcFBDJ9mh5F/sVZgaSL5HCCnwmtvU21FIRQVwCT9v7MF1Y344Hl/c/hYnNDQag/WmbGlIJepWA==}
+
+  oci-vault@2.141.0:
+    resolution: {integrity: sha512-y7lHPBDCJfU/6Qs1Cc8OR1U2VZdN9gOVR7MRRvSvJT4VrcIzQawXJiUNNQpKW1hg12i9fbsISSxLrk3ZmU/qog==}
+
+  oci-workrequests@2.141.0:
+    resolution: {integrity: sha512-XM1XfyynlbCEiRUTCvfCwSoOM/kZV1pj0pl/B92765fEdSHdbdxTFTVlJUTIDueNVzyLGxWjgBOZn8bftAjvYw==}
 
   ohash@2.0.12:
     resolution: {integrity: sha512-65S/5gk9YSsaRjcyf7Nfa6h/d3E8/1gslpXfI4W7Dxn/oap8IKRuNT5VXkLQ1YFKIEg4apRY4Pj6aiwFzrDdmw==}
@@ -3686,6 +3701,28 @@ snapshots:
   oci-objectstorage@2.141.0:
     dependencies:
       await-semaphore: 0.1.3
+      oci-common: 2.141.0
+      opossum: 5.0.1
+    transitivePeerDependencies:
+      - encoding
+
+  oci-secrets@2.141.0:
+    dependencies:
+      oci-common: 2.141.0
+      opossum: 5.0.1
+    transitivePeerDependencies:
+      - encoding
+
+  oci-vault@2.141.0:
+    dependencies:
+      oci-common: 2.141.0
+      oci-workrequests: 2.141.0
+      opossum: 5.0.1
+    transitivePeerDependencies:
+      - encoding
+
+  oci-workrequests@2.141.0:
+    dependencies:
       oci-common: 2.141.0
       opossum: 5.0.1
     transitivePeerDependencies:

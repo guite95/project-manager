@@ -18,10 +18,15 @@ function Source({ source }: { source: WorkSource }) {
       <span className="font-medium">
         {source.kind === "git"
           ? `Git · ${source.repository} · ${source.commit?.slice(0, 8)}`
-          : "완료 체크"}
+          : source.kind === "ai"
+            ? `AI 대화 · ${source.aiSource} · ${source.role === "USER" ? "요청" : "응답"} · ${formatSeoulDateTime(source.occurredAt!)}`
+            : "완료 체크"}
       </span>
       {" — "}
       {source.title}
+      {source.kind === "ai" && (
+        <span className="block">세션 {source.sessionId} · 메시지 {source.messageId}{source.bodyAvailable ? "" : " · 본문 없음"}</span>
+      )}
     </li>
   );
 }
@@ -107,7 +112,7 @@ export function WorkSummaryHistory({
         <div className="rounded border border-dashed border-[var(--bi-border)] px-4 py-12 text-center text-[var(--bi-muted)]">
           <p className="text-sm">{date}에 저장된 작업 정리가 없습니다.</p>
           <p className="mt-2 text-xs">
-            work-sum에 이 날짜의 작업 정리를 요청하면 Git 기록과 완료 체크를
+            work-sum에 이 날짜의 작업 정리를 요청하면 Git 기록·완료 체크·AI 대화를
             모아 여기에 저장합니다.
           </p>
         </div>
@@ -129,6 +134,7 @@ export function WorkSummaryHistory({
                   .length
               }
               건
+              {report.evidence.ai && ` · AI 메시지 ${report.evidence.ai.messages}건`}
             </p>
           </div>
           <div className="flex flex-col gap-5 p-4">
@@ -184,9 +190,18 @@ export function WorkSummaryHistory({
                 {warnings.length ? ` · 확인 필요 ${warnings.length}개` : ""}
               </summary>
               <p className="mt-2 text-[11px] text-[var(--bi-muted)]">
-                한국 시간 커밋 날짜 기준 ·{" "}
+                한국 시간 커밋·완료·메시지 날짜 기준 ·{" "}
                 {formatSeoulDateTime(report.evidence.collectedAt)} 수집본
               </p>
+              {report.evidence.ai && (
+                <div className="mt-2 text-[11px] text-[var(--bi-muted)]">
+                  <p>AI 세션 {report.evidence.ai.sessions}개 · 본문 미수집 {report.evidence.ai.missingBodies}건</p>
+                  {report.evidence.ai.devices.length === 0 && <p>등록된 AI 수집 기기가 없습니다.</p>}
+                  {report.evidence.ai.devices.map((device, index) => (
+                    <p key={index}>{device.name} · 마지막 수신 {formatSeoulDateTime(device.lastSyncAt)} · 오류 {device.errors}건</p>
+                  ))}
+                </div>
+              )}
               <ul className="mt-2 flex flex-col gap-1 text-[11px] text-[var(--bi-muted)]">
                 {report.evidence.repositories.map((r) => (
                   <li key={r.path} className="break-words">

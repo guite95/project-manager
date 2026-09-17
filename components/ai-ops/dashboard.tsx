@@ -132,6 +132,11 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
   const changeFilter = useCallback((key: keyof AiFilters, value: string) => {
     setFilters(previous => ({ ...previous, [key]: value })); setPages([]); setSearchBody(undefined); setSearchPages([]); setSearchValidation(null); setSelected(null); setAnchor(null); setMessagePages([]);
   }, []);
+  const changeDateRange = useCallback((from: string, to: string) => {
+    setFilters(previous => ({ ...previous, from, to }));
+    setPages([]); setSearchBody(undefined); setSearchPages([]); setSearchValidation(null);
+    setSelected(null); setAnchor(null); setMessagePages([]);
+  }, []);
   useEffect(() => {
     const url = new URLSearchParams(filterQuery);
     if (!url.has("from") && !url.has("to")) url.set("range", "all");
@@ -159,7 +164,7 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
     <PageHeader title={view === "activity" ? "AI 활동 및 대화" : "AI 사용량 통계"} description="기기별 Codex·Claude Code 사용 기록 · 한국 시간 기준" />
     <div className="space-y-5 p-4 text-[13px] md:p-6">
       <div className="flex flex-wrap items-center gap-2" aria-label="AI 기록 필터">
-        <DateRangeFilter from={filters.from ?? ""} to={filters.to ?? ""} onFromChange={value => changeFilter("from", value)} onToChange={value => changeFilter("to", value)} quickToggle />
+        <DateRangeFilter from={filters.from ?? ""} to={filters.to ?? ""} onFromChange={value => changeFilter("from", value)} onToChange={value => changeFilter("to", value)} onRangeChange={changeDateRange} quickToggle />
         <Dropdown className="w-40" ariaLabel="기기 필터" value={filters.device ?? ""} onChange={value => changeFilter("device", value)} options={[{ value: "", label: "모든 기기" }, ...(data?.devices ?? []).map(device => ({ value: device.id, label: device.name }))]} />
         <Dropdown className="w-36" ariaLabel="원천 필터" value={filters.source ?? ""} onChange={value => changeFilter("source", value)} options={[{ value: "", label: "모든 원천" }, { value: "CODEX", label: "Codex" }, { value: "CLAUDE_CODE", label: "Claude Code" }]} />
         <Dropdown className="w-44" ariaLabel="모델 필터" value={filters.model ?? ""} onChange={value => changeFilter("model", value)} options={[{ value: "", label: "모든 모델" }, ...(data?.options.models ?? []).map(model => ({ value: model, label: model }))]} />

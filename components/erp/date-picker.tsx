@@ -287,7 +287,7 @@ function ModePills({
   onSelect,
 }: {
   modes: DateRangeMode[];
-  mode: DateRangeMode;
+  mode: DateRangeMode | null;
   onSelect: (mode: DateRangeMode) => void;
 }) {
   return (
@@ -795,6 +795,7 @@ export function DateRangeFilter({
   to,
   onFromChange,
   onToChange,
+  onRangeChange,
   today = todayInSeoul(),
   modes = ALL_MODES,
   quickToggle = false,
@@ -804,6 +805,8 @@ export function DateRangeFilter({
   to: string;
   onFromChange: (value: string) => void;
   onToChange: (value: string) => void;
+  /** 확정된 시작일과 종료일을 한 번에 전달한다. */
+  onRangeChange?: (from: string, to: string) => void;
   today?: string;
   modes?: DateRangeMode[];
   /** 달력 버튼 왼쪽에 '전체 / 오늘' 인라인 토글을 노출한다(전체=기간 해제, 오늘=오늘로). */
@@ -841,6 +844,22 @@ export function DateRangeFilter({
   const isAll = !from && !to;
   const isToday = Boolean(from) && from === today && to === today;
 
+  // 버튼 강조는 달력 편집 모드가 아닌 실제 조회 기간을 따른다.
+  const matchesRange = (value: DateRangeMode) => {
+    const range = PRESETS[value][0].range(todayDate);
+    return from === toYmd(range.from) && to === toYmd(range.to);
+  };
+  const activeMode = modes.includes(mode) && matchesRange(mode)
+    ? mode
+    : modes.find(matchesRange) ?? null;
+  const publishRange = (nextFrom: string, nextTo: string) => {
+    if (onRangeChange) onRangeChange(nextFrom, nextTo);
+    else {
+      onFromChange(nextFrom);
+      onToChange(nextTo);
+    }
+  };
+
   const applyPreset = (preset: Preset) => {
     const { from: presetFrom, to: presetTo } = preset.range(todayDate);
     setDraftFrom(toYmd(presetFrom));
@@ -860,8 +879,8 @@ export function DateRangeFilter({
     setDraftFrom(nextFrom);
     setDraftTo(nextTo);
     setEditing("from");
-    onFromChange(nextFrom);
-    onToChange(nextTo);
+    publishRange(nextFrom, nextTo);
+    setOpen(false);
   };
 
   // 달력에서 날짜를 고르면 현재 편집 중인(시작/종료) 쪽에 넣는다.
@@ -887,8 +906,7 @@ export function DateRangeFilter({
   };
 
   const commit = () => {
-    onFromChange(draftFrom);
-    onToChange(draftTo);
+    publishRange(draftFrom, draftTo);
     setOpen(false);
   };
 
@@ -911,8 +929,8 @@ export function DateRangeFilter({
                 : "text-[var(--bi-muted)] hover:text-[var(--bi-fg)]",
             )}
             onClick={() => {
-              onFromChange("");
-              onToChange("");
+              publishRange("", "");
+              setOpen(false);
             }}
             type="button"
           >
@@ -927,8 +945,9 @@ export function DateRangeFilter({
                 : "text-[var(--bi-muted)] hover:text-[var(--bi-fg)]",
             )}
             onClick={() => {
-              onFromChange(today);
-              onToChange(today);
+              setMode("day");
+              publishRange(today, today);
+              setOpen(false);
             }}
             type="button"
           >
@@ -938,7 +957,7 @@ export function DateRangeFilter({
       ) : null}
 
       {modes.length > 1 ? (
-        <ModePills mode={mode} modes={modes} onSelect={selectMode} />
+        <ModePills mode={activeMode} modes={modes} onSelect={selectMode} />
       ) : null}
 
       <button

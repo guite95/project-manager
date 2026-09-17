@@ -8,6 +8,8 @@
  *  - id 와 시각은 호출부가 넘긴다 — 그래야 테스트가 결정적이다.
  * ---------------------------------------------------------------------- */
 
+import { isPersonalProject } from "./personal-projects.ts";
+
 export type Issue = {
   id: string;
   projectSlug: string;
@@ -64,6 +66,20 @@ export const PROJECT_DRAG_TYPE = "application/x-today-project";
 export const UNGROUPED_TITLE = "미분류";
 /** 프로젝트에 속하지 않는 개인 이슈의 예약 식별자. 기존 이슈 저장·완료 흐름을 사용한다. */
 export const PERSONAL_ISSUES_SLUG = "__personal_issues__";
+
+/** 프로젝트 소속을 보존한 채 이슈 풀의 두 탭으로 나눈다. */
+export function splitIssuePoolGroups(groups: IssueGroup[]): {
+  projectGroups: IssueGroup[];
+  personalGroups: IssueGroup[];
+} {
+  const personal = groups.find(group => group.slug === PERSONAL_ISSUES_SLUG) ?? {
+    slug: PERSONAL_ISSUES_SLUG, title: "개인", canAdd: true, removable: false, issues: [],
+  };
+  return {
+    projectGroups: groups.filter(group => group.slug !== PERSONAL_ISSUES_SLUG && !isPersonalProject(group.slug ?? "")),
+    personalGroups: [personal, ...groups.filter(group => isPersonalProject(group.slug ?? ""))],
+  };
+}
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 

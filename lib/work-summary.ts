@@ -1,10 +1,10 @@
 import { PERSONAL_ISSUES_SLUG } from "./today-board.ts";
 
-/** 작업 정리는 원본 완료 기록과 Git 증거를 참조하는 날짜별 스냅샷이다. */
+/** 작업 정리는 완료 기록, Git, AI 대화 근거를 참조하는 날짜별 스냅샷이다. */
 export type WorkProject = { key: string; title: string };
 export type WorkSource = {
   id: string;
-  kind: "git" | "completion";
+  kind: "git" | "completion" | "ai";
   projectKey: string;
   title: string;
   repository?: string;
@@ -15,12 +15,20 @@ export type WorkSource = {
   merge?: boolean;
   completionId?: string;
   completedAt?: string;
+  sessionId?: string;
+  messageId?: string;
+  aiSource?: "CODEX" | "CLAUDE_CODE";
+  role?: "USER" | "ASSISTANT";
+  cwd?: string;
+  occurredAt?: string;
+  bodyAvailable?: boolean;
 };
 export type WorkRepository = {
   path: string;
   status: "ok" | "skipped" | "error";
   authorEmails: string[];
   reason?: string;
+  projectKey?: string;
 };
 export type WorkEvidence = {
   version: 1;
@@ -32,6 +40,12 @@ export type WorkEvidence = {
   projects: WorkProject[];
   repositories: WorkRepository[];
   sources: WorkSource[];
+  ai?: {
+    messages: number;
+    sessions: number;
+    missingBodies: number;
+    devices: { name: string; lastSyncAt: string; errors: number }[];
+  };
 };
 export type WorkSummaryDraft = {
   items: { projectKey: string; title: string; sourceIds: string[] }[];
@@ -106,6 +120,8 @@ export function parseEvidence(input: unknown): WorkEvidence {
     array(repo.authorEmails);
     repo.authorEmails.forEach((x) => string(x));
     if (repo.reason !== undefined) string(repo.reason);
+    if (repo.projectKey !== undefined && !keys.has(String(repo.projectKey)))
+      throw new WorkSummaryError("저장소 프로젝트가 잘못되었습니다.");
   }
   const ids = new Set<string>();
   for (const raw of v.sources) {
@@ -134,7 +150,37 @@ export function parseEvidence(input: unknown): WorkEvidence {
     } else if (s.kind === "completion") {
       string(s.completionId);
       instant(s.completedAt);
+    } else if (s.kind === "ai") {
+      string(s.sessionId);
+      string(s.messageId);
+      string(s.cwd, 4096);
+      instant(s.occurredAt);
+      if (
+        s.id !== `ai:${s.messageId}` ||
+        !["CODEX", "CLAUDE_CODE"].includes(String(s.aiSource)) ||
+        !["USER", "ASSISTANT"].includes(String(s.role)) ||
+        typeof s.bodyAvailable !== "boolean" ||
+        "body" in s
+      ) throw new WorkSummaryError("AI 대화 증거 형식이 잘못되었습니다.");
+      if (new Date(Date.parse(String(s.occurredAt)) + 9 * 3600000).toISOString().slice(0, 10) !== v.date)
+        throw new WorkSummaryError("AI 메시지 날짜가 수집 날짜와 다릅니다.");
     } else throw new WorkSummaryError("증거 종류가 잘못되었습니다.");
+  }
+  if (v.ai !== undefined) {
+    const ai = object(v.ai);
+    const messages = v.sources.map(object).filter(s => s.kind === "ai");
+    if (ai.messages !== messages.length ||
+        ai.sessions !== new Set(messages.map(s => s.sessionId)).size ||
+        ai.missingBodies !== messages.filter(s => !s.bodyAvailable).length)
+      throw new WorkSummaryError("AI 수집 건수가 증거와 다릅니다.");
+    array(ai.devices);
+    for (const raw of ai.devices) {
+      const device = object(raw);
+      string(device.name);
+      instant(device.lastSyncAt);
+      if (!Number.isSafeInteger(device.errors) || Number(device.errors) < 0)
+        throw new WorkSummaryError("AI 기기 오류 건수가 잘못되었습니다.");
+    }
   }
   return input as WorkEvidence;
 }
