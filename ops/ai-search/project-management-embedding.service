@@ -1,0 +1,16 @@
+[Unit]
+Description=Process Project Management incremental embeddings
+After=docker.service project-management-wif.service
+Requires=docker.service
+Wants=project-management-wif.service
+
+[Service]
+Type=oneshot
+User=ubuntu
+ExecStart=/usr/bin/docker exec project-management node scripts/ai-ops-search.mjs worker --apply --batches 10000
+TimeoutStartSec=6h
+Nice=10
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll changed AI sessions and retry ready embedding jobs
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=1min
+AccuracySec=15s
+Unit=project-management-embedding.service
+
+[Install]
+WantedBy=timers.target

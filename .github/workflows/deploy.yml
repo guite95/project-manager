@@ -86,7 +86,7 @@ jobs:
 
       - name: Upload image and Compose file
         run: |
-          scp "$RUNNER_TEMP/project-management.tar.gz" docker-compose.yml \
+          scp "$RUNNER_TEMP/project-management.tar.gz" docker-compose.yml docker-compose.wif.yml \
             deploy-target:project-management/
 
       - name: Start app and verify response

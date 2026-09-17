@@ -1,0 +1,11 @@
+[Unit]
+Description=Renew Project Management OCI identity every 10 minutes
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=10min
+AccuracySec=15s
+Unit=project-management-wif.service
+
+[Install]
+WantedBy=timers.target

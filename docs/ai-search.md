@@ -106,6 +106,11 @@ Mac에서 공유 DB를 대상으로 실행할 때는 기존 `pnpm db:shared -- n
 
 ## 평가
 
+OCI 상시 실행 구성은 `ops/ai-search/README.md`를 따른다. 서버는 개인 ADC 대신
+OCI의 자동 갱신 인스턴스 인증서와 GCP X.509 WIF를 사용한다. 선택적
+`docker-compose.wif.yml`과 systemd 인증서 갱신·embedding worker timer로 운영한다.
+현재 운영 기본 호출 위치는 `global`이며 프로젝트 설정은 서버 환경변수로 유지한다.
+
 사용자가 직접 관련 세션을 판정한 작은 JSON 파일로 시작한다. 본문·실제 session ID가 담긴 평가 파일을 공개 Git에 커밋하지 않는다.
 
 ```json

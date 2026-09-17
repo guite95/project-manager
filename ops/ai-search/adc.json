@@ -1,0 +1,13 @@
+{
+  "universe_domain": "googleapis.com",
+  "type": "external_account",
+  "audience": "//iam.googleapis.com/projects/616373009012/locations/global/workloadIdentityPools/pm-oci/providers/oci-instance",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:mtls",
+  "token_url": "https://sts.mtls.googleapis.com/v1/token",
+  "credential_source": {
+    "certificate": {
+      "certificate_config_location": "/run/project-management-wif/certificate-config.json"
+    }
+  },
+  "service_account_impersonation_url": "https://iamcredentials.mtls.googleapis.com/v1/projects/-/serviceAccounts/pm-wkddnr@project-manager-508905.iam.gserviceaccount.com:generateAccessToken"
+}

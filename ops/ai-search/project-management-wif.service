@@ -1,0 +1,22 @@
+[Unit]
+Description=Refresh OCI certificate for Project Management GCP federation
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/project-management-wif.conf
+RuntimeDirectory=project-management-wif
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+UMask=0077
+ExecStart=/usr/bin/python3 /usr/local/lib/project-management/refresh-oci-certificate.py --expected-instance ${OCI_INSTANCE_ID} --trusted-ca-sha256 ${OCI_CA_SHA256}
+TimeoutStartSec=60
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/run/project-management-wif
+
+[Install]
+WantedBy=multi-user.target

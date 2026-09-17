@@ -1,0 +1,12 @@
+# Optional OCI-only runtime identity. /run is tmpfs; no personal ADC or durable key.
+services:
+  app:
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/project-management-wif/adc.json
+    volumes:
+      - type: bind
+        source: /run/project-management-wif
+        target: /run/project-management-wif
+        read_only: true
+        bind:
+          create_host_path: false

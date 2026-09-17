@@ -1,0 +1,12 @@
+# Build extension files against the exact PostgreSQL image used by shared-infra.
+ARG POSTGRES_IMAGE=postgres@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+FROM ${POSTGRES_IMAGE} AS build
+RUN apk add --no-cache build-base curl
+WORKDIR /src
+RUN curl -fsSL https://codeload.github.com/pgvector/pgvector/tar.gz/778dacf20c07caf904557a88705142631818d8cb -o vector.tar.gz \
+ && echo '4c33cf053329784ba6d992d05c9588b93789e907a7511f20ff5a5a5b8a0703c1  vector.tar.gz' | sha256sum -c - \
+ && tar -xzf vector.tar.gz --strip-components=1 \
+ && make OPTFLAGS="" with_llvm=no \
+ && make install OPTFLAGS="" with_llvm=no DESTDIR=/out
+FROM scratch
+COPY --from=build /out/ /
