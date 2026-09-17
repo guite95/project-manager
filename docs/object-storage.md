@@ -26,7 +26,7 @@ AI 세션 본문은 전체 본문 검색을 위해 PostgreSQL에 보관하며 �
 `OBJECT_READ`, `OBJECT_CREATE`, `OBJECT_OVERWRITE`, `OBJECT_DELETE` 권한으로 제한한다.
 이 권한은 인스턴스 단위이므로 같은 VM에서 metadata endpoint에 접근할 수 있는 다른 프로세스도 사용 가능하다.
 버킷은 `NoPublicAccess`, `Standard`, versioning disabled로 만들고 수명주기 자동 삭제를 설정하지 않는다.
-실제 IAM 구성과 인스턴스 인증 검증은 배포 전 수행한다. OCI의 무료 사용량은 계정 내 다른 버킷과 공유한다.
+IAM은 배포 전에 구성하고 배포된 앱에서 인스턴스 인증을 검증한다. OCI의 무료 사용량은 계정 내 다른 버킷과 공유한다.
 
 현재 운영 반영 대상은 춘천의 `dev-uk` 인스턴스다. 새 dynamic group과 policy 이름은
 `project-management-materials-app`으로 하고, 기존 그룹·정책은 수정하지 않는다.
@@ -73,8 +73,15 @@ pnpm db:shared -- node --experimental-strip-types scripts/material-storage.mjs v
 
 - 춘천 리전 `project-management-materials` private Standard 버킷 생성.
 - 자료 4개(업로드 2, 가져온 HTML 1, 슬라이드 1), 원본 총 532,624바이트를 복사하고 재다운로드 SHA-256 및 콘텐츠 동일성 검증 완료.
-- 공유 DB에 4개 참조를 revision 검사 후 추가. 구버전 앱 호환을 위해 DB 원본 4개는 보존 중이다.
+- 공유 DB에 4개 참조를 revision 검사 후 추가. 복사 단계에서는 구버전 앱 호환을 위해 DB 원본을 보존했고, 아래 배포 검증 후 중복 본문 4개를 제거했다.
 - 백업: `~/.local/share/project-management/backups/materials-before-oci-20260917.json` (권한 0600).
 - 백업 SHA-256: `a65c84f84355d5d43c02aeed51671d0190f33f74f687348f6190c08c43dbfaa2`.
 - 개인 인증으로 업로드·조건부 재시도·조회·삭제·반복 삭제 검증 완료. 검증용 객체 삭제 완료.
-- 운영 컨테이너의 instance metadata 접근 확인. 사용자 승인 후 `project-management-materials-app` dynamic group/policy를 생성하고 서버 환경파일을 백업한 뒤 저장소 연결 정보만 추가했다. 앱 배포 후 실제 인스턴스 인증 및 자료 API를 검증하고, 새 백업으로 compact를 수행한다.
+- 사용자 승인 후 `project-management-materials-app` dynamic group/policy를 생성하고 서버 환경파일을 백업한 뒤 저장소 연결 정보만 추가했다.
+- 앱 커밋 `bb5ecb42e3920bcd97664264dcb2e64d8b7bcc0b`을 main에 푸시하고 [운영 배포 실행](https://github.com/guite95/project-manager/actions/runs/35166705756)이 성공했다.
+- 운영 인스턴스 인증으로 객체 읽기·쓰기·삭제 성공. 검증용 객체는 삭제했다.
+- compact 전 서버 전체 DB 백업: `/home/ubuntu/project-management/backups/before-oci-compact-20260917T003042Z.dump` (0600, 13,960,794바이트). SHA-256: `6777290b4a0c87f4ef7ab4d22365fbb1ad968eaeed3a304c5a1a78db0418c0fc`. `pg_restore --list`로 아카이브 목록을 확인했으며 실제 복원은 수행하지 않았다.
+- 배포 후 최신 자료 백업: `~/.local/share/project-management/backups/materials-before-compact-20260917.json` (0600). SHA-256: `98d0632c9e41c8aa157f88ab9794880777c9bdc2221a7c3bd417cc39ecbe8372`.
+- 위 백업으로 compact 완료. 후속 검증 결과 객체 4개, 532,624바이트, DB 중복 본문 0개.
+- 정리 후 내부 주소와 공개 HTTPS의 인증된 자료 API에서 4개 모두 원본 SHA-256 일치. 비로그인 AI API는 401, 로그인 AI 조회는 정상이며 영구 보관 코드 반영을 확인했다. AI 본문은 DB에 유지한다.
+- 코드 검증: 관련 테스트 39개, typecheck, build 통과. 브라우저 검증은 수행하지 않았다. 백업은 보존한다.
