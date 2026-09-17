@@ -69,11 +69,25 @@ export interface AiSessionDetail {
   nextCursor: string | null;
 }
 export interface AiSearchResult {
+  mode?: "hybrid" | "keyword";
+  fallbackReason?: string | null;
+  profileId?: string;
+  candidateSessions?: string[];
+  context?: {
+    sessionId: string;
+    messageId: string;
+    documentId: string | null;
+    content: string;
+    start: number;
+    end: number;
+  }[];
   messages: (AiMessage & {
     title: string;
     cwd: string;
     source: AiSource;
     deviceName: string;
+    snippet?: string;
+    score?: number;
   })[];
   nextCursor: string | null;
 }

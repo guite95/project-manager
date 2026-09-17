@@ -37,6 +37,8 @@ COPY --from=builder /app/node_modules ./node_modules
 
 COPY --from=builder /app/lib/ai-ops ./lib/ai-ops
 COPY --from=builder /app/scripts/ai-ops-ingest.mjs ./scripts/ai-ops-ingest.mjs
+COPY --from=builder /app/scripts/ai-ops-search.mjs ./scripts/ai-ops-search.mjs
+COPY --from=builder /app/scripts/sql/ai-ops-vector.sql ./scripts/sql/ai-ops-vector.sql
 
 EXPOSE 30001
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && exec node server.js"]

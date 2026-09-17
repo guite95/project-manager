@@ -90,7 +90,7 @@ function TokenCards({ tokens }: { tokens: AiTokens }) {
       {knownTotal > 0 ? <div role="img" aria-label={`제공된 토큰 구성: ${segments.map(([key, label]) => `${label} ${number(tokens[key])}`).join(", ")}`} className="mt-3 flex h-4 overflow-hidden rounded">{segments.map(([key, label], index) => <span key={key} title={`${label}: ${number(tokens[key])}`} style={{ width: `${100 * (tokens[key] ?? 0) / knownTotal}%`, backgroundColor: colors[index] }} />)}</div> : <p className={`mt-3 text-xs ${muted}`}>표시할 토큰 구성이 없습니다.</p>}
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">{segments.map(([key, label], index) => <li key={key} className="flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-sm" style={{ backgroundColor: colors[index] }} />{label} {number(tokens[key])}</li>)}</ul>
     </div>
-    <p className={`mt-2 text-xs ${muted}`}>입력·출력은 캐시·추론과 겹치지 않도록 구분합니다. 미제공은 0과 다르며, 미제공이 있으면 구성 합계와 전체가 다를 수 있습니다. 막대 비율은 제공된 구성 항목 기준입니다. 사용량 기록 {number(tokens.records)}개 중 일부 항목 미제공 {number(tokens.missingRecords)}개.</p>
+    <p className={`mt-2 text-xs ${muted}`}>입력·출력은 캐시·추론과 겹치지 않도록 구분합니다. 미제공은 0과 다르며, 미제공이 있으면 구성 합계와 전체가 다를 수 있습니다. 막대 비율은 제공된 구성 항목 기준입니다. 캐시 읽기는 반복 소비량이며 고유 저장 데이터 크기가 아닙니다. 사용량 기록 {number(tokens.records)}개 중 일부 항목 미제공 {number(tokens.missingRecords)}개.</p>
   </div>;
 }
 
@@ -118,6 +118,7 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
   const [messagePages, setMessagePages] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("");
+  const [searchMode, setSearchMode] = useState("hybrid");
   const [searchBody, setSearchBody] = useState<string | undefined>();
   const [searchPages, setSearchPages] = useState<string[]>([]);
   const [searchRevision, setSearchRevision] = useState(0);
@@ -157,7 +158,7 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
     if (!query.trim()) { setSearchValidation("검색할 내용을 입력해 주세요."); return; }
     const { from, to } = filters;
     if (from && to && from > to) { setSearchValidation("시작일은 종료일보다 늦을 수 없습니다."); return; }
-    setSearchValidation(null); setSearchPages([]); setSearchRevision(value => value + 1); setSearchBody(JSON.stringify({ ...filters, from, to, query: query.trim(), ...(kind ? { kind } : {}) }));
+    setSearchValidation(null); setSearchPages([]); setSearchRevision(value => value + 1); setSearchBody(JSON.stringify({ ...filters, from, to, mode: searchMode, query: query.trim(), ...(kind ? { kind } : {}) }));
   };
   const data = overview.data;
   return <div className="mx-auto max-w-[1600px]">
@@ -186,6 +187,7 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
             <h2 className="font-semibold">프롬프트·응답 검색</h2>
             <form className="mt-3 flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); runSearch(); }}>
               <label className="min-w-40 flex-1"><span className="sr-only">검색어</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} maxLength={200} placeholder="대화 내용 검색" className="h-[30px] w-full rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] px-2 outline-[var(--bi-accent)]" /></label>
+              <Dropdown className="w-36" ariaLabel="검색 방식" value={searchMode} onChange={setSearchMode} options={[{ value: "hybrid", label: "의미 + 키워드" }, { value: "keyword", label: "키워드" }, { value: "literal", label: "부분 문자열" }]} />
               <Dropdown className="w-36" ariaLabel="본문 검색 대상" value={kind} onChange={setKind} options={[{ value: "", label: "프롬프트 및 응답" }, { value: "USER", label: "프롬프트" }, { value: "ASSISTANT", label: "응답" }]} />
               <Button type="submit" disabled={search.loading}>검색</Button>
               {searchBody ? <Button variant="ghost" onClick={() => { setSearchBody(undefined); setSearchPages([]); }}>검색 닫기</Button> : null}
@@ -194,7 +196,9 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
             {searchValidation || search.error ? <p role="alert" className="mt-3 text-[var(--bi-error)]">{searchValidation ?? search.error}</p> : null}
             {search.loading ? <p role="status" className="mt-3">본문을 검색하는 중…</p> : null}
             {search.data ? <div className="mt-4">
-              {!search.data.messages.length ? <p className={muted}>일치하는 대화가 없습니다.</p> : <ul className="divide-y divide-[var(--bi-border)]">{search.data.messages.map(message => <li key={message.id} className="py-3"><button type="button" className="w-full rounded text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]" onClick={() => selectSession(message.sessionId, message.id)}><span className="font-semibold text-[var(--bi-accent)]">{message.title || "제목 없는 세션"}</span><span className={`mt-1 block text-xs ${muted}`}>{message.role === "USER" ? "프롬프트" : "응답"} · {sourceName(message.source)} · {message.deviceName} · {date(message.occurredAt)}</span><span className="mt-2 block line-clamp-3 whitespace-pre-wrap break-words">{message.body ?? "본문 없음"}</span></button></li>)}</ul>}
+              {search.data.fallbackReason ? <p role="status" className={`mb-3 text-xs ${muted}`}>의미 검색을 사용할 수 없어 키워드 검색 결과를 표시합니다.</p> : null}
+              {search.data.mode ? <p className={`mb-3 text-xs ${muted}`}>관련도가 높은 상위 {search.data.messages.length}개 결과입니다.</p> : null}
+              {!search.data.messages.length ? <p className={muted}>일치하는 대화가 없습니다.</p> : <ul className="divide-y divide-[var(--bi-border)]">{search.data.messages.map(message => <li key={message.id} className="py-3"><button type="button" className="w-full rounded text-left focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]" onClick={() => selectSession(message.sessionId, message.id)}><span className="font-semibold text-[var(--bi-accent)]">{message.title || "제목 없는 세션"}</span><span className={`mt-1 block text-xs ${muted}`}>{message.role === "USER" ? "프롬프트" : "응답"} · {sourceName(message.source)} · {message.deviceName} · {date(message.occurredAt)}</span><span className="mt-2 block line-clamp-3 whitespace-pre-wrap break-words">{message.snippet ?? message.body ?? "본문 없음"}</span></button></li>)}</ul>}
               <Pagination pages={searchPages} next={search.data.nextCursor} onChange={setSearchPages} loading={search.loading} />
             </div> : null}
           </section>

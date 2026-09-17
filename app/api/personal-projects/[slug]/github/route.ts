@@ -9,7 +9,7 @@ export async function GET(request: Request, context: Context) {
 export async function PUT(request: Request, context: Context) {
   return githubJson(request, async () => {
     const body = await readJson(request);
-    return { repository: await connectGitHubRepository((await context.params).slug, body.url) };
+    return { repository: await connectGitHubRepository((await context.params).slug, body.url, body.credentialId) };
   }, true);
 }
 export async function DELETE(request: Request, context: Context) {

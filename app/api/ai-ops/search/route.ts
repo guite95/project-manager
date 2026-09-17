@@ -1,5 +1,6 @@
 import { aiOpsRead, pool } from "@/lib/ai-ops/http";
-import { AiOpsInputError, searchMessages } from "@/lib/ai-ops/store.mjs";
+import { AiOpsInputError } from "@/lib/ai-ops/store.mjs";
+import { retrieve } from "@/lib/ai-ops/search/retrieval.mjs";
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   return aiOpsRead(async () => {
@@ -25,6 +26,6 @@ export async function POST(request: Request) {
     }
     if (!params || typeof params !== "object" || Array.isArray(params))
       throw new AiOpsInputError("잘못된 검색 요청입니다.");
-    return searchMessages(pool, params);
+    return retrieve(pool, params);
   });
 }

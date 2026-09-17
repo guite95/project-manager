@@ -2,9 +2,13 @@
 # sharp 는 next 의 이미지 최적화용 네이티브 모듈이라 postinstall 빌드가 필요하다.
 # prisma 와 @prisma/engines 는 쿼리 엔진 바이너리를 내려받아야 해서 빌드가 필요하다.
 allowBuilds:
+  '@google/genai': false
   '@prisma/engines': true
   esbuild: false
   msgpackr-extract: false
   prisma: true
+  protobufjs: false
   sharp: true
   workerd: false
+minimumReleaseAgeExclude:
+  - '@google/genai@2.23.0'

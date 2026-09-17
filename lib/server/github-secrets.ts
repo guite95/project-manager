@@ -20,11 +20,11 @@ async function clients() {
   return { secrets, vault };
 }
 
-export async function readGitHubSecret(kind: "client" | "tokens"): Promise<string> {
+export async function readGitHubSecret(): Promise<string> {
   try {
     const config = requireGitHubConfig();
     const { secrets } = await clients();
-    const response = await secrets.getSecretBundle({ secretId: kind === "client" ? config.clientSecretId : config.tokenSecretId });
+    const response = await secrets.getSecretBundle({ secretId: config.tokenSecretId });
     const bundle = response.secretBundle.secretBundleContent;
     if (!bundle || bundle.contentType !== "BASE64" || !("content" in bundle) || typeof bundle.content !== "string") throw new Error();
     return Buffer.from(bundle.content, "base64").toString("utf8");
@@ -36,6 +36,7 @@ export async function writeGitHubTokens(value: object) {
     const { vault } = await clients();
     const secretId = requireGitHubConfig().tokenSecretId;
     const current = await vault.getSecret({ secretId });
+    if (!current.etag) throw new Error();
     await vault.updateSecret({ secretId, ifMatch: current.etag, updateSecretDetails: {
       secretContent: { contentType: "BASE64", content: Buffer.from(JSON.stringify(value)).toString("base64") },
     } });

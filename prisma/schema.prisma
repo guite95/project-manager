@@ -135,6 +135,9 @@ model AiOpsSession {
   lastActiveAt DateTime @map("last_active_at") @db.Timestamptz(6)
   messages AiOpsMessage[]
   usage AiOpsUsage[]
+  searchRevision BigInt @default(0) @map("search_revision")
+  searchState AiOpsSearchState?
+  searchDocuments AiOpsSearchDocument[]
   @@unique([deviceId, source, externalId])
   @@index([lastActiveAt(sort: Desc), id], map: "ai_ops_session_active_idx")
   @@map("ai_ops_session")
@@ -148,6 +151,8 @@ model AiOpsMessage {
   occurredAt DateTime @map("occurred_at") @db.Timestamptz(6)
   body String?
   chars Int
+  searchDocuments AiOpsSearchDocument[]
+  @@unique([id, sessionId], map: "ai_ops_message_id_session_key")
   @@index([sessionId, occurredAt, id], map: "ai_ops_message_session_time_idx")
   @@index([occurredAt], map: "ai_ops_message_time_idx")
   @@map("ai_ops_message")
@@ -167,4 +172,84 @@ model AiOpsUsage {
   @@index([sessionId, occurredAt, id], map: "ai_ops_usage_session_time_idx")
   @@index([occurredAt], map: "ai_ops_usage_time_idx")
   @@map("ai_ops_usage")
+}
+
+// FTS expression indexes, generated columns, CHECKs and revision triggers are owned by SQL migrations.
+// The optional pgvector table/index is SQL-owned: scripts/sql/ai-ops-vector.sql.
+model AiOpsSearchState {
+  sessionId String @id @map("session_id")
+  session AiOpsSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  indexedRevision BigInt @map("indexed_revision")
+  chunkVersion String @map("chunk_version")
+  indexedAt DateTime @default(now()) @map("indexed_at") @db.Timestamptz(6)
+  @@map("ai_ops_search_state")
+}
+model AiOpsSearchDocument {
+  id String @id
+  sessionId String @map("session_id")
+  session AiOpsSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messageId String? @map("message_id")
+  message AiOpsMessage? @relation(fields: [messageId, sessionId], references: [id, sessionId], onDelete: Cascade)
+  kind String
+  chunkIndex Int @map("chunk_index")
+  chunkVersion String @map("chunk_version")
+  sourceRevision BigInt @map("source_revision")
+  title String
+  content String
+  contentHash String @map("content_hash")
+  chars Int
+  contentType String @map("content_type")
+  searchable Boolean
+  embeddingEnabled Boolean @map("embedding_enabled")
+  importance Float @db.Real
+  metadata Json @default("{}")
+  searchVector Unsupported("tsvector")? @default(dbgenerated("to_tsvector('simple'::regconfig, content)")) @map("search_vector")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  embeddings AiOpsDocumentEmbedding[]
+  @@unique([id, contentHash])
+  @@index([sessionId, kind], map: "ai_ops_search_document_session_idx")
+  @@index([searchVector], type: Gin, map: "ai_ops_search_document_fts_idx")
+  @@map("ai_ops_search_document")
+}
+model AiOpsEmbeddingProfile {
+  id String @id
+  provider String
+  model String
+  dimensions Int
+  version String
+  inputVersion String @map("input_version")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  jobs AiOpsEmbeddingJob[]
+  @@unique([provider, model, dimensions, version, inputVersion])
+  @@unique([id, dimensions])
+  @@map("ai_ops_embedding_profile")
+}
+model AiOpsEmbeddingJob {
+  profileId String @map("profile_id")
+  profile AiOpsEmbeddingProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  contentHash String @map("content_hash")
+  title String
+  content String
+  status String @default("PENDING")
+  attempts Int @default(0)
+  availableAt DateTime @default(now()) @map("available_at") @db.Timestamptz(6)
+  leaseToken String? @map("lease_token")
+  leaseUntil DateTime? @map("lease_until") @db.Timestamptz(6)
+  errorCode String? @map("error_code")
+  embeddedAt DateTime? @map("embedded_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  documents AiOpsDocumentEmbedding[]
+  @@id([profileId, contentHash])
+  @@index([profileId, status, availableAt], map: "ai_ops_embedding_job_pending_idx")
+  @@map("ai_ops_embedding_job")
+}
+model AiOpsDocumentEmbedding {
+  documentId String @map("document_id")
+  profileId String @map("profile_id")
+  contentHash String @map("content_hash")
+  document AiOpsSearchDocument @relation(fields: [documentId, contentHash], references: [id, contentHash], onDelete: Cascade, onUpdate: NoAction)
+  job AiOpsEmbeddingJob @relation(fields: [profileId, contentHash], references: [profileId, contentHash], onDelete: Cascade, onUpdate: NoAction)
+  @@id([documentId, profileId])
+  @@index([profileId, contentHash], map: "ai_ops_document_embedding_cache_idx")
+  @@map("ai_ops_document_embedding")
 }

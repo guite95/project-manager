@@ -397,5 +397,6 @@ Claude Code에서도 `/pm-flow-author`, `/pm-flow-review`로 같은 스킬을 �
 `pnpm ai:agent scan`으로 Mac의 수집 범위를 전송 없이 검사할 수 있습니다.
 운영 반영 후 `pnpm ai:agent install`로 60초 간격 자동수집을 등록합니다.
 수집 경로, 보관 정책, 설치·중지·검증 절차는 [docs/ai-ops.md](docs/ai-ops.md)를 참고하세요.
+검색은 PostgreSQL FTS와 pgvector를 사용하며 Gemini Embedding 2·1536차원의 비동기 worker를 지원합니다. `pnpm ai:search inspect`로 준비 상태를 확인합니다. 선택적 pgvector 활성화·백필·재처리·검색 품질 평가는 [docs/ai-search.md](docs/ai-search.md)를 참고하세요.
 
 개인 프로젝트는 `lib/personal-projects.ts`의 식별자로 풀링 프로젝트와 메뉴를 구분하고, 실제 프로젝트·자료는 기존 `flow_project`/`flow_document`, 기록은 `project_note`에 저장한다. `personal-` 식별자를 사용해 기존 프로젝트와 충돌하지 않는다. 각 프로젝트의 자료·기록·회의록은 `/flows/<personal-slug>/...`를 재사용하며 개인 탭을 유지한다. 디렉터리 변경은 자동 동기화하지 않는다. 초기 등록은 공유 DB 백업 후 `pnpm db:shared -- node --experimental-strip-types scripts/register-personal-projects.mjs inspect`로 확인하고 `apply`로 실행한다. 기존 행은 덮어쓰지 않는다. 작업 기록은 `/records/work-records`에서 조회하며, 이전 `/personal/work-records` 주소는 제거했다.
