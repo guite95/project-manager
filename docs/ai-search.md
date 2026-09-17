@@ -43,6 +43,14 @@ flowchart TD
 
 USER/ASSISTANT 대화와 코드 설명을 우선한다. usage/cache/system은 의미 검색에서 제외한다. 현재 raw tool/system/reasoning 수집 금지는 그대로다. 향후 승인된 tool 수집에는 정책 함수를 재사용할 수 있지만 이번 변경으로 도구 원문 수집을 확대하지 않는다.
 
+`[Request interrupted by user]` 및 `[Request interrupted by user for tool use]`만으로
+구성된 메시지는 대소문자와 앞뒤 공백을 무시해 SYSTEM_NOTICE로 분류한다.
+원본·세션 상세·집계는 유지하고 literal/keyword/hybrid 검색 후보, 임베딩 및 추출식
+요약에서 제외한다. 해당 문구를 인용한 질문·설명은 제외하지 않는다. 검색 SQL에서
+LIMIT·커서 적용 전에 제외하므로 결과 페이지가 빈 항목으로 채워지지 않는다.
+`paragraph-2`로 파생 문서를 재생성하면 기존 알림 벡터의 연결은 제거되고, 변경되지
+않은 대화의 content-hash 임베딩은 재사용된다. 예전 벡터는 비활성 캐시로 보존한다.
+
 기계적 로그는 줄 패턴과 비율로 식별해 기본 embedding을 끈다. 중요한 error/exception/failed/오류 문맥은 낮은 중요도로 포함한다. 이 규칙은 휴리스틱이며 실제 평가셋으로 조정해야 한다. 원본 및 명시적 부분 문자열/키워드 검색에서는 기록을 지우지 않는다.
 
 청크는 문단·줄 경계를 우선하고 긴 코드/단일 줄은 UTF-8 6,000 bytes 이하로 나눈다. Unicode code point 중간을 자르지 않는다. 원문 offset은 JS UTF-16 인덱스이며 DB char_length와 구별한다. 토큰 수를 문자 수로 가장하지 않는다. 제목은 512 bytes 이하, 전체 API 입력은 8,000 bytes 이하로 제한해 문서의 8,192-token 창 내에서 보수적으로 처리한다.
