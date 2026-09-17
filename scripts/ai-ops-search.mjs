@@ -14,7 +14,7 @@ import {
   retryFailed,
 } from "../lib/ai-ops/search/worker.mjs";
 import { retrieve } from "../lib/ai-ops/search/retrieval.mjs";
-import { evaluateRanking } from "../lib/ai-ops/search/ranking.mjs";
+import { validateDataset, scoreExample, summarizeEvaluation, compareEvaluation } from "../lib/ai-ops/search/evaluation.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 if (!["inspect", "backfill", "worker", "retry", "evaluate"].includes(command)) {
@@ -70,47 +70,20 @@ try {
       JSON.stringify({ retried: await retryFailed(pool, config.id) }),
     );
   } else if (command === "evaluate") {
-    const dataset = JSON.parse(await readFile(args[0], "utf8"));
-    if (!Array.isArray(dataset) || !dataset.length || dataset.length > 1000)
-      throw new Error("Invalid evaluation dataset");
-    const metrics = [];
+    const dataset = validateDataset(JSON.parse(await readFile(args[0], "utf8")));
+    const rows = [];
     for (const example of dataset) {
-      if (
-        !example.relevant ||
-        typeof example.relevant !== "object" ||
-        Array.isArray(example.relevant) ||
-        Object.values(example.relevant).some(
-          (v) => !Number.isInteger(v) || v < 0 || v > 3,
-        )
-      )
-        throw new Error("Invalid relevance labels");
-      const result = await retrieve(
-        pool,
-        { query: example.query, mode: "hybrid", limit: 100 },
-        { config },
-      );
-      if (result.fallbackReason)
-        throw new Error("Evaluation requires a ready embedding index/provider");
-      metrics.push(
-        evaluateRanking(
-          result.messages.map((m) => m.sessionId),
-          example.relevant,
-        ),
-      );
+      const result = await retrieve(pool, { ...example.filters, query: example.query, mode: "hybrid", limit: 100 }, { config });
+      rows.push(scoreExample(example, result));
     }
-    const average = Object.fromEntries(
-      Object.keys(metrics[0]).map((key) => [
-        key,
-        metrics.reduce((sum, m) => sum + m[key], 0) / metrics.length,
-      ]),
-    );
-    console.log(
-      JSON.stringify(
-        { profileId: config.id, queries: metrics.length, ...average },
-        null,
-        2,
-      ),
-    );
+    const baselineIndex = args.indexOf("--baseline");
+    let comparison;
+    if (baselineIndex >= 0) {
+      const baseline = JSON.parse(await readFile(args[baselineIndex + 1], "utf8"));
+      comparison = compareEvaluation(Array.isArray(baseline) ? baseline : baseline.results, rows);
+    }
+    console.log(JSON.stringify({ profileId: config.id, queries: rows.length, summary: summarizeEvaluation(rows), comparison, results: rows }, null, 2));
+    if (comparison && !comparison.passed) process.exitCode = 2;
   }
 } catch (error) {
   // Never dump provider/PG exceptions: they can contain private content or credentials.

@@ -23,6 +23,7 @@ services:
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-gemini-embedding-2}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
       EMBEDDING_VERSION: ${EMBEDDING_VERSION:-1}
+      AI_SEARCH_MIN_COSINE: ${AI_SEARCH_MIN_COSINE:-0.68}
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
       GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-us}
       # Optional mounted ADC/WIF configuration path; no credential values in compose.

@@ -55,6 +55,8 @@ pnpm ai:agent status
 - 중지: `pnpm ai:agent uninstall` (기존 데이터/체크포인트 보존)
 - 업데이트: 최신 코드에서 `pnpm ai:agent install` 재실행 (기기 ID/체크포인트 유지)
 
+수집기는 eventType/channel/synthetic/contentTypes 출처 정보만 추가로 전송한다. 텍스트로 감싼 skill 및 external-agent tool payload도 업로드 전에 분리한다. 기존 본문을 재전송으로 덮어쓰지 않는다.
+
 동기화는 개인 SSH로 고정된 `docker exec -i project-management node scripts/ai-ops-ingest.mjs` 명령에 JSON stdin을 전달한다. 수신기는 컨테이너의 기존 DB 자격증명을 사용한다. 수신 트랜잭션 성공 ACK 후 읽은 위치를 원자적으로 저장한다. 응답이 유실되어 재전송해도 안정적 ID로 중복을 막는다. 로그/상태 파일에 대화 본문을 보관하지 않는다. 기기 화면은 마지막 서버 수신 시각·로그 루트/파일 수·오류 수를 표시한다. 연결 실패 자체는 서버에 도달할 수 없으므로 로컬 status와 서버의 지연 시각을 함께 확인한다.
 
 ## 보관·조회

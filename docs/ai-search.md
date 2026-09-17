@@ -25,11 +25,11 @@ flowchart TD
   H --> C[원문 위치가 연결된 제한된 context]
 ```
 
-- `ai_ops_session.search_revision`: 본문·역할·모델·시각·제목·cwd 변경을 감지하는 SQL trigger. Usage 증가만으로 재생성하지 않는다. 기존 ingest ACK와 원문 트랜잭션에는 외부 호출이나 chunk 작업을 넣지 않는다.
+- `ai_ops_session.search_revision`: 본문·역할·모델·시각·출처 메타데이터·제목·cwd 변경을 감지하는 SQL trigger. Usage 증가만으로 재생성하지 않는다. 기존 ingest ACK와 원문 트랜잭션에는 외부 호출이나 chunk 작업을 넣지 않는다.
 - `ai_ops_search_state`: 세션별 indexed revision / chunk algorithm version. 세션 단위 트랜잭션 성공 후 갱신한다. 중단 시 마지막 미완료 세션부터 재개한다.
 - `ai_ops_search_document`: CHUNK / SESSION_SUMMARY / TOPIC_SUMMARY를 하나의 검색 문서 모델로 관리. 원본 session/message FK, 청크 순서, 본문·제목·hash·문자 길이·유형·중요도·정책·원문 UTF-16 offset을 저장한다. 원문은 대체하지 않는다.
 - `ai_ops_embedding_profile`: provider/model/dimensions/version/input_version으로 embedding space를 식별한다. 교체 모델은 새 profile로 공존한다.
-- `ai_ops_embedding_job`: profile + SHA-256(title, content)를 PK로 사용한 durable job/cache. PENDING → PROCESSING → SUCCESS 또는 FAILED. 성공한 내용은 재import·재chunk 후에도 다시 호출하지 않는다. 제목도 API 입력이므로 hash에 포함한다.
+- `ai_ops_embedding_job`: profile + SHA-256(title, content)를 PK로 사용한 durable job/cache. PENDING → PROCESSING → SUCCESS 또는 FAILED. 성공한 내용은 재import·재chunk 후에도 다시 호출하지 않는다. 제목 슬롯에는 세션의 마지막 제목 대신 인접한 실제 질문을 사용하며, 이 입력도 hash에 포함한다.
 - `ai_ops_document_embedding`: 검색 문서와 profile별 content-addressed 결과의 연결. 같은 내용의 여러 문서가 벡터를 재사용한다.
 - `ai_ops_embedding_vector`: 선택 활성화되는 SQL 소유 테이블. 가변 `vector` + dimension CHECK + profile/dimension FK. 기본 1536차원은 partial expression HNSW `vector_cosine_ops`; 3072는 저장 및 exact cosine 비교가 가능하지만 ANN 최적화는 하지 않는다. Prisma만으로 이 테이블을 재생성하지 않는다.
 
@@ -38,6 +38,26 @@ flowchart TD
 달라졌으면 UPDATE"하는 수정 동기화 기능과는 구별해야 한다. 실제 DB의 본문이
 변경되거나 메시지가 추가되면 revision 인덱서가 파생 문서를 다시 만들며,
 같은 profile + SHA-256(title, content)의 성공 임베딩은 재사용한다.
+
+## 원본과 해석의 분리
+
+`ai_ops_message.source_metadata`는 eventType/channel/synthetic/contentTypes만 허용하는
+작은 JSONB이다. 본문·키·환경 설정은 메타데이터에 넣지 않는다. 수집기는 제공자의
+이벤트 정보를 붙이며, 이전 레코드는 legacy-role 근거로 해석한다. 같은 ID 재전송은
+기존 본문을 덮어쓰지 않고 비어 있는 출처 정보만 보완할 수 있다.
+
+`interpretation.mjs`가 메시지를 원본 UTF-16 범위가 있는 블록으로 해석한다. 각 블록의
+유형, rule/reason, 근거 수준(provider-event/provider-marker/heuristic/legacy-role),
+해석 버전을 파생 문서 metadata에 남긴다. 코드 펜스 안의 예시와 인용 문장은 유지한다.
+스킬/환경/메모리 인용 envelope는 대화와 분리하며, 외부 도구 envelope는 일반 대화로
+벡터화하지 않는다. 이미 저장된 도구 출력에서는 명시적인 오류 줄과 인접 문맥만
+ERROR_CONTEXT로 검색한다. 이후 수집에서는 이 도구 원문을 새로 전송하지 않는다.
+불확실한 짧은 답변이나 빈 양식은 가중치만 낮추며 원본을 삭제하지 않는다.
+
+Assistant 청크는 가장 가까운 실제 User 문맥을 제목 슬롯과 contextSources로 연결한다.
+본문 청크는 여전히 원문의 연속 범위이며, 질문은 별도 messageId/offset으로 인용한다.
+세션 제목 변경만으로 동일 본문 전체를 재임베딩하지 않는다. 결과의 질문 문맥도
+날짜/역할/출처 필터를 만족할 때만 반환한다.
 
 ## 검색 정책과 chunking
 
@@ -48,14 +68,14 @@ USER/ASSISTANT 대화와 코드 설명을 우선한다. usage/cache/system은 �
 원본·세션 상세·집계는 유지하고 literal/keyword/hybrid 검색 후보, 임베딩 및 추출식
 요약에서 제외한다. 해당 문구를 인용한 질문·설명은 제외하지 않는다. 검색 SQL에서
 LIMIT·커서 적용 전에 제외하므로 결과 페이지가 빈 항목으로 채워지지 않는다.
-`paragraph-2`로 파생 문서를 재생성하면 기존 알림 벡터의 연결은 제거되고, 변경되지
+`conversation-1`로 파생 문서를 재생성하면 기존 알림 벡터의 연결은 제거되고, 변경되지
 않은 대화의 content-hash 임베딩은 재사용된다. 예전 벡터는 비활성 캐시로 보존한다.
 
 기계적 로그는 줄 패턴과 비율로 식별해 기본 embedding을 끈다. 중요한 error/exception/failed/오류 문맥은 낮은 중요도로 포함한다. 이 규칙은 휴리스틱이며 실제 평가셋으로 조정해야 한다. 원본 및 명시적 부분 문자열/키워드 검색에서는 기록을 지우지 않는다.
 
 청크는 문단·줄 경계를 우선하고 긴 코드/단일 줄은 UTF-8 6,000 bytes 이하로 나눈다. Unicode code point 중간을 자르지 않는다. 원문 offset은 JS UTF-16 인덱스이며 DB char_length와 구별한다. 토큰 수를 문자 수로 가장하지 않는다. 제목은 512 bytes 이하, 전체 API 입력은 8,000 bytes 이하로 제한해 문서의 8,192-token 창 내에서 보수적으로 처리한다.
 
-요약은 초기 구현에서 **추출식**이다. 12개 유효 청크마다 발췌를 모아 TOPIC_SUMMARY를 만들고, 주제 구간을 골고루 선택해 SESSION_SUMMARY를 만든다. 원문 message/document ID를 남긴다. LLM이 이해·재서술한 요약이나 자동 주제 분류라고 주장하지 않는다. 장기 세션은 여러 topic summary로 덮는다. 고품질 추상식 요약은 별도 생성기를 붙이고 chunk/input version을 올려 비교할 수 있다.
+요약은 **추출식**이다. 분류된 실제 대화·오류 근거 중 중요도 0.6 이상만 사용한다. 12개 유효 청크마다 발췌를 모아 TOPIC_SUMMARY를 만들고, 주제 구간을 골고루 선택해 SESSION_SUMMARY를 만든다. 원문 message/document ID를 남긴다. LLM이 이해·재서술한 요약이나 자동 주제 분류라고 주장하지 않는다. 장기 세션은 여러 topic summary로 덮는다. 고품질 추상식 요약은 별도 생성기를 붙이고 chunk/input version을 올려 비교할 수 있다.
 
 ## Provider와 Vertex AI
 
@@ -89,7 +109,14 @@ POST `/api/ai-ops/search`의 기존 인증 검증 뒤 실행한다. 읽기 요�
 
 - `mode: literal` 또는 생략: 기존 ILIKE 검색, `%`/`_`는 일반 문자, 시간 커서 페이지네이션 유지.
 - `mode: keyword`: `simple` FTS + `websearch_to_tsquery`, rank/시간/ID 커서. 한국어 형태소 분석기가 아니므로 띄어쓰기·조사·부분 문자열에는 한계가 있다. literal 모드를 유지한다.
-- `mode: hybrid`: query embedding → session/topic summary 후보 → 후보 세션 안의 청크 + 전역 청크 후보 → 전역 FTS 후보와 RRF. 자연어 문장의 기술 용어를 놓치지 않도록 FTS 후보는 OR lexeme를 사용하며 literal 일치도 보완한다. 전역 후보는 요약 불완전·백필 중의 recall을 보완한다. profile/revision/metadata filter를 적용하고 메시지 ID로 중복 제거한다. 결과는 관련도 Top-K이며 커서 페이지네이션은 하지 않는다.
+- `mode: hybrid`: query embedding → session/topic summary 후보 → 세션 내부 벡터·전역 벡터·전역 청크 FTS·미인덱싱 원문 fallback을 독립된 순위 목록으로 RRF 결합. 자연어 문장의 기술 용어를 놓치지 않도록 FTS 후보는 OR lexeme를 사용하며 literal 일치도 보완한다. 전역 후보는 요약 불완전·백필 중의 recall을 보완한다. profile/revision/metadata filter를 적용하고 메시지 ID로 중복 제거한다. 결과는 관련도 Top-K이며 커서 페이지네이션은 하지 않는다. RRF 이후 원문 분류,
+  cosine 근거와 lexical coverage를 확인한다. Gemini 2/1536의 초기 semantic floor는
+  `AI_SEARCH_MIN_COSINE=0.68`이며 프로필별 평가 후 조정한다. 이 값은 보편적 관련성
+  확률이 아니다. 다른 모델은 명시적인 threshold 설정/평가가 필요하다. 정확한 문구
+  일치나 충분한 lexical coverage도 후보를 유지하므로 의미 점수만으로 버리지 않는다.
+  같은 세션·역할·동일 snippet은 occurrences로 묶고, 세션 다양성은 soft preference로
+  적용해 한 세션의 실제 결과를 hard cap으로 제거하지 않는다. 관련 근거가 없는 결과로
+  빈 자리를 채우지 않는다.
 
 반환 `context`는 session/message/document ID와 원문 범위가 붙은 인용이며 최대 16KB. LLM 호출·답변 생성은 이 변경에 포함하지 않는다. 원본 대화는 신뢰할 수 없는 참고 자료로 취급하고, 후속 LLM이 그 안의 지시를 시스템 명령으로 실행하지 않도록 한다.
 
@@ -134,10 +161,15 @@ OCI의 자동 갱신 인스턴스 인증서와 GCP X.509 WIF를 사용한다. �
 ```
 
 ```bash
-pnpm ai:search evaluate /private/path/ai-search-evaluation.json
+pnpm ai:search evaluate /private/path/ai-search-evaluation.json --baseline /private/path/baseline.json
 ```
 
-동일 query set에 대해 profile 설정을 바꾸어 Recall@5, Recall@10, MRR, nDCG@10을 비교한다. 판정 점수는 0~3이다. fallback이면 평가를 실패 처리해 의미 검색 품질로 잘못 보고하지 않는다. 현재 실제 데이터에서 모델의 검색 품질을 측정했다는 뜻은 아니다. 3072는 exact 검색으로 먼저 비교하고 필요할 때 halfvec HNSW+full precision reranking을 검토한다.
+동일 query set에 대해 profile 설정을 바꾸어 Recall@5, Recall@10, MRR, nDCG@10을 비교한다. 판정 점수는 0~3이다. 항목은 id/query/relevant 외에 filters, split(development/holdout),
+noAnswer를 가질 수 있다. 날짜를 고정해 평가 중 생성되는 대화가 결과를 오염시키지 않는다.
+정답 없는 항목은 relevant={}와 noAnswer=true를 사용한다. CLI는 per-query 결과와
+상위 10개 메시지 기준 contextRecall10, 세션 순위 MRR/nDCG, 구조적 잡음 비율,
+무응답 정확도를 출력한다. baseline 대비 알려진 정답의 contextRecall10 또는 기존에
+성공한 no-answer가 후퇴하면 exit 2다. 작은 평가셋의 결과가 전체 대화의 recall을 보증하지 않는다. fallback이면 평가를 실패 처리해 의미 검색 품질로 잘못 보고하지 않는다. 현재 실제 데이터에서 모델의 검색 품질을 측정했다는 뜻은 아니다. 3072는 exact 검색으로 먼저 비교하고 필요할 때 halfvec HNSW+full precision reranking을 검토한다.
 
 ## 공식 근거
 

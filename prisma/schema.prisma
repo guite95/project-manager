@@ -150,6 +150,7 @@ model AiOpsMessage {
   model String?
   occurredAt DateTime @map("occurred_at") @db.Timestamptz(6)
   body String?
+  sourceMetadata Json @default("{}") @map("source_metadata")
   chars Int
   searchDocuments AiOpsSearchDocument[]
   @@unique([id, sessionId], map: "ai_ops_message_id_session_key")

@@ -72,6 +72,7 @@ export interface AiSearchResult {
   mode?: "hybrid" | "keyword";
   fallbackReason?: string | null;
   profileId?: string;
+  selectionVersion?: string;
   candidateSessions?: string[];
   context?: {
     sessionId: string;
@@ -88,6 +89,8 @@ export interface AiSearchResult {
     deviceName: string;
     snippet?: string;
     score?: number;
+    occurrences?: { messageId: string; occurredAt: string }[];
+    question?: { messageId: string; content: string; start: number; end: number; occurredAt: string };
   })[];
   nextCursor: string | null;
 }
