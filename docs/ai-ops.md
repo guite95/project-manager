@@ -10,10 +10,13 @@ Mac의 아래 기본·추가 로그 경로에 있는 Codex/Claude Code 세션을
 - `~/.codex/sessions`, `~/.codex/archived_sessions`
 - `~/.uk-private/.codex/sessions`, `~/.uk-private/.codex/archived_sessions`
 - `~/.claude/projects`, `~/.uk-private/.claude/projects`
+- `~/.uk-private/projects` (`CLAUDE_CONFIG_DIR=~/.uk-private`로 생성한 기존 세션)
+- `~/Library/Application Support/orca/codex-accounts/*/home/sessions`와 `archived_sessions`
+- `~/Library/Application Support/orca/codex-runtime-home/home/sessions`와 `archived_sessions`
 - 설치 당시 `CODEX_HOME`, `CLAUDE_CONFIG_DIR`
 - `~/uk` 하위 `.codex`, `.claude` 및 커스텀 `sessions`/`archived_sessions` 폴더
 
-심볼릭 링크는 실제 경로로 중복 제거한다. `node_modules`, `.git`, `.next`, `.venv`, 캐시·빌드 폴더는 탐색하지 않는다. 추가 루트는 설치 설정의 `extraRoots: [{"source":"CODEX","path":"/absolute/log/root"}]`로 지정한다. 기존 `~/uk` 제한 버전에서 갱신하면 체크포인트를 한 번 초기화하여 과거에 제외한 기록도 재수집한다. 장치·세션·이벤트 ID는 유지하므로 서버에서 중복 저장하지 않는다. 프로젝트 폴더 전체나 다른 앱 데이터는 업로드하지 않는다.
+심볼릭 링크와 하드링크는 실제 경로·파일 identity로 중복 제거한다. Orca에서는 계정별 Codex 세션 폴더만 읽으며 `claude-accounts` 인증 자료, 상태 DB와 설정 파일은 탐색하지 않는다. `node_modules`, `.git`, `.next`, `.venv`, 캐시·빌드 폴더도 탐색하지 않는다. 추가 루트는 설치 설정의 `extraRoots: [{"source":"CODEX","path":"/absolute/log/root"}]`로 지정한다. 기존 `~/uk` 제한 버전에서 갱신하면 체크포인트를 한 번 초기화하여 과거에 제외한 기록도 재수집한다. 장치·세션·이벤트 ID는 유지하므로 서버에서 중복 저장하지 않는다. 프로젝트 폴더 전체나 다른 앱 데이터는 업로드하지 않는다.
 
 사용자 메시지·공개 AI 응답·모델·시간·토큰·cwd를 수집한다. 도구 실행 본문, 시스템/개발자 메시지, 추론 본문과 알려진 자동 문맥은 제외한다. 원천이 미지원 형식으로 바뀌면 파서 업데이트가 필요하다. 비밀값 패턴은 전송 전과 서버에서 두 번 마스킹하지만, 임의의 민감한 자연어 문장까지 탐지하는 기능은 아니다. Poooling Agent는 변경하지 않으며 별도 Agent/서버로 동작한다.
 
