@@ -125,14 +125,20 @@ PC와 모바일 모두 프로젝트 메뉴는 처음에 전체가 접혀 있고,
 | --- | --- |
 | `sidebar:project-order` | 사이드바 프로젝트 순서 |
 | `ui:navigation` | 상세 메뉴 패널 접힘 |
+| `ui:personal-project-groups` | 개인 프로젝트별 포폴용·토이 분류 |
 | `ui:reference-columns` | UI 레퍼런스 표의 컬럼 표시·순서·너비 |
 | `board` | 기존 오늘의 할 일 보드 설정 |
 
-`GET/PATCH /api/ui-settings/navigation`, `GET/PATCH /api/ui-settings/reference-columns`는
+`GET/PATCH /api/ui-settings/navigation`, `GET/PATCH /api/ui-settings/reference-columns`,
+`GET/PATCH /api/ui-settings/personal-project-groups`는
 허용된 설정만 읽고 저장한다. PATCH는 `{ changes: { ... } }` 형식이며 변경한 항목만
 비교 후 갱신하여 다른 브라우저의 별도 설정 변경을 보존한다. 예를 들어
 `{ "changes": { "panelCollapsed": true } }`로 저장한다.
 조회는 DB를 변경하지 않고, 최초 변경 때 설정 키를 생성하므로 스키마 마이그레이션은 없다.
+
+개인 프로젝트 기본 분류는 flight-app·ilchul이 포폴용, project-management가 토이다.
+개인 프로젝트 목록 또는 사이드바의 펼친 프로젝트에서 분류 선택기로 이동할 수 있다.
+분류 변경은 프로젝트 slug별로 저장하며, 저장한 분류가 기본값보다 우선한다.
 
 새 UI 설정은 새로고침·창 복귀와 화면이 보이는 동안 15초 간격으로 동기화한다.
 저장 실패는 화면에 알리고 마지막으로 확인한 값으로 복구한다. 기존 브라우저의

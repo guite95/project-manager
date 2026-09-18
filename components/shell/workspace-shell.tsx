@@ -8,6 +8,7 @@ import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
 import { type UiPreferences } from "@/lib/ui-preferences";
+import { PersonalProjectGroupsProvider } from "@/components/personal/project-groups";
 import { AppSidebar } from "./app-sidebar";
 
 import { isPersonalProject } from "@/lib/personal-projects";
@@ -148,6 +149,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
     </Link>
   );
   return (
+    <PersonalProjectGroupsProvider>
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--bi-bg)] text-[var(--bi-fg)] md:flex-row">
       <header inert={mobileOpen} className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 md:hidden">
         <button ref={menuButton} type="button" aria-expanded={mobileOpen} aria-controls="workspace-panel"
@@ -227,5 +229,6 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
       {prefs.error ? <p role="alert" className="fixed right-3 bottom-3 left-3 z-[60] m-0 rounded border border-[var(--bi-error)] bg-[var(--bi-card-bg)] px-3 py-2 text-[12px] text-[var(--bi-error)] md:left-auto md:max-w-sm">{prefs.error}</p> : null}
       <span role="status" className="sr-only">{prefs.saving ? "공유 설정을 저장하는 중입니다." : ""}</span>
     </div>
+    </PersonalProjectGroupsProvider>
   );
 }

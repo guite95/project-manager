@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ProjectGroupSelect, usePersonalProjectGroups } from "@/components/personal/project-groups";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -26,7 +27,7 @@ import { meetingsHref } from "@/lib/meetings";
 import { materialsHref } from "@/lib/materials";
 import { recordingsHref } from "@/lib/recordings";
 
-import { isPersonalProject } from "@/lib/personal-projects";
+import { isPersonalProject, personalProjectGroup, personalProjectGroups } from "@/lib/personal-projects";
 
 const ROW = "mx-2 flex min-h-10 md:min-h-9 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
 const linkCls = (active: boolean) => `${ROW} ${active
@@ -40,6 +41,8 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   inline?: boolean;
   personal?: boolean;
 }) {
+  const groupPreferences = usePersonalProjectGroups();
+  const groupFor = (slug: string) => personalProjectGroup(slug, groupPreferences.values);
   const pathname = usePathname();
   const visibleExternal = personal ? [] : externalProjects;
   const overviewHref = personal ? "/personal" : "/flows";
@@ -81,10 +84,12 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
 
   const moveProject = (slug: string, target: string, edge: "before" | "after") => {
     if (query.trim()) return;
+    if (personal && groupFor(slug) !== groupFor(target)) return;
     void saveOrder(moveSidebarProject(order, slug, target, edge));
   };
   const stepProject = (slug: string, step: -1 | 1) => {
-    const target = order[order.indexOf(slug) + step];
+    const groupOrder = personal ? order.filter(item => groupFor(item) === groupFor(slug)) : order;
+    const target = groupOrder[groupOrder.indexOf(slug) + step];
     if (target) moveProject(slug, target, step < 0 ? "before" : "after");
   };
   const toggle = (slug: string) => setExpandedProject(current => current === slug ? null : slug);
@@ -162,6 +167,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
       >
         {!pCollapsed ? (
           <>
+            {personal ? <div className="mx-2 my-2"><ProjectGroupSelect slug={project.slug} title={project.title} /></div> : null}
             {showMaterials ? <Link href={materialsHref(project.slug)} aria-label={`${project.title} 자료`}
               aria-current={projectActive && active?.view === "materials" ? "page" : undefined}
               className={linkCls(projectActive && active?.view === "materials")}>자료</Link> : null}
@@ -293,7 +299,19 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
       </span>
       <span role="status" className="sr-only">{announcement}</span>
       {orderError ? <p role="alert" className="mx-4 text-[11px] text-[var(--bi-error)]">{orderError}</p> : null}
-      {order.map((slug) => {
+      {personal ? personalProjectGroups.map(group => {
+        const entries = order.flatMap(slug => {
+          const entry = visibleProjects.find(item => item.project.slug === slug);
+          return entry && groupFor(slug) === group.id ? [entry] : [];
+        });
+        if (searching && entries.length === 0) return null;
+        return (
+          <section key={group.id} aria-label={group.title} className="mt-3">
+            <h3 className="mx-4 mb-1 text-[11px] font-semibold text-[var(--bi-muted)]">{group.title}</h3>
+            {entries.length ? entries.map(renderProject) : <p className="mx-4 text-[11px] text-[var(--bi-muted)]">등록된 프로젝트가 없습니다.</p>}
+          </section>
+        );
+      }) : order.map((slug) => {
         const flow = visibleProjects.find((entry) => entry.project.slug === slug);
         if (flow) return renderProject(flow);
         const external = visibleExternalProjects.find((project) => project.slug === slug);

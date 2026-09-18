@@ -1,11 +1,13 @@
-export type UiPreferenceScope = "navigation" | "reference-columns";
-export type UiPreferenceValues = Record<string, boolean | number | string[]>;
+import { isPersonalProject } from "./personal-projects.ts";
+
+export type UiPreferenceScope = "navigation" | "reference-columns" | "personal-project-groups";
+export type UiPreferenceValues = Record<string, boolean | number | string | string[]>;
 export type UiPreferences = { exists: boolean; values: UiPreferenceValues };
 
 export class UiPreferenceError extends Error {}
 
 export function isUiPreferenceScope(value: string): value is UiPreferenceScope {
-  return value === "navigation" || value === "reference-columns";
+  return value === "navigation" || value === "reference-columns" || value === "personal-project-groups";
 }
 
 export function parseUiPreferenceChanges(scope: string, input: unknown): UiPreferenceValues {
@@ -16,7 +18,9 @@ export function parseUiPreferenceChanges(scope: string, input: unknown): UiPrefe
   if (!entries.length || entries.length > 200) throw new UiPreferenceError("변경할 설정을 확인해 주세요.");
   const identifier = /^[a-zA-Z0-9_-]{1,100}$/;
   for (const [key, value] of entries) {
-    const valid = scope === "navigation"
+    const valid = scope === "personal-project-groups"
+      ? isPersonalProject(key) && (value === "portfolio" || value === "toy")
+      : scope === "navigation"
       ? (key === "panelCollapsed" || (key.startsWith("project:") && identifier.test(key.slice(8)))) && typeof value === "boolean"
       : ((key === "order" || key === "hidden") && Array.isArray(value) && value.length <= 100 &&
           value.every(item => typeof item === "string" && identifier.test(item)) && new Set(value).size === value.length) ||

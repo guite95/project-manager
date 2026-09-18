@@ -1,5 +1,7 @@
 # Project management
 
+- Company project recordings use `project_recording` and separate `recording_transcript` rows. Originals stay in private OCI `recordings/` objects; Chirp 3 uses the existing embedding ADC/WIF identity and a private GCS staging bucket. Keep Google operation IDs durable, use DB-time leases, never blindly resubmit ambiguous requests, and clean staging only after the transcript transaction succeeds. See `docs/recordings.md`. Shared DB migration, IAM/bucket setup, and deployment are separate operations.
+
 ## Data and runtime
 
 - Flowcharts are stored in PostgreSQL: `flow_project`, `flow_category`, and `flow_document.document` (JSONB). Navigation and overview read lightweight summaries from `lib/server/flow-catalog-store.ts`; chart detail reads only the selected document through `lib/server/flows-store.ts`.
