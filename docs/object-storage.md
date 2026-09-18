@@ -1,17 +1,18 @@
 # OCI 자료 저장소
 
-PDF·HTML 업로드와 가져온 HTML·슬라이드의 원본을 private Standard 버킷에 저장한다.
+PDF·HTML·PPTX 업로드와 가져온 HTML·슬라이드의 원본을 private Standard 버킷에 저장한다.
 파일명·종류·크기·제목 등 목록 정보와 프로젝트 관계는 기존 flow 테이블에 유지한다.
 AI 세션 본문은 전체 본문 검색을 위해 PostgreSQL에 보관하며 영구 보관한다.
 
 ## 데이터 계약
 
 - `document.content.storage`: provider/version/region/namespace/bucket/key/sha256/bytes.
+- PPTX는 `document.content.preview.storage`에 서버에서 변환한 PDF를 별도 객체로 저장한다.
 - 객체 경로: `materials/<project>/<slug>/<sha256>`. 업로드는 조건부 생성으로 기존 객체를 덮어쓰지 않는다.
-- PDF·HTML은 원본 바이트, 가져온 슬라이드는 styles/slides JSON으로 저장한다.
+- PDF·HTML·PPTX는 원본 바이트, 가져온 슬라이드는 styles/slides JSON으로 저장한다. PPTX 원본과 PDF 미리보기는 서로 다른 SHA-256 객체다.
 - GET은 설정된 버킷·리전·namespace와 프로젝트/slug 경로를 검사하고 크기 및 SHA-256 검증 후 기존 콘텐츠 형식으로 복원한다. 목록은 본문을 내려받지 않는다.
 - 앱 로그인 및 HTML sandbox/CSP를 유지한다. 공개 버킷이나 영구 공개 URL을 만들지 않는다.
-- 자료 업로드의 10MB 제한은 동일하다. 내부 객체 상한은 16MB이다.
+- 자료 업로드 원본은 10MB, 변환된 PDF와 내부 객체는 16MB가 상한이다.
 - OCI 자료는 일반 차트 PUT으로 변경하지 않는다. 자료 메뉴의 삭제/업로드를 사용한다.
 
 ## 인증과 설정
@@ -64,7 +65,8 @@ pnpm db:shared -- node --experimental-strip-types scripts/material-storage.mjs v
 
 ## 삭제와 재시도
 
-자료 삭제 트랜잭션은 `app_setting`의 `storage:delete:materials:<uuid>`에 객체 정리 작업을 남긴다.
+자료 삭제 트랜잭션은 `app_setting`의 `storage:delete:materials:<uuid>`에 객체별 정리 작업을 남긴다.
+PPTX는 원본과 PDF 미리보기 두 작업을 기록한다.
 커밋 후 객체를 삭제하고 성공한 작업만 제거한다. OCI 장애 시 DB 작업이 되돌려지거나 원본 참조가 다시 생기지 않는다.
 업로드/삭제 시 최대 20개를 재시도한다. 유휴 서비스에서는 다음 쓰기 작업까지 정리가 지연될 수 있다.
 버킷/경로를 검증할 수 없는 작업은 삭제하지 않고 남긴다. 운영자는 설정과 잔여 작업 수를 확인한다.

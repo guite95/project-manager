@@ -49,16 +49,16 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
     <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-6">
     {writable && adding ? <form onSubmit={upload} className="mb-7 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 md:p-5">
       <h2 className="mb-1 text-[15px] font-semibold">자료 추가</h2>
-      <p id="material-file-help" className="mb-4 text-[12px] text-[var(--bi-muted)]">PDF·HTML 파일을 추가하면 형식에 맞게 미리보기를 제공합니다. 파일당 최대 10MB, HTML은 UTF-8 형식입니다.</p>
+      <p id="material-file-help" className="mb-4 text-[12px] text-[var(--bi-muted)]">PDF·HTML·PPTX 파일을 추가하면 형식에 맞게 미리보기를 제공합니다. PPTX는 PDF 미리보기도 함께 생성합니다. 파일당 최대 10MB, HTML은 UTF-8 형식입니다.</p>
       <FormGrid>
         <label className="space-y-2 text-[12px]">파일 선택
-          <input ref={fileInput} type="file" accept=".pdf,.html,.htm,application/pdf,text/html" disabled={busy} required aria-describedby="material-file-help" className={`${inputClass} block py-2`} onChange={event => {
+          <input ref={fileInput} type="file" accept=".pdf,.html,.htm,.pptx,application/pdf,text/html,application/vnd.openxmlformats-officedocument.presentationml.presentation" disabled={busy} required aria-describedby="material-file-help" className={`${inputClass} block py-2`} onChange={event => {
             const file = event.target.files?.[0] ?? null;
             setError('');
-            if (file && (!/\.(pdf|html?)$/i.test(file.name) || !file.size || file.size > MAX_MATERIAL_BYTES)) {
-              setError('비어 있지 않은 PDF 또는 HTML 파일(최대 10MB)을 선택해 주세요.'); setSelected(null); event.target.value = ''; return;
+            if (file && (!/\.(pdf|html?|pptx)$/i.test(file.name) || !file.size || file.size > MAX_MATERIAL_BYTES)) {
+              setError('비어 있지 않은 PDF, HTML 또는 PPTX 파일(최대 10MB)을 선택해 주세요.'); setSelected(null); event.target.value = ''; return;
             }
-            setSelected(file); if (file) setTitle(file.name.replace(/\.(pdf|html?)$/i, '').slice(0, 200));
+            setSelected(file); if (file) setTitle(file.name.replace(/\.(pdf|html?|pptx)$/i, '').slice(0, 200));
           }} />
         </label>
         <TextField label="자료 제목" value={title} onChange={value => setTitle(value.slice(0, 200))} required disabled={busy} placeholder="자료 제목을 입력하세요" />
@@ -75,7 +75,7 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
     </div>
     <div className="overflow-x-auto rounded border border-[var(--bi-border)]">
       <DataTable caption="프로젝트 자료 목록" rows={visible} rowKey={row => row.slug}
-        emptyMessage={materials.length ? '검색 결과가 없습니다.' : writable ? '아직 등록된 자료가 없습니다. 자료 추가에서 PDF 또는 HTML 파일을 선택해 주세요.' : '아직 등록된 자료가 없습니다.'}
+        emptyMessage={materials.length ? '검색 결과가 없습니다.' : writable ? '아직 등록된 자료가 없습니다. 자료 추가에서 PDF, HTML 또는 PPTX 파일을 선택해 주세요.' : '아직 등록된 자료가 없습니다.'}
         columns={[
           { key: 'format', header: '형식', render: row => <Badge variant="primary">{materialFormatLabel(row.format)}</Badge> },
           { key: 'title', header: '자료', render: row => <Link href={materialsHref(project, row.slug)} className="font-semibold text-[var(--bi-accent)] hover:underline">{row.title}</Link> },

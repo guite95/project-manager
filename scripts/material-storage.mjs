@@ -4,7 +4,7 @@ import { resolve, dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import pg from 'pg';
 import { sha256, storageConfig } from '../lib/server/object-storage.mjs';
-import { storeMaterial, restoreMaterial, compactMaterial, encodeMaterial } from '../lib/server/material-storage.mjs';
+import { storeMaterial, restoreMaterial, compactMaterial, encodeMaterial, encodeMaterialPreview, materialWithoutStorage } from '../lib/server/material-storage.mjs';
 import { validateProjectContent } from '../lib/flows/content.ts';
 
 const [mode, ...args] = process.argv.slice(2);
@@ -37,7 +37,8 @@ try {
       const restored = await restoreMaterial(r.document, r.project_slug, r.slug);
       validateProjectContent(restored.content);
       bytes += encodeMaterial(restored.content).bytes.length;
-      const { storage, ...original } = r.document.content;
+      if (restored.content.kind === 'material' && restored.content.format === 'pptx') bytes += encodeMaterialPreview(restored.content).bytes.length;
+      const original = materialWithoutStorage(r.document.content);
       if ('data' in original || 'html' in original || 'slides' in original) {
         if (!isDeepStrictEqual(original, restored.content)) throw new Error('원본 비교 실패');
       }
@@ -55,13 +56,19 @@ try {
       const restored = await restoreMaterial(r.document, r.project_slug, r.slug);
       validateProjectContent(restored.content);
       if (r.document.content.storage) {
-        const { storage, ...original } = r.document.content;
+        const original = materialWithoutStorage(r.document.content);
         if (['data','html','slides'].some(k => k in original) && !isDeepStrictEqual(original, restored.content)) throw new Error('복사 이후 원본이 변경되었습니다. 수동 대조가 필요합니다.');
       }
       const stored = r.document.content.storage
-        ? compactMaterial(restored.content, r.document.content.storage)
-        : await storeMaterial(restored.content, r.project_slug, r.slug);
-      converted.push({ ...r, document: { ...r.document, content: mode === 'copy' ? { ...restored.content, storage: stored.storage } : stored } });
+        ? compactMaterial(restored.content, r.document.content.storage, r.document.content.preview?.storage)
+        : await storeMaterial(restored.content, r.project_slug, r.slug, { onCleanupFailure: async storage => {
+          await db.query('INSERT INTO app_setting (key,value) VALUES ($1,$2::jsonb)',
+            [`storage:delete:materials:${crypto.randomUUID()}`, JSON.stringify({ storage, project: r.project_slug, slug: r.slug })]);
+        } });
+      const copied = mode === 'copy'
+        ? { ...restored.content, storage: stored.storage, ...(stored.preview?.storage ? { preview: { ...restored.content.preview, storage: stored.preview.storage } } : {}) }
+        : stored;
+      converted.push({ ...r, document: { ...r.document, content: copied } });
     }
     await db.query('BEGIN');
     await db.query("SET LOCAL lock_timeout='5s'");

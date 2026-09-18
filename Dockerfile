@@ -22,6 +22,10 @@ FROM base AS runner
 ENV NODE_ENV=production
 ENV PORT=30001
 ENV HOSTNAME=0.0.0.0
+ENV LIBREOFFICE_BIN=/usr/bin/soffice
+
+# PPTX는 서버에서 PDF로 변환해 비공개 원본과 함께 제공한다.
+RUN apk add --no-cache libreoffice-impress font-noto-cjk
 
 # standalone 출력에는 실행에 필요한 node_modules 만 들어 있다.
 # 이 저장소에는 public 디렉터리가 없다. 나중에 만들면 여기서 함께 복사한다.

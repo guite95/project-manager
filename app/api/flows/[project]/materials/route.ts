@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { jsonError } from '@/lib/api-types';
-import { MAX_MATERIAL_BYTES, validateMaterial, type MaterialContent } from '@/lib/materials';
+import { MAX_MATERIAL_BYTES } from '@/lib/materials';
 import { createMaterial } from '@/lib/server/materials-store';
 import { getFlowProjectIdentity } from '@/lib/server/flow-catalog-store';
+import { MaterialUploadError, prepareMaterialContent } from '@/lib/server/material-upload';
 
 export const dynamic = 'force-dynamic';
 export async function POST(request: Request, { params }: { params: Promise<{ project: string }> }) {
@@ -38,15 +39,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   } catch { return jsonError('파일 업로드 요청을 읽을 수 없습니다.', 400); }
   finally { reader.releaseLock(); }
   const file = form.get('file');
-  if (!(file instanceof File) || !file.size) return jsonError('PDF 또는 HTML 파일을 선택해 주세요.', 400);
+  if (!(file instanceof File) || !file.size) return jsonError('PDF, HTML 또는 PPTX 파일을 선택해 주세요.', 400);
   if (file.size > MAX_MATERIAL_BYTES) return jsonError('파일은 최대 10MB까지 추가할 수 있습니다.', 413);
-  const format = /\.pdf$/i.test(file.name) ? 'pdf' : /\.html?$/i.test(file.name) ? 'html' : null;
-  if (!format) return jsonError('PDF 또는 HTML 파일만 추가할 수 있습니다.', 415);
   const title = form.get('title');
   if (typeof title !== 'string' || !title.trim() || title.trim().length > 200) return jsonError('자료 제목은 1~200자로 입력해 주세요.', 400);
-  const content: MaterialContent = { kind: 'material', format, fileName: file.name, byteLength: file.size, data: Buffer.from(await file.arrayBuffer()).toString('base64') };
-  try { validateMaterial(content); }
-  catch (error) { return jsonError((error as Error).message, 400); }
+  const bytes = Buffer.from(await file.arrayBuffer());
+  let content;
+  try { content = await prepareMaterialContent(file.name, bytes); }
+  catch (error) {
+    if (error instanceof MaterialUploadError) return jsonError(error.message, error.status);
+    throw error;
+  }
   const result = await createMaterial(project, title, content);
   return result ? NextResponse.json(result, { status: 201, headers: { 'Cache-Control': 'no-store' } }) : jsonError('프로젝트가 없습니다.', 404);
 }

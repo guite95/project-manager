@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { cache } from 'react';
 import { prisma } from '../db.ts';
 import { parseFlowChart } from '../flows/document.ts';
-import { MATERIAL_CATEGORY, validateMaterial, type MaterialContent, type MaterialSummary } from '../materials.ts';
+import { hasMaterialStorageReference, MATERIAL_CATEGORY, validateMaterial, type MaterialContent, type MaterialSummary } from '../materials.ts';
 import { getFlowDocument } from './flows-store.ts';
 import { storeMaterial } from './material-storage.mjs';
 import { deleteObject } from './object-storage.mjs';
@@ -46,8 +46,10 @@ export async function deleteMaterial(projectSlug: string, slug: string): Promise
       AND document->'content'->>'kind' IN ('material', 'html', 'slides')
       RETURNING document
     `);
-    const storage = rows[0]?.document.content?.storage;
-    if (storage) await tx.appSetting.create({ data: { key: `storage:delete:materials:${crypto.randomUUID()}`, value: { storage, project: projectSlug, slug } as Prisma.InputJsonValue } });
+    const content = rows[0]?.document.content as { storage?: unknown; preview?: { storage?: unknown } } | undefined;
+    for (const storage of [content?.storage, content?.preview?.storage].filter(Boolean)) {
+      await tx.appSetting.create({ data: { key: `storage:delete:materials:${crypto.randomUUID()}`, value: { storage, project: projectSlug, slug } as Prisma.InputJsonValue } });
+    }
     return rows.length > 0;
   });
   await cleanupMaterialObjects();
@@ -59,9 +61,11 @@ export async function createMaterial(projectSlug: string, title: string, content
   if (!title.trim() || title.trim().length > 200) throw new Error('자료 제목은 1~200자로 입력해 주세요.');
   const slug = `material-${crypto.randomUUID()}`;
   const chart = parseFlowChart({ slug, title: title.trim(), nodes: [], edges: [], content });
-  if ('storage' in content) throw new Error('업로드에 저장소 참조를 지정할 수 없습니다.');
+  if (hasMaterialStorageReference(content)) throw new Error('업로드에 저장소 참조를 지정할 수 없습니다.');
   if (projectSlug === 'common' || !await prisma.flowProject.findUnique({ where: { slug: projectSlug }, select: { slug: true } })) return null;
-  const stored = await storeMaterial(content, projectSlug, slug);
+  const stored = await storeMaterial(content, projectSlug, slug, { onCleanupFailure: async storage => {
+    await prisma.appSetting.create({ data: { key: `storage:delete:materials:${crypto.randomUUID()}`, value: { storage, project: projectSlug, slug } as Prisma.InputJsonValue } });
+  } });
   await cleanupMaterialObjects();
   // 커밋 결과가 불명확한 오류에서는 객체를 보존한다. 원본 없는 DB 참조보다 고아 객체가 복구 가능하다.
   return prisma.$transaction(async tx => {

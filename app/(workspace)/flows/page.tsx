@@ -70,7 +70,7 @@ async function ProjectsOverview() {
           </Link> : null}
           {project.slug !== "common" ? <Link href={materialsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
             <span className="text-[13px] font-semibold">자료</span>
-            <span className="text-[12px] text-[var(--bi-muted)]">PDF·HTML 문서 추가와 미리보기</span>
+            <span className="text-[12px] text-[var(--bi-muted)]">PDF·HTML·PPTX 문서 추가와 미리보기</span>
           </Link> : null}
           {flowCategories(project.categories).map((category) => (
             <div key={category.slug} className="mt-3">
