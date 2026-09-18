@@ -5,6 +5,7 @@ import type { FlowNavigationProject } from '@/lib/navigation/flow-navigation';
 import { chartHref } from '@/lib/flows/registry';
 import { hasProjectNotes } from '@/lib/project-notes';
 import { LogoutButton } from './logout-button';
+import { isPersonalProject } from '@/lib/personal-projects';
 export function MemberShell({projects,admin,name,children}:{projects:FlowNavigationProject[];admin:boolean;name:string;children:ReactNode}) {
   const [expanded,setExpanded]=useState<string|null>(null);
   return <div className="min-h-screen bg-[var(--bi-bg)] text-[var(--bi-fg)]">
@@ -16,7 +17,9 @@ export function MemberShell({projects,admin,name,children}:{projects:FlowNavigat
     <div className="md:flex"><aside className="border-b border-[var(--bi-border)] p-3 md:w-64 md:shrink-0 md:border-r">
       <Link className="block px-3 py-2 text-sm" href="/flows">전체 프로젝트</Link>
       {!projects.length&&<p className="p-3 text-xs text-[var(--bi-muted)]">아직 접근 가능한 프로젝트가 없습니다. 관리자에게 권한을 요청하세요.</p>}
-      {projects.map(project=><section key={project.slug}>
+      {[{personal:false,title:'회사 프로젝트'},{personal:true,title:'개인 프로젝트'}].map(group => <div key={group.title}>
+      {projects.some(project=>isPersonalProject(project.slug)===group.personal)&&<h2 className="px-3 pt-4 pb-2 text-xs text-[var(--bi-muted)]">{group.title}</h2>}
+      {projects.filter(project=>isPersonalProject(project.slug)===group.personal).map(project=><section key={project.slug}>
         <button className="w-full rounded px-3 py-2 text-left text-sm font-semibold" aria-expanded={expanded===project.slug} onClick={()=>setExpanded(expanded===project.slug?null:project.slug)}>{expanded===project.slug?'▾':'▸'} {project.title}</button>
         {expanded===project.slug&&<nav aria-label={project.title} className="space-y-2 px-5 pb-3 text-xs">
           {hasProjectNotes(project.slug)&&<Link className="block" href={`/flows/${project.slug}/notes`}>명심할 점</Link>}
@@ -24,6 +27,7 @@ export function MemberShell({projects,admin,name,children}:{projects:FlowNavigat
           {project.categories.map(category=><div key={category.slug}><p className="mt-3 mb-2 text-[var(--bi-muted)]">{category.title}</p>{category.charts.map(chart=><Link className="block py-1" key={chart.slug} href={chartHref(project.slug,category.slug,chart.slug)}>{chart.title}</Link>)}</div>)}
         </nav>}
       </section>)}
+      </div>)}
     </aside><main className="min-w-0 flex-1">{children}</main></div>
   </div>;
 }

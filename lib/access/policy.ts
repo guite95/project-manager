@@ -6,8 +6,7 @@ export const isAdmin = (actor: Actor | null) => actor?.role === 'OWNER' || actor
 export function canProject(actor: Actor | null, slug: string, action: Action): boolean {
   if (!actor) return false;
   if (actor.role === 'OWNER') return true;
-  if (isPersonalProject(slug)) return false;
-  if (actor.role === 'ADMIN') return true;
+  if (actor.role === 'ADMIN' && !isPersonalProject(slug)) return true;
   const membership = actor.memberships.find(item => item.projectSlug === slug);
   return membership?.role === 'EDITOR' ? action !== 'delete' : membership?.role === 'VIEWER' && action === 'read';
 }

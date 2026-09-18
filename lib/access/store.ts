@@ -101,7 +101,7 @@ export async function accessOverview(actor: Actor) {
     readFlowCatalog(),
     prisma.accessShare.findMany({where:{expiresAt:{gt:new Date()}},select:{id:true,projectSlug:true,chartSlug:true,expiresAt:true}}),
   ]);
-  return {actor,users,projects:projects.filter(p=>!isPersonalProject(p.slug)).map(p=>({slug:p.slug,title:p.title,charts:p.categories.flatMap(c=>c.charts.flatMap(d=>{
+  return {actor,users:actor.role==='OWNER'?users:users.map(user=>({...user,memberships:user.memberships.filter(m=>!isPersonalProject(m.projectSlug))})),projects:projects.filter(p=>actor.role==='OWNER'||!isPersonalProject(p.slug)).map(p=>({slug:p.slug,title:p.title,charts:p.categories.flatMap(c=>c.charts.flatMap(d=>{
     return d.erdDomain ? [] : [{slug:d.slug,title:d.title}];
   }))})),shares:shares.filter(s=>!isPersonalProject(s.projectSlug))};
 }
@@ -124,7 +124,7 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
     const id=String(body.id??'');
     if (typeof body.active!=='boolean' || !['ADMIN','MEMBER'].includes(String(body.role)) || !Array.isArray(body.memberships) || body.memberships.length>500) throw new AccessError('계정 권한 형식을 확인하세요.');
     const memberships=body.memberships.map((m:unknown)=>{
-      if (!m || typeof m!=='object' || !('projectSlug' in m) || !('role' in m) || typeof m.projectSlug!=='string' || !['VIEWER','EDITOR'].includes(String(m.role)) || isPersonalProject(m.projectSlug)) throw new AccessError('허용할 수 없는 프로젝트 권한입니다.');
+      if (!m || typeof m!=='object' || !('projectSlug' in m) || !('role' in m) || typeof m.projectSlug!=='string' || !['VIEWER','EDITOR'].includes(String(m.role)) || actor.role!=='OWNER' && isPersonalProject(m.projectSlug)) throw new AccessError('허용할 수 없는 프로젝트 권한입니다.');
       return {userId:id,projectSlug:m.projectSlug,role:String(m.role)};
     });
     await prisma.$transaction(async tx=>{
@@ -132,7 +132,10 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
       const target=await tx.accessUser.findUnique({where:{id}});
       if(!target || target.role==='OWNER' || target.id===actor.id || actor.role!=='OWNER' && (target.role==='ADMIN' || body.role==='ADMIN')) throw new AccessError('이 계정의 권한을 변경할 수 없습니다.',403);
       await tx.accessUser.update({where:{id},data:{role:String(body.role),active:body.active as boolean}});
-      await tx.accessMembership.deleteMany({where:{userId:id}});
+      // 개인 프로젝트 권한은 소유자만 변경한다. 관리자 수정 시 기존 부여를 보존한다.
+      const existing = actor.role==='OWNER' ? [] : await tx.accessMembership.findMany({where:{userId:id},select:{projectSlug:true}});
+      const privateSlugs = existing.filter(m=>isPersonalProject(m.projectSlug)).map(m=>m.projectSlug);
+      await tx.accessMembership.deleteMany({where:{userId:id,...(privateSlugs.length?{projectSlug:{notIn:privateSlugs}}:{})}});
       await tx.accessMembership.createMany({data:memberships});
       // 권한은 요청마다 DB에서 읽는다. 비활성화할 때만 기존 세션을 폐기한다.
       if (!body.active) await tx.accessSession.deleteMany({where:{userId:id}});
