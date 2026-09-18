@@ -26,23 +26,36 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 function expiry(value: string) { return new Date(value).toLocaleString("ko-KR"); }
 
 function UserEditor({ user, data, pending, save }: { user: User; data: AccessData; pending: boolean; save: (body: unknown) => Promise<boolean> }) {
+  const [editing, setEditing] = useState(false);
   const [role, setRole] = useState(user.role);
   const [active, setActive] = useState(user.active);
   const [memberships, setMemberships] = useState(user.memberships);
   const editable = user.id !== data.actor.id && user.role !== "OWNER" && (data.actor.role === "OWNER" || user.role !== "ADMIN");
   const canChangeRole = data.actor.role === "OWNER";
-  return <details className="rounded border border-[var(--bi-border)] px-4 py-3">
-    <summary className="cursor-pointer text-[13px]">{user.name || user.username} <span className="text-[var(--bi-muted)]">@{user.username} · {roleLabels[user.role]} · {user.active ? "활성" : "비활성"}{user.id === data.actor.id ? " · 나" : ""}</span></summary>
-    {editable ? <form className="mt-4 space-y-4" onSubmit={event => { event.preventDefault(); void save({ action: "updateUser", id: user.id, role, active, memberships }); }}>
+  const editorId = `permissions-${user.id}`;
+  const permissionSummary = user.role === "OWNER" ? "전체 프로젝트 권한" : user.role === "ADMIN" ? "회사 프로젝트 전체 관리" : user.memberships.length ? user.memberships.map(item => `${data.projects.find(project => project.slug === item.projectSlug)?.title ?? item.projectSlug}: ${item.role === "EDITOR" ? "편집" : "열람"}`).join(" · ") : "접근 가능한 프로젝트 없음";
+  function startEditing() {
+    setRole(user.role); setActive(user.active); setMemberships(user.memberships); setEditing(true);
+  }
+  return <article className="rounded border border-[var(--bi-border)] px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0 space-y-1">
+        <p className="text-[13px]">{user.name || user.username} <span className="text-[var(--bi-muted)]">@{user.username} · {roleLabels[user.role]} · {user.active ? "활성" : "비활성"}{user.id === data.actor.id ? " · 나" : ""}</span></p>
+        <p className="text-[12px] text-[var(--bi-muted)]">{permissionSummary}</p>
+      </div>
+      {editable && <Button variant="secondary" size="sm" disabled={pending || editing} aria-label={`${user.username} 권한 편집`} aria-expanded={editing} aria-controls={editorId} onClick={startEditing}>권한 편집</Button>}
+    </div>
+    {editable && <div id={editorId} hidden={!editing}>{editing && <form className="mt-4 space-y-4" onSubmit={async event => { event.preventDefault(); if (await save({ action: "updateUser", id: user.id, role, active, memberships })) setEditing(false); }}>
       <div className="flex flex-wrap items-center gap-4">
         {canChangeRole ? <Dropdown ariaLabel={`${user.username} 계정 역할`} value={role} onChange={value => setRole(value as Role)} options={ownerOptions} disabled={pending} className="w-40" /> : <span className="text-[12px]">계정 역할: {roleLabels[role]}</span>}
         <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={active} disabled={pending} onChange={event => setActive(event.target.checked)} />활성 계정</label>
       </div>
-      <p className="text-[12px] text-[var(--bi-muted)]">프로젝트별 권한을 지정하세요. 관리자는 회사 프로젝트 전체를 관리하며, 변경을 저장하면 이 사용자의 기존 세션이 종료됩니다.</p>
-      <div className="grid gap-3 sm:grid-cols-2">{data.projects.map(project => <div key={project.slug} className="space-y-1"><span className="text-[12px]">{project.title}</span><Dropdown ariaLabel={`${user.username} ${project.title} 권한`} value={memberships.find(item => item.projectSlug === project.slug)?.role ?? ""} options={permissionOptions} disabled={pending} onChange={value => setMemberships(current => [...current.filter(item => item.projectSlug !== project.slug), ...(value ? [{ projectSlug: project.slug, role: value as Membership["role"] }] : [])])} /></div>)}</div>
-      <Button type="submit" disabled={pending}>권한 저장</Button>
-    </form> : <p className="mt-3 text-[12px] text-[var(--bi-muted)]">자신과 소유자의 권한은 변경할 수 없으며, 관리자 계정은 소유자만 변경할 수 있습니다.</p>}
-  </details>;
+      <p className="text-[12px] text-[var(--bi-muted)]">{role === "ADMIN" ? "관리자는 회사 프로젝트 전체를 관리합니다." : "프로젝트별로 접근 불가, 열람, 편집 권한을 지정하세요."} 변경을 저장하면 이 사용자의 기존 세션이 종료되며, 다시 로그인할 때 변경된 권한이 적용됩니다.</p>
+      {role === "MEMBER" && <div className="grid gap-3 sm:grid-cols-2">{data.projects.map(project => <div key={project.slug} className="space-y-1"><span className="text-[12px]">{project.title}</span><Dropdown ariaLabel={`${user.username} ${project.title} 권한`} value={memberships.find(item => item.projectSlug === project.slug)?.role ?? ""} options={permissionOptions} disabled={pending} onChange={value => setMemberships(current => [...current.filter(item => item.projectSlug !== project.slug), ...(value ? [{ projectSlug: project.slug, role: value as Membership["role"] }] : [])])} /></div>)}</div>}
+      <div className="flex gap-2"><Button type="submit" loading={pending}>권한 저장</Button><Button variant="secondary" disabled={pending} onClick={() => setEditing(false)}>취소</Button></div>
+    </form>}</div>}
+    {!editable && <p className="mt-3 text-[12px] text-[var(--bi-muted)]">{user.role === "OWNER" ? "소유자는 항상 전체 권한을 유지합니다." : user.id === data.actor.id ? "자신의 권한은 변경할 수 없습니다." : "관리자 계정의 권한은 소유자만 변경할 수 있습니다."}</p>}
+  </article>;
 }
 
 export function AccessManager() {
@@ -115,7 +128,7 @@ export function AccessManager() {
     {createdLink && <div className="space-y-2 rounded border border-[var(--bi-accent)] p-4"><p className="text-[13px] font-semibold">{createdLink.label}</p><p className="text-[12px] text-[var(--bi-muted)]">이 링크는 생성 직후에만 표시됩니다. 복사하여 직접 전달하세요.</p><input aria-label={createdLink.label} className="w-full rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] p-2 text-[12px]" readOnly value={createdLink.url} onFocus={event => event.target.select()} /><Button variant="secondary" onClick={() => { void copyLink(); }}>링크 복사</Button></div>}
     {data.actor.bootstrap ? <Section title="최초 소유자 등록"><p className="text-[12px] text-[var(--bi-muted)]">소유자 등록 후 기존 공통 비밀번호 로그인은 종료됩니다.</p>{identityForm}</Section> : <>
       <Section title="계정 발급"><p className="text-[12px] text-[var(--bi-muted)]">아이디와 초기 비밀번호를 정해 계정을 바로 생성합니다. 생성 후 아래에서 프로젝트 권한을 지정하고 로그인 정보를 전달하세요. 사용자는 내 계정에서 비밀번호를 변경할 수 있습니다.</p>{identityForm}</Section>
-      <Section title="계정 및 프로젝트 권한">{data.users.length ? data.users.map(user => <UserEditor key={`${user.id}:${JSON.stringify(user)}`} user={user} data={data} pending={pending} save={save} />) : <p className="text-[12px] text-[var(--bi-muted)]">등록된 계정이 없습니다.</p>}</Section>
+      <Section title="계정 및 프로젝트 권한"><p className="text-[12px] text-[var(--bi-muted)]">계정별 권한 편집 버튼으로 역할, 활성 상태와 프로젝트 권한을 언제든지 변경할 수 있습니다.</p>{data.users.length ? data.users.map(user => <UserEditor key={`${user.id}:${JSON.stringify(user)}`} user={user} data={data} pending={pending} save={save} />) : <p className="text-[12px] text-[var(--bi-muted)]">등록된 계정이 없습니다.</p>}</Section>
       <Section title="문서 읽기 전용 공유"><p className="text-[12px] text-[var(--bi-muted)]">링크를 가진 사람은 로그인 없이 선택한 회사 문서를 열람할 수 있습니다. 개인 프로젝트와 TNS ERD는 공유할 수 없습니다.</p>
         <form className="grid items-end gap-4 sm:grid-cols-2" onSubmit={event => { event.preventDefault(); void save({ action: "share", projectSlug, chartSlug, days: Number(days) }); }}>
           <Dropdown ariaLabel="공유 프로젝트" value={projectSlug} options={data.projects.map(project => ({ value: project.slug, label: project.title }))} onChange={value => { setProjectSlug(value); setChartSlug(""); }} disabled={pending} />
