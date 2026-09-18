@@ -7,7 +7,7 @@ const DRAG_TYPE = "application/x-project-management-sidebar";
 
 export function SidebarProject({
   slug, title, count, collapsed, onToggle, children,
-  movable, dragging, onDragChange, onMove, onStep, toggleDisabled = false,
+  movable, dragging, onDragChange, onMove, onStep, toggleDisabled = false, showMoveHandle = true,
 }: {
   slug: string;
   title: string;
@@ -16,6 +16,7 @@ export function SidebarProject({
   onToggle: () => void;
   children: ReactNode;
   movable: boolean;
+  showMoveHandle?: boolean;
   toggleDisabled?: boolean;
   dragging: string | null;
   onDragChange: (slug: string | null) => void;
@@ -68,7 +69,7 @@ export function SidebarProject({
           <span className="truncate">{title}</span>
           <span className="ml-auto font-normal text-[var(--bi-muted)]">{count}</span>
         </button>
-        <button
+        {showMoveHandle ? <button
           type="button"
           aria-label={`${title} 순서 이동`}
           aria-describedby="sidebar-order-help"
@@ -91,7 +92,7 @@ export function SidebarProject({
           }}
         >
           <HiOutlineSelector size={14} aria-hidden />
-        </button>
+        </button> : null}
       </div>
       {!collapsed ? <div className="ml-3 border-l border-[var(--bi-border)] py-0.5">{children}</div> : null}
     </div>

@@ -7,9 +7,15 @@ import type { UiPreferenceScope, UiPreferenceValues, UiPreferences } from "@/lib
 type LegacyPreferences = { key: string; read: (value: unknown) => UiPreferenceValues };
 
 /** 변경분만 순서대로 저장한다. 새로고침·창 복귀·15초 간격 조회로 공유 설정을 반영한다. */
-export function useSharedPreferences(scope: UiPreferenceScope, initial?: UiPreferences, legacy?: LegacyPreferences) {
+export function useSharedPreferences(
+  scope: UiPreferenceScope,
+  initial?: UiPreferences,
+  legacy?: LegacyPreferences,
+  options?: { readOnly?: boolean },
+) {
+  const readOnly = options?.readOnly === true;
   const [values, setValues] = useState<UiPreferenceValues>(initial?.values ?? {});
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(readOnly);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const confirmed = useRef(initial?.values ?? {});
@@ -20,7 +26,7 @@ export function useSharedPreferences(scope: UiPreferenceScope, initial?: UiPrefe
   const mounted = useRef(false);
 
   const flush = useCallback(async () => {
-    if (inFlight.current || !Object.keys(pending.current).length) return;
+    if (readOnly || inFlight.current || !Object.keys(pending.current).length) return;
     inFlight.current = true;
     if (mounted.current) { setSaving(true); setError(""); }
     try {
@@ -41,10 +47,14 @@ export function useSharedPreferences(scope: UiPreferenceScope, initial?: UiPrefe
       inFlight.current = false;
       if (mounted.current) setSaving(false);
     }
-  }, [scope]);
+  }, [scope, readOnly]);
 
   useEffect(() => {
     mounted.current = true;
+    if (readOnly) {
+      setReady(true);
+      return () => { mounted.current = false; };
+    }
     let cancelled = false;
     let refreshing = false;
     const refresh = async () => {
@@ -84,10 +94,10 @@ export function useSharedPreferences(scope: UiPreferenceScope, initial?: UiPrefe
       if (timer.current) clearTimeout(timer.current);
       void flush();
     };
-  }, [scope, legacy, flush]);
+  }, [scope, legacy, flush, readOnly]);
 
   const update = useCallback((changes: UiPreferenceValues) => {
-    if (!ready || !Object.keys(changes).length) return;
+    if (readOnly || !ready || !Object.keys(changes).length) return;
     revision.current++;
     pending.current = { ...pending.current, ...changes };
     setValues(current => ({ ...current, ...changes }));
@@ -95,7 +105,7 @@ export function useSharedPreferences(scope: UiPreferenceScope, initial?: UiPrefe
     setError("");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), 180);
-  }, [ready, flush]);
+  }, [ready, flush, readOnly]);
 
   return { values, update, ready, saving, error };
 }

@@ -9,6 +9,8 @@ import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
 import { type UiPreferences } from "@/lib/ui-preferences";
 import { PersonalProjectGroupsProvider } from "@/components/personal/project-groups";
+import { LogoutButton } from "@/components/access/logout-button";
+import { workspaceRoleLabel, workspaceSectionHref, workspaceSectionIds, type WorkspaceSectionId } from "@/lib/navigation/workspace-menu";
 import { AppSidebar } from "./app-sidebar";
 
 import { isPersonalProject } from "@/lib/personal-projects";
@@ -26,16 +28,35 @@ const utilitySections = [
   { id: "guide", href: "/guide", title: "작성 가이드", railTitle: "작성\n가이드", description: "플로우차트 JSON 작성 방법", icon: HiOutlineBookOpen },
 ] as const;
 const allSections = [...sections, ...utilitySections];
-type Section = (typeof allSections)[number]["id"];
+type Section = WorkspaceSectionId;
+type WorkspaceAccount = { name: string; username: string; role: string };
 const panelLink = (active: boolean) => `mx-2 flex min-h-10 items-center md:min-h-9 rounded-[3px] px-3 text-[12px] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${active
   ? "bg-[var(--bi-accent)] font-semibold text-white"
   : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
 
-export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initialPreferences, children }: {
+function SidebarAccount({ account }: { account: WorkspaceAccount }) {
+  const displayName = account.name || account.username || "로그인 계정";
+  return <footer className="shrink-0 border-t border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 py-3">
+    <div className="min-w-0">
+      <p className="m-0 truncate text-[12px] font-semibold" title={displayName}>{displayName}</p>
+      <p className="mt-0.5 mb-0 truncate text-[10px] text-[var(--bi-muted)]" title={account.username ? `@${account.username} · ${workspaceRoleLabel(account.role)}` : workspaceRoleLabel(account.role)}>
+        {account.username ? `@${account.username} · ` : ""}{workspaceRoleLabel(account.role)}
+      </p>
+    </div>
+    <div className="mt-2 flex items-center gap-2 text-[11px]">
+      <Link href="/account" className="flex min-h-8 flex-1 items-center justify-center rounded-[3px] border border-[var(--bi-border)] px-2 hover:bg-[var(--bi-sidebar-active)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">내 계정</Link>
+      <LogoutButton className="flex min-h-8 flex-1 items-center justify-center rounded-[3px] border border-[var(--bi-border)] px-2 hover:bg-[var(--bi-sidebar-active)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] disabled:opacity-50" />
+    </div>
+  </footer>;
+}
+
+export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initialPreferences, initialPersonalProjectGroups, account, children }: {
   brand: string;
   flowProjects: FlowNavigationProject[];
   initialProjectOrder: string[];
   initialPreferences: UiPreferences;
+  initialPersonalProjectGroups: UiPreferences;
+  account: WorkspaceAccount;
   children: ReactNode;
 }) {
   const [projectOrder, setProjectOrder] = useState(initialProjectOrder);
@@ -44,14 +65,20 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const searchParams = useSearchParams();
   const portfolioActive = pathname === "/portfolio" || pathname.startsWith("/portfolio/");
   const personalActive = isPersonalProject(pathname.match(/^\/flows\/([^/]+)/)?.[1] ?? "");
-  const currentSection: Section = personalActive ? "personal" : portfolioActive ? "recruitment" : allSections.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.id ?? "projects";
+  const allowedSectionIds = workspaceSectionIds(account.role, navigationProjects);
+  const availableSections = allSections.filter(item => allowedSectionIds.includes(item.id));
+  const primarySections = availableSections.filter(item => item.id !== "guide");
+  const availableUtilitySections = availableSections.filter(item => item.id === "guide");
+  const candidateSection: Section = personalActive ? "personal" : portfolioActive ? "recruitment" : allSections.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.id ?? "projects";
+  const currentSection = allowedSectionIds.includes(candidateSection) ? candidateSection : allowedSectionIds[0];
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<Section | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
-  const prefs = useSharedPreferences("navigation", initialPreferences);
-  const collapsed = prefs.values.panelCollapsed === true;
-  const section = allSections.find(item => item.id === currentSection)!;
+  const canCustomizeNavigation = account.role === "OWNER";
+  const prefs = useSharedPreferences("navigation", initialPreferences, undefined, { readOnly: !canCustomizeNavigation });
+  const collapsed = canCustomizeNavigation && prefs.values.panelCollapsed === true;
+  const section = allSections.find(item => item.id === currentSection);
 
   useEffect(() => { setProjectOrder(initialProjectOrder); }, [initialProjectOrder]);
   useEffect(() => { setNavigationProjects(flowProjects); }, [flowProjects]);
@@ -120,7 +147,9 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const renderSectionMenu = (id: Section, inline = false) => {
     if (id === "projects" || id === "personal") return (
       <AppSidebar key={id} personal={id === "personal"} flowProjects={navigationProjects.filter(project => isPersonalProject(project.slug) === (id === "personal"))} projectOrder={projectOrder}
-        onProjectOrderChange={setProjectOrder} inline={inline} />
+        onProjectOrderChange={setProjectOrder} inline={inline} canReorder={canCustomizeNavigation}
+        canEditPersonalGroups={canCustomizeNavigation} includeExternalProjects={canCustomizeNavigation}
+        showOverview={id === "projects" || account.role === "OWNER"} />
     );
     const menuSection = allSections.find(item => item.id === id)!;
     const title = menuSection.title;
@@ -141,7 +170,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
     );
   };
   const renderRailLink = (item: (typeof allSections)[number]) => (
-    <Link key={item.id} href={item.href} title={item.title} aria-current={currentSection === item.id ? "true" : undefined}
+    <Link key={item.id} href={workspaceSectionHref(item.id, account.role, navigationProjects)} title={item.title} aria-current={currentSection === item.id ? "true" : undefined}
       className={`flex min-h-[60px] flex-col items-center justify-center gap-0.5 border-l-[3px] px-1 py-1.5 text-center text-[10px] leading-[1.35] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
         ? "border-[var(--bi-rail-indicator)] bg-[var(--bi-rail-active)] font-semibold text-white"
         : "border-transparent hover:bg-[var(--bi-rail-active)] hover:text-white"}`}>
@@ -149,7 +178,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
     </Link>
   );
   return (
-    <PersonalProjectGroupsProvider>
+    <PersonalProjectGroupsProvider initial={initialPersonalProjectGroups} readOnly={!canCustomizeNavigation}>
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--bi-bg)] text-[var(--bi-fg)] md:flex-row">
       <header inert={mobileOpen} className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 md:hidden">
         <button ref={menuButton} type="button" aria-expanded={mobileOpen} aria-controls="workspace-panel"
@@ -169,9 +198,16 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
           <HiOutlineChevronDoubleRight size={16} aria-hidden />펼치기
         </button> : null}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {sections.map(renderRailLink)}
+          {primarySections.map(renderRailLink)}
         </div>
-        <div className="shrink-0 border-t border-white/10">{utilitySections.map(renderRailLink)}</div>
+        <div className="shrink-0 border-t border-white/10">{availableUtilitySections.map(renderRailLink)}</div>
+        {collapsed ? <div className="shrink-0 border-t border-white/10">
+          <Link href="/account" aria-label={`${account.name || account.username || "로그인 계정"} 내 계정`} title="내 계정"
+            className="flex min-h-12 items-center justify-center hover:bg-[var(--bi-rail-active)] hover:text-white focus-visible:outline-2 focus-visible:outline-white">
+            <HiOutlineUser size={18} aria-hidden />
+          </Link>
+          <LogoutButton compact className="flex min-h-12 w-full items-center justify-center hover:bg-[var(--bi-rail-active)] hover:text-white focus-visible:outline-2 focus-visible:outline-white disabled:opacity-50" />
+        </div> : null}
       </nav>
 
       <aside id="workspace-panel" ref={panel} role={mobileOpen ? "dialog" : undefined} aria-modal={mobileOpen ? true : undefined}
@@ -187,7 +223,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
           <span className="truncate font-bold">{brand}</span>
         </div>
         {mobileOpen ? <nav aria-label="전체 메뉴" className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2">
-          {allSections.map(item => {
+          {availableSections.length === 0 ? <p className="m-3 text-[12px] leading-5 text-[var(--bi-muted)]">현재 접근 가능한 프로젝트가 없습니다. 관리자에게 프로젝트 권한을 요청하세요.</p> : availableSections.map(item => {
             const expanded = mobileSection === item.id;
             const contentId = `mobile-section-${item.id}`;
             const triggerId = `${contentId}-trigger`;
@@ -213,16 +249,17 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         </nav> : <>
           <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[var(--bi-border)] px-4">
             <div className="min-w-0 flex-1">
-              <h2 className="m-0 truncate text-[13px] font-bold">{section.title}</h2>
-              <p className="mt-1 mb-0 truncate text-[10px] text-[var(--bi-muted)]">{section.description}</p>
+              <h2 className="m-0 truncate text-[13px] font-bold">{section?.title ?? "접근 가능한 메뉴 없음"}</h2>
+              <p className="mt-1 mb-0 truncate text-[10px] text-[var(--bi-muted)]">{section?.description ?? "관리자에게 프로젝트 권한을 요청하세요."}</p>
             </div>
-            <button type="button" onClick={togglePanel} disabled={!prefs.ready} aria-label="사이드바 접기" title="사이드바 접기"
+            {canCustomizeNavigation ? <button type="button" onClick={togglePanel} disabled={!prefs.ready} aria-label="사이드바 접기" title="사이드바 접기"
               className="hidden h-8 w-8 shrink-0 items-center justify-center rounded text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] md:flex">
               <HiOutlineChevronDoubleLeft size={14} aria-hidden />
-            </button>
+            </button> : null}
           </header>
-          {renderSectionMenu(section.id)}
+          {section ? renderSectionMenu(section.id) : <p className="m-4 text-[12px] leading-5 text-[var(--bi-muted)]">현재 접근 가능한 프로젝트가 없습니다.</p>}
         </>}
+        <SidebarAccount account={account} />
       </aside>
 
       <main id="workspace-content" inert={mobileOpen} className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>

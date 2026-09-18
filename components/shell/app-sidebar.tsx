@@ -34,17 +34,31 @@ const linkCls = (active: boolean) => `${ROW} ${active
   ? "bg-[var(--bi-accent)] font-semibold text-white"
   : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
 
-export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, inline = false, personal = false }: {
+export function AppSidebar({
+  flowProjects,
+  projectOrder,
+  onProjectOrderChange,
+  inline = false,
+  personal = false,
+  canReorder = true,
+  canEditPersonalGroups = true,
+  includeExternalProjects = true,
+  showOverview = true,
+}: {
   flowProjects: FlowNavigationProject[];
   projectOrder: string[];
   onProjectOrderChange: (order: string[]) => void;
   inline?: boolean;
   personal?: boolean;
+  canReorder?: boolean;
+  canEditPersonalGroups?: boolean;
+  includeExternalProjects?: boolean;
+  showOverview?: boolean;
 }) {
   const groupPreferences = usePersonalProjectGroups();
   const groupFor = (slug: string) => personalProjectGroup(slug, groupPreferences.values);
   const pathname = usePathname();
-  const visibleExternal = personal ? [] : externalProjects;
+  const visibleExternal = personal || !includeExternalProjects ? [] : externalProjects;
   const overviewHref = personal ? "/personal" : "/flows";
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
@@ -61,7 +75,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   );
 
   const saveOrder = async (next: string[]) => {
-    if (savingOrderRef.current || next === order) return;
+    if (!canReorder || savingOrderRef.current || next === order) return;
     savingOrderRef.current = true;
     const previous = projectOrder;
     const merged = mergeSidebarGroupOrder(projectOrder, next);
@@ -142,8 +156,8 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   const visibleProjects = useMemo(() => searchSidebarProjects(flowProjects, q), [flowProjects, q]);
 
   const visibleExternalProjects = useMemo(
-    () => filterExternalProjects(personal ? [] : externalProjects, q),
-    [q, personal]
+    () => filterExternalProjects(visibleExternal, q),
+    [q, visibleExternal]
   );
 
   const renderProject = (entry: (typeof visibleProjects)[number]) => {
@@ -159,7 +173,8 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
         count={categories.reduce((n, c) => n + c.charts.length, 0)}
         collapsed={pCollapsed}
         onToggle={() => toggle(project.slug)}
-        movable={!searching && !savingOrder}
+        movable={canReorder && !searching && !savingOrder}
+        showMoveHandle={canReorder}
         dragging={dragging}
         onDragChange={setDragging}
         onMove={moveProject}
@@ -167,7 +182,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
       >
         {!pCollapsed ? (
           <>
-            {personal ? <div className="mx-2 my-2"><ProjectGroupSelect slug={project.slug} title={project.title} /></div> : null}
+            {personal && canEditPersonalGroups ? <div className="mx-2 my-2"><ProjectGroupSelect slug={project.slug} title={project.title} /></div> : null}
             {showMaterials ? <Link href={materialsHref(project.slug)} aria-label={`${project.title} 자료`}
               aria-current={projectActive && active?.view === "materials" ? "page" : undefined}
               className={linkCls(projectActive && active?.view === "materials")}>자료</Link> : null}
@@ -243,7 +258,8 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
         count={project.links.length}
         collapsed={pCollapsed}
         onToggle={() => toggle(project.slug)}
-        movable={!searching && !savingOrder}
+        movable={canReorder && !searching && !savingOrder}
+        showMoveHandle={canReorder}
         dragging={dragging}
         onDragChange={setDragging}
         onMove={moveProject}
@@ -284,7 +300,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
         </label>
       </div>
       <div className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
-        {!searching ? <Link href={overviewHref} aria-current={pathname === overviewHref && searchParams.get("view") !== "components" ? "page" : undefined}
+        {!searching && showOverview ? <Link href={overviewHref} aria-current={pathname === overviewHref && searchParams.get("view") !== "components" ? "page" : undefined}
           className={linkCls(pathname === overviewHref && searchParams.get("view") !== "components")}>전체 프로젝트</Link> : null}
       {searching &&
       visibleProjects.length === 0 &&
@@ -294,11 +310,13 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
         </p>
       ) : null}
 
-      <span id="sidebar-order-help" className="sr-only">
-        손잡이를 드래그하거나 위·아래 방향키로 프로젝트 순서를 바꿀 수 있습니다. 검색 중에는 순서를 변경할 수 없습니다.
-      </span>
-      <span role="status" className="sr-only">{announcement}</span>
-      {orderError ? <p role="alert" className="mx-4 text-[11px] text-[var(--bi-error)]">{orderError}</p> : null}
+      {canReorder ? <>
+        <span id="sidebar-order-help" className="sr-only">
+          손잡이를 드래그하거나 위·아래 방향키로 프로젝트 순서를 바꿀 수 있습니다. 검색 중에는 순서를 변경할 수 없습니다.
+        </span>
+        <span role="status" className="sr-only">{announcement}</span>
+        {orderError ? <p role="alert" className="mx-4 text-[11px] text-[var(--bi-error)]">{orderError}</p> : null}
+      </> : null}
       {personal ? personalProjectGroups.map(group => {
         const entries = order.flatMap(slug => {
           const entry = visibleProjects.find(item => item.project.slug === slug);

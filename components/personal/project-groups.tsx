@@ -4,11 +4,16 @@ import { createContext, useContext, type ReactNode } from "react";
 import { Dropdown } from "@/components/erp/dropdown";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
 import { personalProjectGroup, personalProjectGroups } from "@/lib/personal-projects";
+import type { UiPreferences } from "@/lib/ui-preferences";
 
 const GroupsContext = createContext<ReturnType<typeof useSharedPreferences> | null>(null);
 
-export function PersonalProjectGroupsProvider({ children }: { children: ReactNode }) {
-  const preferences = useSharedPreferences("personal-project-groups");
+export function PersonalProjectGroupsProvider({ children, initial, readOnly = false }: {
+  children: ReactNode;
+  initial?: UiPreferences;
+  readOnly?: boolean;
+}) {
+  const preferences = useSharedPreferences("personal-project-groups", initial, undefined, { readOnly });
   return <GroupsContext.Provider value={preferences}>
     {children}
     {preferences.error ? <p role="alert" className="fixed right-3 bottom-14 z-[60] rounded border border-[var(--bi-error)] bg-[var(--bi-card-bg)] px-3 py-2 text-[12px] text-[var(--bi-error)]">{preferences.error}</p> : null}

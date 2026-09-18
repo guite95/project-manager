@@ -26,8 +26,8 @@ export function PasswordForm() {
   }
   return <form className="flex w-full max-w-md flex-col gap-4" onSubmit={submit}>
     <Field label="현재 비밀번호" autoComplete="current-password" type="password" required value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} disabled={pending} />
-    <Field label="새 비밀번호 (12~128자)" autoComplete="new-password" type="password" required minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} disabled={pending} />
-    <Field label="새 비밀번호 확인" autoComplete="new-password" type="password" required minLength={12} maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={pending} />
+    <Field label="새 비밀번호 (최대 128자)" autoComplete="new-password" type="password" required maxLength={128} value={password} onChange={event => setPassword(event.target.value)} disabled={pending} />
+    <Field label="새 비밀번호 확인" autoComplete="new-password" type="password" required maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={pending} />
     <Button type="submit" loading={pending}>비밀번호 변경</Button>
     <Feedback error={error} message={message} />
   </form>;

@@ -117,7 +117,7 @@ export function AccessManager() {
   const identityForm = <form className="grid gap-4 sm:grid-cols-2" onSubmit={submitIdentity}>
     <Field label="아이디" autoComplete="off" required pattern="[a-z0-9._-]{3,64}" minLength={3} maxLength={64} title="영문 소문자, 숫자, 점, 밑줄, 대시 3~64자" value={username} onChange={event => setUsername(event.target.value)} disabled={pending} />
     <Field label="이름" required maxLength={80} value={name} onChange={event => setName(event.target.value)} disabled={pending} />
-    <Field label={data?.actor.bootstrap ? "비밀번호 (12~128자)" : "초기 비밀번호 (12~128자)"} required type="password" autoComplete="new-password" minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} disabled={pending} />
+    <Field label={data?.actor.bootstrap ? "비밀번호 (최대 128자)" : "초기 비밀번호 (최대 128자)"} required type="password" autoComplete="new-password" maxLength={128} value={password} onChange={event => setPassword(event.target.value)} disabled={pending} />
     {!data?.actor.bootstrap && <Dropdown ariaLabel="발급 계정 역할" value={role} options={data?.actor.role === "OWNER" ? ownerOptions : memberOptions} onChange={setRole} disabled={pending} />}
     <div className="flex items-end"><Button type="submit" loading={pending}>{data?.actor.bootstrap ? "소유자 계정 등록" : "계정 생성"}</Button></div>
   </form>;

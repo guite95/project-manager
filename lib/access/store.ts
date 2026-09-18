@@ -43,7 +43,7 @@ export async function revokeSession(token: string) {
   if (token.startsWith('v2.')) await prisma.accessSession.deleteMany({where:{tokenHash:tokenHash(token.slice(3))}});
 }
 export function validatePassword(value: unknown): string {
-  if (typeof value !== 'string' || value.length < 12 || value.length > 128) throw new AccessError('비밀번호는 12~128자로 입력하세요.');
+  if (typeof value !== 'string' || !value || value.length > 128) throw new AccessError('비밀번호는 1~128자로 입력하세요.');
   return value;
 }
 function identity(body: Record<string,unknown>) {
