@@ -96,32 +96,29 @@ export async function bootstrapOwner(actor: Actor, body: Record<string,unknown>)
 }
 export async function accessOverview(actor: Actor) {
   if (!isAdmin(actor)) throw new AccessError('관리자 권한이 필요합니다.',403);
-  const [users,projects,invites,shares] = await Promise.all([
+  const [users,projects,shares] = await Promise.all([
     prisma.accessUser.findMany({where:actor.role==='OWNER'?undefined:{role:{not:'OWNER'}},select:userSelect,orderBy:{createdAt:'asc'}}),
     readFlowCatalog(),
-    prisma.accessInvite.findMany({where:{expiresAt:{gt:new Date()}},select:{id:true,username:true,name:true,role:true,expiresAt:true}}),
     prisma.accessShare.findMany({where:{expiresAt:{gt:new Date()}},select:{id:true,projectSlug:true,chartSlug:true,expiresAt:true}}),
   ]);
   return {actor,users,projects:projects.filter(p=>!isPersonalProject(p.slug)).map(p=>({slug:p.slug,title:p.title,charts:p.categories.flatMap(c=>c.charts.flatMap(d=>{
     return d.erdDomain ? [] : [{slug:d.slug,title:d.title}];
-  }))})),invites,shares:shares.filter(s=>!isPersonalProject(s.projectSlug))};
+  }))})),shares:shares.filter(s=>!isPersonalProject(s.projectSlug))};
 }
 export async function manageAccess(actor: Actor, body: Record<string,unknown>): Promise<{path:string}|null> {
   if (!isAdmin(actor) || actor.bootstrap) throw new AccessError('계정 등록 후 관리자 권한으로 이용하세요.',403);
-  if (body.action === 'invite') {
+  if (body.action === 'createUser') {
     const fields=identity(body);
     const role=body.role;
     if (!['MEMBER','ADMIN'].includes(String(role)) || role==='ADMIN' && actor.role!=='OWNER') throw new AccessError('부여할 수 없는 역할입니다.',403);
-    const token=newToken();
+    const passwordHash=await hashPassword(validatePassword(body.password));
     await prisma.$transaction(async tx=>{
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`access-invite:${fields.username}`}))`;
       if(await tx.accessUser.findUnique({where:{username:fields.username}})) throw new AccessError('이미 사용 중인 계정 ID입니다.',409);
-      const previous=await tx.accessInvite.findUnique({where:{username:fields.username}});
-      if(previous?.role==='ADMIN' && actor.role!=='OWNER') throw new AccessError('소유자만 관리자 초대를 변경할 수 있습니다.',403);
-      await tx.accessInvite.upsert({where:{username:fields.username},create:{id:randomUUID(),...fields,role:role as string,tokenHash:tokenHash(token),expiresAt:new Date(Date.now()+48*3600_000)},update:{...fields,role:role as string,tokenHash:tokenHash(token),expiresAt:new Date(Date.now()+48*3600_000)}});
-      await audit(tx,actor,'INVITE_CREATED',fields.username);
+      const user=await tx.accessUser.create({data:{id:randomUUID(),...fields,role:String(role),passwordHash,active:true}});
+      await audit(tx,actor,'USER_CREATED',JSON.stringify({id:user.id,username:user.username,role:user.role}));
     });
-    return {path:`/invite/${token}`};
+    // 관리자 자신의 세션을 유지하며 새 계정의 비밀번호/해시를 응답하지 않는다.
+    return null;
   }
   if (body.action === 'updateUser') {
     const id=String(body.id??'');
@@ -141,17 +138,6 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
       await audit(tx,actor,'USER_ACCESS_CHANGED',JSON.stringify({id,role:body.role,active:body.active,memberships}));
     });
     return null;
-  }
-  if(body.action==='revokeInvite') {
-    await prisma.$transaction(async tx=>{
-      const invite=await tx.accessInvite.findUnique({where:{id:String(body.id)}});
-      if(invite?.role==='ADMIN' && actor.role!=='OWNER') throw new AccessError('소유자 권한이 필요합니다.',403);
-      if(invite) {
-        const removed=await tx.accessInvite.deleteMany({where:{id:invite.id,tokenHash:invite.tokenHash}});
-        if(removed.count!==1) throw new AccessError('초대가 변경되었습니다. 새로고침하세요.',409);
-      }
-      await audit(tx,actor,'INVITE_REVOKED',String(body.id));
-    }); return null;
   }
   if(body.action==='share') {
     const projectSlug=String(body.projectSlug??''),chartSlug=String(body.chartSlug??'');
@@ -173,22 +159,6 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
     });return null;
   }
   throw new AccessError('지원하지 않는 요청입니다.');
-}
-export async function acceptInvite(token: string, password: unknown) {
-  if (!tokenValid(token)) throw new AccessError('유효하지 않은 초대입니다.',404);
-  await throttle('invite:global',100);
-  const passwordHash=await hashPassword(validatePassword(password));
-  const id=randomUUID();
-  await prisma.$transaction(async tx=>{
-    const invite=await tx.accessInvite.findUnique({where:{tokenHash:tokenHash(token)}});
-    if(!invite || invite.expiresAt<=new Date()) throw new AccessError('초대가 만료되었거나 회수되었습니다.',410);
-    // DELETE의 행 수로 동시 수락을 방지한다. 실패 시 계정 생성까지 롤백된다.
-    const removed=await tx.accessInvite.deleteMany({where:{id:invite.id,tokenHash:invite.tokenHash}});
-    if(removed.count!==1) throw new AccessError('이미 사용한 초대입니다.',409);
-    await tx.accessUser.create({data:{id,username:invite.username,name:invite.name,role:invite.role,passwordHash}});
-    await audit(tx,{id,role:invite.role,memberships:[]},'INVITE_ACCEPTED',invite.id);
-  });
-  return issueSession(id);
 }
 export async function changePassword(actor: Actor, current: unknown, password: unknown) {
   if(actor.bootstrap) throw new AccessError('소유자 계정을 먼저 등록하세요.');

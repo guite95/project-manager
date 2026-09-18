@@ -46,9 +46,17 @@ try {
   const login=await check('/api/login',204,{method:'POST',body:{username:users[2].id,password:'local-test-password-only'}});
   assert.match(login.headers.get('set-cookie'),/HttpOnly/i);assert.match(login.headers.get('set-cookie'),/Secure/i);checks+=2;
   await check('/api/login',401,{method:'POST',body:{username:'',password:'local-test-password-only'}});
-  const invited=await (await check('/api/access',200,{user:0,method:'POST',body:{action:'invite',username:`${prefix}-invited`,name:'Invited',role:'MEMBER'}})).json();
-  await check('/api/invite',204,{method:'POST',body:{token:invited.path.split('/').at(-1),password:'local-test-password-only'}});
-  await check('/api/invite',410,{method:'POST',body:{token:invited.path.split('/').at(-1),password:'local-test-password-only'}});
+  const issued=await check('/api/access',204,{user:0,method:'POST',body:{action:'createUser',username:`${prefix}-issued`,name:'Issued',role:'MEMBER',password:'local-issued-password'}});
+  assert.equal(issued.headers.get('set-cookie'),null);checks++;
+  await check('/api/login',204,{method:'POST',body:{username:`${prefix}-issued`,password:'local-issued-password'}});
+  await check('/api/access',409,{user:0,method:'POST',body:{action:'createUser',username:`${prefix}-issued`,name:'Duplicate',role:'MEMBER',password:'local-issued-password'}});
+  await check('/api/access',400,{user:0,method:'POST',body:{action:'invite',username:`${prefix}-legacy`,name:'Legacy',role:'MEMBER'}});
+  const legacyToken='B'.repeat(43);
+  await prisma.accessInvite.create({data:{id:prefix,username:`${prefix}-legacy`,name:'Legacy',role:'MEMBER',tokenHash:tokenHash(legacyToken),expiresAt:new Date(Date.now()+60000)}});
+  await check('/api/invite',410,{method:'POST',body:{token:legacyToken,password:'local-test-password-only'}});
+  const retired=await (await check(`/invite/${legacyToken}`,200)).text();
+  assert.ok(retired.includes('초대 링크는 더 이상 사용하지 않습니다'));checks++;
+  assert.equal(await prisma.accessUser.count({where:{username:`${prefix}-legacy`}}),0);checks++;
   await check('/flows',200,{user:2});
   for(const endpoint of ['/api/flows/navigation','/api/flows']) {
     const list=await (await check(endpoint,200,{user:2})).json();
@@ -90,13 +98,13 @@ try {
 } finally {
   if(child && child.exitCode===null) {child.kill('SIGTERM');await once(child,'exit');}
   if(accountTableRenamed) await prisma.$executeRawUnsafe('ALTER TABLE access_user_unavailable_test RENAME TO access_user');
-  const invited=await prisma.accessUser.findUnique({where:{username:`${prefix}-invited`},select:{id:true}});
+  const issued=await prisma.accessUser.findUnique({where:{username:`${prefix}-issued`},select:{id:true}});
   await prisma.accessShare.deleteMany({where:{projectSlug:{in:[project,other]}}});
   await prisma.accessUser.deleteMany({where:{id:{in:users.map(u=>u.id)}}});
-  await prisma.accessUser.deleteMany({where:{username:`${prefix}-invited`}});
-  await prisma.accessInvite.deleteMany({where:{username:`${prefix}-invited`}});
-  await prisma.accessAudit.deleteMany({where:{actorId:{in:[...users.map(u=>u.id),...(invited?[invited.id]:[])]}}});
-  await prisma.accessThrottle.deleteMany({where:{key:{in:[`login:${users[2].id}`,'login:bootstrap','login:global','invite:global'].map(tokenHash)}}});
+  await prisma.accessUser.deleteMany({where:{username:`${prefix}-issued`}});
+  await prisma.accessInvite.deleteMany({where:{id:prefix}});
+  await prisma.accessAudit.deleteMany({where:{actorId:{in:[...users.map(u=>u.id),...(issued?[issued.id]:[])]}}});
+  await prisma.accessThrottle.deleteMany({where:{key:{in:[`login:${users[2].id}`,`login:${prefix}-issued`,'login:bootstrap','login:global'].map(tokenHash)}}});
   await prisma.projectNote.deleteMany({where:{id:{in:[project,other]}}});
   await prisma.flowDocument.deleteMany({where:{projectSlug:{in:[project,other]}}});
   await prisma.flowCategory.deleteMany({where:{projectSlug:{in:[project,other]}}});

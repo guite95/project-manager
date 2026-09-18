@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/erp/button";
 import { Feedback, Field, postAccess } from "./form";
 
-export function PasswordForm({ token }: { token?: string }) {
-  const router = useRouter();
+export function PasswordForm() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -20,18 +18,17 @@ export function PasswordForm({ token }: { token?: string }) {
     if (password !== confirmation) { setError("새 비밀번호가 일치하지 않습니다."); return; }
     setPending(true);
     try {
-      await postAccess(token ? "/api/invite" : "/api/account/password", token ? { token, password } : { currentPassword, password });
+      await postAccess("/api/account/password", { currentPassword, password });
       setCurrentPassword(""); setPassword(""); setConfirmation("");
-      if (token) { router.replace("/flows"); router.refresh(); }
-      else setMessage("비밀번호를 변경했습니다. 다른 기기의 세션은 종료되었습니다.");
+      setMessage("비밀번호를 변경했습니다. 다른 기기의 세션은 종료되었습니다.");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "서버에 연결하지 못했습니다."); }
     finally { setPending(false); }
   }
   return <form className="flex w-full max-w-md flex-col gap-4" onSubmit={submit}>
-    {!token && <Field label="현재 비밀번호" autoComplete="current-password" type="password" required value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} disabled={pending} />}
+    <Field label="현재 비밀번호" autoComplete="current-password" type="password" required value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} disabled={pending} />
     <Field label="새 비밀번호 (12~128자)" autoComplete="new-password" type="password" required minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} disabled={pending} />
     <Field label="새 비밀번호 확인" autoComplete="new-password" type="password" required minLength={12} maxLength={128} value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={pending} />
-    <Button type="submit" loading={pending}>{token ? "초대 수락 및 로그인" : "비밀번호 변경"}</Button>
+    <Button type="submit" loading={pending}>비밀번호 변경</Button>
     <Feedback error={error} message={message} />
   </form>;
 }

@@ -14,7 +14,6 @@ type Project = { slug: string; title: string; charts: { slug: string; title: str
 type AccessData = {
   actor: { id: string; username: string; name: string; role: Role; bootstrap: boolean };
   users: User[]; projects: Project[];
-  invites: { id: string; username: string; name: string; role: Role; expiresAt: string }[];
   shares: { id: string; projectSlug: string; chartSlug: string; expiresAt: string }[];
 };
 const roleLabels = { OWNER: "소유자", ADMIN: "관리자", MEMBER: "멤버" };
@@ -79,7 +78,7 @@ export function AccessManager() {
     setPending(true); setError(null); setMessage(null);
     try {
       const result = await postAccess("/api/access", body);
-      if (result.path) setCreatedLink({ label: result.path.startsWith("/invite/") ? "초대 링크" : "읽기 전용 공유 링크", url: new URL(result.path, window.location.origin).href });
+      if (result.path) setCreatedLink({ label: "읽기 전용 공유 링크", url: new URL(result.path, window.location.origin).href });
       else setCreatedLink(null);
       setMessage("저장했습니다.");
       try { await load(); router.refresh(); }
@@ -97,14 +96,15 @@ export function AccessManager() {
   }
   async function submitIdentity(event: FormEvent) {
     event.preventDefault();
-    const success = await save(data?.actor.bootstrap ? { action: "bootstrap", username, name, password } : { action: "invite", username, name, role });
-    if (success) { setUsername(""); setName(""); setPassword(""); }
+    const success = await save(data?.actor.bootstrap ? { action: "bootstrap", username, name, password } : { action: "createUser", username, name, role, password });
+    if (success) { setUsername(""); setName(""); setPassword(""); if (!data?.actor.bootstrap) setMessage("계정을 생성했습니다. 입력한 아이디와 초기 비밀번호를 전달하고, 아래에서 프로젝트 권한을 지정하세요."); }
   }
   const identityForm = <form className="grid gap-4 sm:grid-cols-2" onSubmit={submitIdentity}>
     <Field label="아이디" autoComplete="off" required pattern="[a-z0-9._-]{3,64}" minLength={3} maxLength={64} title="영문 소문자, 숫자, 점, 밑줄, 대시 3~64자" value={username} onChange={event => setUsername(event.target.value)} disabled={pending} />
-    <Field label="이름" required maxLength={120} value={name} onChange={event => setName(event.target.value)} disabled={pending} />
-    {data?.actor.bootstrap ? <Field label="비밀번호 (12~128자)" required type="password" autoComplete="new-password" minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} disabled={pending} /> : <Dropdown ariaLabel="초대 계정 역할" value={role} options={data?.actor.role === "OWNER" ? ownerOptions : memberOptions} onChange={setRole} disabled={pending} />}
-    <div className="flex items-end"><Button type="submit" loading={pending}>{data?.actor.bootstrap ? "소유자 계정 등록" : "초대 링크 생성"}</Button></div>
+    <Field label="이름" required maxLength={80} value={name} onChange={event => setName(event.target.value)} disabled={pending} />
+    <Field label={data?.actor.bootstrap ? "비밀번호 (12~128자)" : "초기 비밀번호 (12~128자)"} required type="password" autoComplete="new-password" minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} disabled={pending} />
+    {!data?.actor.bootstrap && <Dropdown ariaLabel="발급 계정 역할" value={role} options={data?.actor.role === "OWNER" ? ownerOptions : memberOptions} onChange={setRole} disabled={pending} />}
+    <div className="flex items-end"><Button type="submit" loading={pending}>{data?.actor.bootstrap ? "소유자 계정 등록" : "계정 생성"}</Button></div>
   </form>;
   if (loading) return <p role="status" className="text-[13px] text-[var(--bi-muted)]">계정 정보를 불러오는 중…</p>;
   if (!data) return <div className="space-y-4"><Feedback error={error} /><Button onClick={() => { setLoading(true); setError(null); void load().catch(cause => setError(cause instanceof Error ? cause.message : "다시 시도하세요.")).finally(() => setLoading(false)); }}>다시 시도</Button><Link href="/account" className="ml-4 text-[12px] text-[var(--bi-accent)]">내 비밀번호 변경</Link></div>;
@@ -114,9 +114,8 @@ export function AccessManager() {
     <Feedback error={error} message={message} />
     {createdLink && <div className="space-y-2 rounded border border-[var(--bi-accent)] p-4"><p className="text-[13px] font-semibold">{createdLink.label}</p><p className="text-[12px] text-[var(--bi-muted)]">이 링크는 생성 직후에만 표시됩니다. 복사하여 직접 전달하세요.</p><input aria-label={createdLink.label} className="w-full rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] p-2 text-[12px]" readOnly value={createdLink.url} onFocus={event => event.target.select()} /><Button variant="secondary" onClick={() => { void copyLink(); }}>링크 복사</Button></div>}
     {data.actor.bootstrap ? <Section title="최초 소유자 등록"><p className="text-[12px] text-[var(--bi-muted)]">소유자 등록 후 기존 공통 비밀번호 로그인은 종료됩니다.</p>{identityForm}</Section> : <>
-      <Section title="계정 초대"><p className="text-[12px] text-[var(--bi-muted)]">초대 링크는 48시간 동안 유효합니다. 초대 수락 후 계정 목록에서 프로젝트 권한을 지정하세요.</p>{identityForm}</Section>
+      <Section title="계정 발급"><p className="text-[12px] text-[var(--bi-muted)]">아이디와 초기 비밀번호를 정해 계정을 바로 생성합니다. 생성 후 아래에서 프로젝트 권한을 지정하고 로그인 정보를 전달하세요. 사용자는 내 계정에서 비밀번호를 변경할 수 있습니다.</p>{identityForm}</Section>
       <Section title="계정 및 프로젝트 권한">{data.users.length ? data.users.map(user => <UserEditor key={`${user.id}:${JSON.stringify(user)}`} user={user} data={data} pending={pending} save={save} />) : <p className="text-[12px] text-[var(--bi-muted)]">등록된 계정이 없습니다.</p>}</Section>
-      <Section title="발급한 초대">{data.invites.length ? data.invites.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--bi-border)] pb-3 text-[12px]"><p>{invite.name} (@{invite.username}) · {roleLabels[invite.role]}<span className="block text-[var(--bi-muted)]">만료: {expiry(invite.expiresAt)}</span></p>{(data.actor.role === "OWNER" || invite.role !== "ADMIN") && <Button variant="destructive" disabled={pending} onClick={() => { void save({ action: "revokeInvite", id: invite.id }); }}>초대 회수</Button>}</div>) : <p className="text-[12px] text-[var(--bi-muted)]">발급한 초대가 없습니다.</p>}</Section>
       <Section title="문서 읽기 전용 공유"><p className="text-[12px] text-[var(--bi-muted)]">링크를 가진 사람은 로그인 없이 선택한 회사 문서를 열람할 수 있습니다. 개인 프로젝트와 TNS ERD는 공유할 수 없습니다.</p>
         <form className="grid items-end gap-4 sm:grid-cols-2" onSubmit={event => { event.preventDefault(); void save({ action: "share", projectSlug, chartSlug, days: Number(days) }); }}>
           <Dropdown ariaLabel="공유 프로젝트" value={projectSlug} options={data.projects.map(project => ({ value: project.slug, label: project.title }))} onChange={value => { setProjectSlug(value); setChartSlug(""); }} disabled={pending} />
