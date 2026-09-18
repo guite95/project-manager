@@ -82,6 +82,7 @@ model FlowProject {
   intro      String?
   position   Int
   categories FlowCategory[]
+  memberships AccessMembership[]
 
   @@map("flow_project")
 }
@@ -107,6 +108,8 @@ model FlowDocument {
   revision     Int @default(1)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
   category     FlowCategory @relation(fields: [projectSlug, categorySlug], references: [projectSlug, slug], onDelete: Restrict)
+
+  shares AccessShare[]
 
   @@id([projectSlug, slug])
   @@index([projectSlug, categorySlug, position])
@@ -253,4 +256,67 @@ model AiOpsDocumentEmbedding {
   @@id([documentId, profileId])
   @@index([profileId, contentHash], map: "ai_ops_document_embedding_cache_idx")
   @@map("ai_ops_document_embedding")
+}
+
+/// OWNER는 최초 등록된 개인 데이터 소유자다. 역할 값은 SQL CHECK로 제한한다.
+model AccessUser {
+  id String @id
+  username String @unique
+  name String
+  passwordHash String @map("password_hash")
+  role String
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  sessions AccessSession[]
+  memberships AccessMembership[]
+  @@map("access_user")
+}
+model AccessSession {
+  tokenHash String @id @map("token_hash")
+  userId String @map("user_id")
+  user AccessUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  @@index([userId])
+  @@map("access_session")
+}
+model AccessMembership {
+  userId String @map("user_id")
+  projectSlug String @map("project_slug")
+  role String
+  user AccessUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project FlowProject @relation(fields: [projectSlug], references: [slug], onDelete: Cascade)
+  @@id([userId, projectSlug])
+  @@map("access_membership")
+}
+model AccessInvite {
+  id String @id
+  tokenHash String @unique @map("token_hash")
+  username String @unique
+  name String
+  role String
+  expiresAt DateTime @map("expires_at")
+  @@map("access_invite")
+}
+model AccessShare {
+  id String @id
+  tokenHash String @unique @map("token_hash")
+  projectSlug String @map("project_slug")
+  chartSlug String @map("chart_slug")
+  expiresAt DateTime @map("expires_at")
+  document FlowDocument @relation(fields: [projectSlug, chartSlug], references: [projectSlug, slug], onDelete: Cascade)
+  @@map("access_share")
+}
+model AccessAudit {
+  id String @id
+  actorId String @map("actor_id")
+  action String
+  target String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@map("access_audit")
+}
+model AccessThrottle {
+  key String @id
+  attempts Int
+  expiresAt DateTime @map("expires_at")
+  @@map("access_throttle")
 }

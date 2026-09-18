@@ -1,46 +1,15 @@
-import { NextResponse } from "next/server";
-import { verifyPassword } from "@/lib/password";
-import {
-  createSessionToken,
-  SESSION_COOKIE_NAME,
-  SESSION_MAX_AGE_SECONDS,
-} from "@/lib/session";
-
+import { createSessionToken, SESSION_MAX_AGE_SECONDS } from '@/lib/session';
+import { AccessError, loginAccount } from '@/lib/access/store';
+import { accessResponse, jsonBody, sessionResponse } from '@/lib/access/http';
 export async function POST(request: Request) {
-  const hash = process.env.APP_PASSWORD_HASH;
-  const secret = process.env.SESSION_SECRET;
-  if (!hash || !secret) {
-    return NextResponse.json(
-      { message: "서버에 비밀번호가 설정되지 않았습니다." },
-      { status: 500 },
-    );
-  }
-
-  let password = "";
-  try {
-    const body = (await request.json()) as { password?: unknown };
-    if (typeof body.password === "string") password = body.password;
-  } catch {
-    // 본문이 JSON 이 아니면 빈 비밀번호와 같게 다룬다.
-  }
-
-  if (!(await verifyPassword(password, hash))) {
-    return NextResponse.json(
-      { message: "비밀번호가 맞지 않습니다." },
-      { status: 401 },
-    );
-  }
-
-  const expiresAt = Date.now() + SESSION_MAX_AGE_SECONDS * 1000;
-  const response = new NextResponse(null, { status: 204 });
-  response.cookies.set({
-    name: SESSION_COOKIE_NAME,
-    value: await createSessionToken(secret, expiresAt),
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+  return accessResponse(async()=>{
+    const body=await jsonBody(request);
+    const username=typeof body.username==='string'?body.username.trim().toLowerCase():'';
+    if(username.length>64 || typeof body.password!=='string' || !body.password || body.password.length>128) throw new AccessError('계정 또는 비밀번호를 확인하세요.',400);
+    const token=await loginAccount(username,body.password);
+    if(token) return sessionResponse(token);
+    const secret=process.env.SESSION_SECRET;
+    if(!secret) throw new AccessError('소유자 등록용 세션 설정이 필요합니다.',503);
+    return sessionResponse(await createSessionToken(secret,Date.now()+SESSION_MAX_AGE_SECONDS*1000));
   });
-  return response;
 }

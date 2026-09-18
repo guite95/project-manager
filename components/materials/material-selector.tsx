@@ -1,5 +1,7 @@
 "use client";
 
+import { useAccess } from "@/components/access/context";
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/erp/badge';
@@ -13,6 +15,7 @@ export const materialFormatLabel = (format: string) => format === 'slides' ? '�
 export function MaterialSelector({ project, projectTitle, materials, selectedSlug = '', onAdd }: {
   project: string; projectTitle: string; materials: MaterialSummary[]; selectedSlug?: string; onAdd?: () => void;
 }) {
+  const { canWrite } = useAccess();
   const router = useRouter();
   const index = materials.findIndex(item => item.slug === selectedSlug);
   const selected = materials[index];
@@ -31,7 +34,7 @@ export function MaterialSelector({ project, projectTitle, materials, selectedSlu
         onChange={slug => router.push(materialsHref(project, slug))} />
       <span className="shrink-0 text-[11px] tabular-nums text-[var(--bi-muted)]">{selected ? `${index + 1} / ${materials.length}` : `${materials.length}개`}</span>
     </div>
-    <Button size="sm" variant="secondary" onClick={onAdd ?? (() => router.push(`${materialsHref(project)}?add=1`))}>자료 추가</Button>
+    {canWrite(project) && <Button size="sm" variant="secondary" onClick={onAdd ?? (() => router.push(`${materialsHref(project)}?add=1`))}>자료 추가</Button>}
     {selected ? <MaterialDeleteButton key={selected.slug} project={project} slug={selected.slug} title={selected.title} returnToList /> : null}
   </div>;
 }

@@ -7,12 +7,15 @@ import { Button } from '@/components/erp/button';
 import { DateField, TextField } from '@/components/erp/form-field';
 import { editMeetingOutcomes, type MeetingOutcomes as Outcomes } from '@/lib/meeting-edit';
 import { MeetingOutcomesView } from './meeting-detail';
+import { useAccess } from '@/components/access/context';
 
 const inputClass = 'mt-1 min-h-20 w-full rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-3 text-[13px] outline-[var(--bi-accent)]';
 
 export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: {
   projectSlug: string; initialChart: FlowChart; initialRevision: number;
 }) {
+  const { canWrite } = useAccess();
+  const writable = canWrite(projectSlug);
   const router = useRouter();
   const [record, setRecord] = useState({ chart: initialChart, revision: initialRevision });
   const [draft, setDraft] = useState<Outcomes | null>(null);
@@ -26,17 +29,17 @@ export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: 
     JSON.stringify(draft) !== JSON.stringify({ decisions: content.decisions, actionItems: content.actionItems });
 
   useEffect(() => {
-    if (!dirty) return;
+    if (!writable || !dirty) return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
+  }, [dirty, writable]);
 
   if (content?.kind !== 'meeting') return null;
   const path = `/api/flows/${encodeURIComponent(projectSlug)}/${encodeURIComponent(record.chart.slug)}`;
 
   const save = async () => {
-    if (!draft || busyRef.current) return;
+    if (!writable || !draft || busyRef.current) return;
     setError(''); setMessage(''); setConflict(false);
     let next: FlowChart;
     try { next = editMeetingOutcomes(record.chart, draft); }
@@ -80,12 +83,12 @@ export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: 
   };
 
   return <div className="space-y-4">
-    {!draft ? <div className="flex justify-end"><Button variant="secondary" className="min-h-10" onClick={() => {
+    {writable && !draft ? <div className="flex justify-end"><Button variant="secondary" className="min-h-10" onClick={() => {
       setDraft(structuredClone({ decisions: content.decisions, actionItems: content.actionItems }));
       setError(''); setMessage(''); setConflict(false);
     }}>결정 사항·태스크 편집</Button></div> : null}
     {message ? <p role="status" className="text-[12px] text-[var(--bi-success)]">{message}</p> : null}
-    {draft ? <form onSubmit={event => { event.preventDefault(); void save(); }} className="space-y-4">
+    {writable && draft ? <form onSubmit={event => { event.preventDefault(); void save(); }} className="space-y-4">
       <fieldset disabled={busy} className="space-y-4">
         <legend className="sr-only">결정 사항과 태스크 편집</legend>
         <section className="rounded-[3px] border border-[var(--bi-border)] p-5">

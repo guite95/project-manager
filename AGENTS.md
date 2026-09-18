@@ -13,6 +13,10 @@
 
 ## Database changes and security
 
+- Account access uses `access_user/session/membership/invite/share/audit/throttle`. OWNER alone can access personal projects, AI activity and owner workspace data; ADMIN manages company projects; MEMBER receives VIEWER/EDITOR per project. Delete is separate from editor rights and requires OWNER/ADMIN. Never restore the development login bypass.
+- `proxy.ts` enforces default-owner route policy and same-origin mutations; normalize URL-encoded path segments before evaluating IDs. Catalog APIs and workspace navigation must filter by the current DB-backed actor. Never trust client role/identity headers. Account APIs additionally validate their own actor.
+- Legacy signed sessions and the shared password are accepted only before the first OWNER is registered. Session issuance locks the user row and compares the verified password hash so password/permission revocation cannot race with login. Invitations are single-use; tokens are stored only as hashes. Public share links resolve exactly one non-personal document, never the whole project or TNS ERD snapshot. See `docs/account-access.md` for rollout and verification.
+
 - Read-only inspection precedes live DB changes. Back up before migration; applied migrations remain immutable. Use forward migrations and `migrate deploy` for the shared server DB.
 - Never run reset, `migrate dev`, `db push`, or integration tests against the shared DB. Tests are limited to local `localhost:5432/project_management_test` and guarded in `lib/test-database.ts`.
 - Keep PostgreSQL private/loopback-only. Use personal SSH authentication and strict known-host verification. Do not expose a public DB port or share private keys.

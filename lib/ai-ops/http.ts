@@ -1,20 +1,14 @@
-import { cookies } from "next/headers";
+import { currentActor } from '../access/http';
 import { NextResponse } from "next/server";
-import { isSessionTokenValid, SESSION_COOKIE_NAME } from "@/lib/session";
 import { AiOpsInputError, createPool } from "./store.mjs";
 const globalPool = globalThis as typeof globalThis & {
   aiOpsPool?: ReturnType<typeof createPool>;
 };
 export const pool = (globalPool.aiOpsPool ??= createPool());
 export async function aiOpsRead(action: () => Promise<unknown>) {
-  const secret = process.env.SESSION_SECRET;
-  const token = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  const actor = await currentActor();
   const headers = { "Cache-Control": "private, no-store" };
-  if (
-    !secret ||
-    !token ||
-    !(await isSessionTokenValid(token, secret, Date.now()))
-  )
+  if (actor?.role !== 'OWNER')
     return NextResponse.json(
       { error: "로그인이 필요합니다." },
       { status: 401, headers },

@@ -91,11 +91,11 @@ export async function deleteNote(id: string): Promise<void> {
 }
 
 /** 넘어온 순서대로 0부터 다시 매긴다. */
-export async function reorderNotes(ids: string[]): Promise<void> {
+export async function reorderNotes(ids: string[], projectSlug?: string): Promise<void> {
   await prisma.$transaction(
     ids.map((id, index) =>
       prisma.projectNote.updateMany({
-        where: { id },
+        where: { id, ...(projectSlug ? { projectSlug } : {}) },
         data: { position: index },
       }),
     ),

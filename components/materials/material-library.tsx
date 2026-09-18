@@ -1,5 +1,7 @@
 "use client";
 
+import { useAccess } from "@/components/access/context";
+
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/erp/button';
@@ -16,6 +18,8 @@ import { materialsHref, MAX_MATERIAL_BYTES, type MaterialSummary } from '@/lib/m
 const inputClass = 'min-h-10 w-full rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 text-[13px]';
 
 export function MaterialLibrary({ project, projectTitle, materials }: { project: string; projectTitle: string; materials: MaterialSummary[] }) {
+  const { canWrite, canDelete } = useAccess();
+  const writable = canWrite(project);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [adding, setAdding] = useState(!materials.length || searchParams.get('add') === '1');
@@ -29,7 +33,7 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
   const visible = materials.filter(m => hangulIncludes(`${m.title} ${m.fileName ?? ''} ${m.format} ${m.description ?? ''}`, query));
   async function upload(event: FormEvent) {
     event.preventDefault();
-    if (submitting.current || !selected) return;
+    if (!writable || submitting.current || !selected) return;
     submitting.current = true; setBusy(true); setError('');
     try {
       const form = new FormData(); form.set('file', selected); form.set('title', title.trim());
@@ -43,7 +47,7 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
   return <>
     <MaterialSelector project={project} projectTitle={projectTitle} materials={materials} onAdd={() => setAdding(true)} />
     <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-6">
-    {adding ? <form onSubmit={upload} className="mb-7 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 md:p-5">
+    {writable && adding ? <form onSubmit={upload} className="mb-7 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 md:p-5">
       <h2 className="mb-1 text-[15px] font-semibold">자료 추가</h2>
       <p id="material-file-help" className="mb-4 text-[12px] text-[var(--bi-muted)]">PDF·HTML 파일을 추가하면 형식에 맞게 미리보기를 제공합니다. 파일당 최대 10MB, HTML은 UTF-8 형식입니다.</p>
       <FormGrid>
@@ -71,13 +75,13 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
     </div>
     <div className="overflow-x-auto rounded border border-[var(--bi-border)]">
       <DataTable caption="프로젝트 자료 목록" rows={visible} rowKey={row => row.slug}
-        emptyMessage={materials.length ? '검색 결과가 없습니다.' : '아직 등록된 자료가 없습니다. 자료 추가에서 PDF 또는 HTML 파일을 선택해 주세요.'}
+        emptyMessage={materials.length ? '검색 결과가 없습니다.' : writable ? '아직 등록된 자료가 없습니다. 자료 추가에서 PDF 또는 HTML 파일을 선택해 주세요.' : '아직 등록된 자료가 없습니다.'}
         columns={[
           { key: 'format', header: '형식', render: row => <Badge variant="primary">{materialFormatLabel(row.format)}</Badge> },
           { key: 'title', header: '자료', render: row => <Link href={materialsHref(project, row.slug)} className="font-semibold text-[var(--bi-accent)] hover:underline">{row.title}</Link> },
           { key: 'file', header: '파일명', render: row => row.fileName ?? '가져온 자료' },
           { key: 'updated', header: '등록·수정일', render: row => row.updatedAt.slice(0, 10) },
-          { key: 'actions', header: '관리', render: row => <MaterialDeleteButton project={project} slug={row.slug} title={row.title} /> },
+          ...(canDelete(project) ? [{ key: 'actions', header: '관리', render: (row: MaterialSummary) => <MaterialDeleteButton project={project} slug={row.slug} title={row.title} /> }] : []),
         ]} />
     </div>
     </div>

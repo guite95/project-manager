@@ -26,9 +26,8 @@
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL 접속 문자열 |
 | `TEST_DATABASE_URL` | 통합 테스트용 별도 데이터베이스 |
-| `APP_PASSWORD_HASH` | `node scripts/hash-password.mjs` 결과 |
-| `SESSION_SECRET` | `openssl rand -hex 32` 결과 |
-| `REQUIRE_LOGIN` | 개발 환경에서도 로그인을 강제할 때 `1`. 선택 |
+| `APP_PASSWORD_HASH` | 소유자 최초 등록 전 기존 비밀번호 로그인용 해시 |
+| `SESSION_SECRET` | 소유자 최초 등록 전 기존 서명 세션용 키 |
 
 Homebrew 로 깐 PostgreSQL 은 기본 사용자가 OS 계정 이름이다. 접속 문자열에
 사용자를 빼면 `P1010: User was denied access` 가 난다.
@@ -65,8 +64,10 @@ pnpm db:reset-test
 pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 ```
 
-**개발 환경에서는 비밀번호를 묻지 않는다.** 프로덕션 빌드에서는 항상 묻는다.
-로그인 흐름 자체를 확인하려면 `REQUIRE_LOGIN=1 pnpm dev` 로 켠다.
+**개발·운영 모두 계정 로그인이 필요하다.** 소유자 최초 등록 전에는 계정 ID를 비워 두고
+기존 비밀번호로 로그인한 뒤 설정에서 소유자 계정을 등록한다. 이후 공통 비밀번호와
+기존 서명 세션은 사용할 수 없다. 계정 초대·프로젝트 권한·페이지 공유는
+[계정 및 공유](docs/account-access.md)를 참고한다.
 
 배포는 `docs/deploy.md` 를 본다.
 
@@ -74,7 +75,10 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 
 | 경로 | 내용 |
 | --- | --- |
-| `/login` | 비밀번호 한 겹. 프로덕션 빌드에서만 막는다 |
+| `/login` | 계정 로그인. 개발·운영 모두 인증 |
+| `/account` | 내 비밀번호 변경 및 기존 세션 회수 |
+| `/settings` | 관리자 계정 초대·프로젝트 권한·조회 전용 공유 |
+| `/share/<token>` | 만료·회수 가능한 단일 문서 조회 |
 | `/today` | 오늘의 할 일 — 프로젝트별 이슈를 끌어다 놓고 체크, 날짜가 바뀌면 자동 정리 |
 | `/today/history` | 날짜별 완료 이력 — 체크한 순간의 날짜로 쌓인다 |
 | `/flows` | 전체 목록 — 프로젝트 → 카테고리 → 차트 |

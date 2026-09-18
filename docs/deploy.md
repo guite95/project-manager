@@ -36,8 +36,8 @@ GitHub에는 아래의 SSH 접속용 Secret 4개를 등록한다.
 
 ## GitHub Actions 자동 배포
 
-`.github/workflows/deploy.yml` 은 `master` push 또는 Actions의 **Run workflow**
-(`master` 선택)로 실행한다. 기본 브랜치를 바꾸면 워크플로우의 `branches`와
+`.github/workflows/deploy.yml` 은 `main` push 또는 Actions의 **Run workflow**
+(`main` 선택)로 실행한다. 기본 브랜치를 바꾸면 워크플로우의 `branches`와
 job의 `if`도 함께 바꾼다.
 
 - 대상: GitHub Secrets의 `SSH_HOST`, `SSH_PORT`, `SSH_USER`로 지정
@@ -154,7 +154,7 @@ curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://localhost:30001/
 ```
 
 `307` 과 `/login` 이 나와야 한다. 프로덕션 빌드는 항상 비밀번호를 묻는다.
-개발 환경에서만 묻지 않는다.
+개발 환경에서도 동일하게 계정 인증을 적용한다.
 
 ## 로그와 재시작
 
@@ -188,11 +188,17 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 비밀번호 바꾸기
 
+계정 기능 적용 후에는 `/account`에서 본인 비밀번호를 변경한다. 이전 세션은 DB에서
+즉시 폐기되며 `SESSION_SECRET` 교체는 계정 세션을 회수하지 않는다. 계정·프로젝트
+권한 도입 순서와 최초 소유자 등록은 [계정 및 공유](account-access.md)를 따른다.
+
+아래 절차는 소유자 계정 등록 전의 기존 공통 비밀번호에만 해당한다.
+
 1. `node scripts/hash-password.mjs` 로 새 해시를 만든다.
 2. 인스턴스의 `.env` 에서 `APP_PASSWORD_HASH` 를 바꾼다.
 3. `docker compose up -d` 로 다시 띄운다.
 
-`SESSION_SECRET` 을 바꾸면 이미 로그인한 세션이 전부 끊긴다.
+`SESSION_SECRET` 을 바꾸면 기존 서명 방식의 세션만 끊긴다.
 
 ## 프로젝트 DB 공유 (2026-09-11)
 

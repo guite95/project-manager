@@ -1,5 +1,7 @@
 "use client";
 
+import { useAccess } from "@/components/access/context";
+
 import { useCallback, useEffect, useState } from "react";
 import {
   HiOutlineChevronDown,
@@ -82,6 +84,9 @@ function formatUpdatedAt(value: string): string {
 }
 
 export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
+  const { canWrite, canDelete } = useAccess();
+  const writable = canWrite(projectSlug);
+  const deletable = canDelete(projectSlug);
   const [notes, setNotes] = useState<ProjectNote[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -132,6 +137,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
   );
 
   const addNote = () => {
+    if (!writable) return;
     void sync(async () => {
       const note = await postNote(projectSlug);
       setNotes((current) => [note, ...current]);
@@ -144,6 +150,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     id: string,
     patch: Partial<Pick<ProjectNote, "content" | "priority">>,
   ) => {
+    if (!writable) return;
     setNotes((current) =>
       updateProjectNote(current, id, patch, new Date().toISOString()),
     );
@@ -158,7 +165,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
   };
 
   const removeNote = (note: ProjectNote) => {
-    if (!window.confirm(`“${noteLabel(note)}” 항목을 삭제할까요?`)) return;
+    if (!deletable || !window.confirm(`“${noteLabel(note)}” 항목을 삭제할까요?`)) return;
     if (editingId === note.id) setEditingId(null);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     void sync(() => deleteNoteRequest(note.id));
@@ -170,6 +177,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
     targetId: string,
     position: "before" | "after",
   ) => {
+    if (!writable) return;
     const next = moveProjectNote(notes, id, targetId, position);
     if (next === notes) return;
     setNotes(next);
@@ -211,10 +219,10 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
             </span>
           ))}
         </div>
-        <Button onClick={addNote} size="sm">
+        {writable && <Button onClick={addNote} size="sm">
           <HiOutlinePlus aria-hidden size={14} />
           행 추가
-        </Button>
+        </Button>}
       </div>
 
       <div className="overflow-x-auto">
@@ -260,12 +268,12 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                     아직 적어둔 내용이 없습니다.
                   </p>
                   <p className="mt-1 mb-3 text-[11px] text-[var(--bi-muted)]">
-                    프로젝트 진행 중 놓치면 안 되는 기준을 한 줄씩 추가하세요.
+                    {writable ? "프로젝트 진행 중 놓치면 안 되는 기준을 한 줄씩 추가하세요." : "등록된 내용이 여기에 표시됩니다."}
                   </p>
-                  <Button onClick={addNote} size="sm" variant="secondary">
+                  {writable && <Button onClick={addNote} size="sm" variant="secondary">
                     <HiOutlinePlus aria-hidden size={14} />
                     첫 행 추가
-                  </Button>
+                  </Button>}
                 </td>
               </tr>
             ) : (
@@ -280,7 +288,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                         : "border-b-2 border-b-[var(--bi-accent)]"
                       : ""
                   }`}
-                  draggable={handleHeldId === note.id}
+                  draggable={writable && handleHeldId === note.id}
                   key={note.id}
                   onDragEnd={() => {
                     setHandleHeldId(null);
@@ -295,7 +303,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                     setDropEdge(null);
                   }}
                   onDragOver={(event) => {
-                    if (!event.dataTransfer.types.includes(PROJECT_NOTE_DRAG_TYPE)) {
+                    if (!writable || !event.dataTransfer.types.includes(PROJECT_NOTE_DRAG_TYPE)) {
                       return;
                     }
                     event.preventDefault();
@@ -305,7 +313,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                   onDragStart={(event) => {
                     // 입력칸 안 텍스트 드래그가 여기까지 버블링된다. 행 자신이
                     // 시작한 드래그가 아니면 손대지 않는다.
-                    if (event.target !== event.currentTarget) return;
+                    if (!writable || event.target !== event.currentTarget) return;
                     event.dataTransfer.setData(PROJECT_NOTE_DRAG_TYPE, note.id);
                     // text/plain 도 함께 넣는다. 표준 타입이 없으면 드래그 이미지를
                     // 만들지 않는 브라우저가 있다.
@@ -314,7 +322,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                     setDraggingId(note.id);
                   }}
                   onDrop={(event) => {
-                    if (!event.dataTransfer.types.includes(PROJECT_NOTE_DRAG_TYPE)) {
+                    if (!writable || !event.dataTransfer.types.includes(PROJECT_NOTE_DRAG_TYPE)) {
                       return;
                     }
                     event.preventDefault();
@@ -327,7 +335,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                   }}
                 >
                   <td className="border-b border-[var(--bi-border)] px-3 py-2.5">
-                    <div className="flex items-center gap-1">
+                    {writable ? <div className="flex items-center gap-1">
                       <span
                         aria-hidden
                         className="shrink-0 cursor-grab text-[var(--bi-muted)] active:cursor-grabbing"
@@ -366,17 +374,17 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                           <HiOutlineChevronDown aria-hidden size={11} />
                         </button>
                       </span>
-                    </div>
+                    </div> : <span className="text-[var(--bi-muted)]">{index + 1}</span>}
                   </td>
                   <td className="border-b border-[var(--bi-border)] px-4 py-2.5">
-                    <Dropdown ariaLabel={`${index + 1}번째 항목 우선순위`} searchable
+                    <Dropdown ariaLabel={`${index + 1}번째 항목 우선순위`} searchable disabled={!writable}
                       triggerClassName={`font-semibold ${PRIORITY_STYLES[note.priority].select}`}
                       value={note.priority} options={PROJECT_NOTE_PRIORITIES}
                       onChange={value => editNote(note.id, { priority: value as ProjectNotePriority })} />
                   </td>
                   <td className="border-b border-[var(--bi-border)] px-4 py-2.5">
                     <InlineEdit
-                      editing={editingId === note.id}
+                      editing={writable && editingId === note.id}
                       inputClassName="h-[30px] w-full rounded-[4px] border border-[var(--bi-accent)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)]"
                       label={`${index + 1}번째 ${isPersonalProject(projectSlug) ? "기록" : "명심할 점"}`}
                       maxLength={500}
@@ -403,11 +411,11 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                     {formatUpdatedAt(note.updatedAt)}
                   </td>
                   <td className="whitespace-nowrap border-b border-[var(--bi-border)] px-4 py-2.5 text-right">
-                    <EditButton
+                    {writable && <EditButton
                       label={`${index + 1}번째 항목 수정`}
                       onClick={() => setEditingId(note.id)}
-                    />
-                    <button
+                    />}
+                    {deletable && <button
                       aria-label={`${index + 1}번째 항목 삭제`}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none hover:bg-[var(--bi-error)]/10 hover:text-[var(--bi-error)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
                       onClick={() => removeNote(note)}
@@ -415,7 +423,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                       type="button"
                     >
                       <HiOutlineTrash aria-hidden size={15} />
-                    </button>
+                    </button>}
                   </td>
                 </tr>
               ))
@@ -429,7 +437,7 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
       </p>
 
       <div className="flex min-h-9 items-center justify-between gap-3 border-t border-[var(--bi-border)] px-4 py-2 text-[11px] text-[var(--bi-muted)]">
-        <span>연필을 눌러 고칩니다. 바뀐 내용은 서버에 자동 저장됩니다.</span>
+        <span>{writable ? "연필을 눌러 고칩니다. 바뀐 내용은 서버에 자동 저장됩니다." : "읽기 전용입니다."}</span>
         <span aria-live="polite" className={storageError ? "text-[var(--bi-error)]" : ""}>
           {storageError ?? (loaded ? `${notes.length}개 항목 저장됨` : "불러오는 중")}
         </span>

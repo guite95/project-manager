@@ -1,5 +1,6 @@
 import { isPersonalProject } from "@/lib/personal-projects";
-import { flowCategories, getFlowCatalog } from "@/lib/server/flow-catalog-store";
+import { accessibleCatalog } from '@/lib/access/catalog';
+import { flowCategories } from "@/lib/server/flow-catalog-store";
 import { meetingsHref } from "@/lib/meetings";
 import { materialsHref } from "@/lib/materials";
 import type { Metadata } from "next";
@@ -49,7 +50,7 @@ function ViewTabs({ view }: { view: FlowsView }) {
 }
 
 async function ProjectsOverview() {
-  const flowProjects = (await getFlowCatalog()).filter(project => !isPersonalProject(project.slug));
+  const flowProjects = (await accessibleCatalog()).filter(project => !isPersonalProject(project.slug));
   return (
     <>
       {flowProjects.map((project) => (

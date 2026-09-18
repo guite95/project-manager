@@ -1,5 +1,7 @@
 "use client";
 
+import { useAccess } from "@/components/access/context";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -113,6 +115,8 @@ export function ProcessFlow({
   /** true 면 부모 높이를 꽉 채운다 (전용 페이지용). 부모가 flex 컨테이너여야 한다. */
   fill?: boolean;
 }) {
+  const { canWrite } = useAccess();
+  const writable = !!projectSlug && canWrite(projectSlug);
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState<FlowChart>();
   const visibleChart = saved ?? chart;
@@ -160,7 +164,7 @@ export function ProcessFlow({
               {chart.caption ?? chart.title} · {HINT}
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
-              {projectSlug && !chart.erdDomain && !chart.content && <button type="button" className="rounded border px-2 py-0.5" onClick={() => setEditing(true)}>배치 편집</button>}
+              {writable && projectSlug && !chart.erdDomain && !chart.content && <button type="button" className="rounded border px-2 py-0.5" onClick={() => setEditing(true)}>배치 편집</button>}
               <ExportSvgButton slug={chart.slug} wrapper={wrapperRef} />
               <button
                 type="button"
@@ -183,7 +187,7 @@ export function ProcessFlow({
         </ReactFlowProvider>
       </figure>
 
-      {editing && projectSlug && <LayoutEditor chart={visibleChart} projectSlug={projectSlug} onClose={() => setEditing(false)} onSaved={setSaved} />}
+      {editing && writable && projectSlug && <LayoutEditor chart={visibleChart} projectSlug={projectSlug} onClose={() => setEditing(false)} onSaved={setSaved} />}
       {open && typeof document !== "undefined"
         ? createPortal(
             <div
