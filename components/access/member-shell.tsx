@@ -6,6 +6,7 @@ import { chartHref } from '@/lib/flows/registry';
 import { hasProjectNotes } from '@/lib/project-notes';
 import { LogoutButton } from './logout-button';
 import { isPersonalProject } from '@/lib/personal-projects';
+import { recordingsHref } from '@/lib/recordings';
 export function MemberShell({projects,admin,name,children}:{projects:FlowNavigationProject[];admin:boolean;name:string;children:ReactNode}) {
   const [expanded,setExpanded]=useState<string|null>(null);
   return <div className="min-h-screen bg-[var(--bi-bg)] text-[var(--bi-fg)]">
@@ -23,6 +24,7 @@ export function MemberShell({projects,admin,name,children}:{projects:FlowNavigat
         <button className="w-full rounded px-3 py-2 text-left text-sm font-semibold" aria-expanded={expanded===project.slug} onClick={()=>setExpanded(expanded===project.slug?null:project.slug)}>{expanded===project.slug?'▾':'▸'} {project.title}</button>
         {expanded===project.slug&&<nav aria-label={project.title} className="space-y-2 px-5 pb-3 text-xs">
           {hasProjectNotes(project.slug)&&<Link className="block" href={`/flows/${project.slug}/notes`}>명심할 점</Link>}
+          {project.slug !== 'common' && !isPersonalProject(project.slug) && <Link className="block" href={recordingsHref(project.slug)}>녹음·전사</Link>}
           {project.slug!=='common'&&<><Link className="block" href={`/flows/${project.slug}/meetings`}>회의록</Link><Link className="block" href={`/flows/${project.slug}/materials`}>자료</Link></>}
           {project.categories.map(category=><div key={category.slug}><p className="mt-3 mb-2 text-[var(--bi-muted)]">{category.title}</p>{category.charts.map(chart=><Link className="block py-1" key={chart.slug} href={chartHref(project.slug,category.slug,chart.slug)}>{chart.title}</Link>)}</div>)}
         </nav>}

@@ -19,6 +19,7 @@ RUN pnpm build
 
 # --- 실행 ---
 FROM base AS runner
+RUN apk add --no-cache ffmpeg
 ENV NODE_ENV=production
 ENV PORT=30001
 ENV HOSTNAME=0.0.0.0
@@ -43,6 +44,10 @@ COPY --from=builder /app/lib/ai-ops ./lib/ai-ops
 COPY --from=builder /app/scripts/ai-ops-ingest.mjs ./scripts/ai-ops-ingest.mjs
 COPY --from=builder /app/scripts/ai-ops-search.mjs ./scripts/ai-ops-search.mjs
 COPY --from=builder /app/scripts/sql/ai-ops-vector.sql ./scripts/sql/ai-ops-vector.sql
+
+# 별도 전사 작업자는 같은 이미지와 기존 런타임 identity를 사용한다.
+COPY --from=builder /app/lib ./lib
+COPY --from=builder /app/scripts/recordings-worker.mjs ./scripts/recordings-worker.mjs
 
 EXPOSE 30001
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && exec node server.js"]

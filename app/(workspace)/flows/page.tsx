@@ -3,6 +3,7 @@ import { accessibleCatalog } from '@/lib/access/catalog';
 import { flowCategories } from "@/lib/server/flow-catalog-store";
 import { meetingsHref } from "@/lib/meetings";
 import { materialsHref } from "@/lib/materials";
+import { recordingsHref } from "@/lib/recordings";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { RichText } from "@/components/rich-text";
@@ -71,6 +72,10 @@ async function ProjectsOverview() {
           {project.slug !== "common" ? <Link href={materialsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
             <span className="text-[13px] font-semibold">자료</span>
             <span className="text-[12px] text-[var(--bi-muted)]">PDF·HTML·PPTX 문서 추가와 미리보기</span>
+          </Link> : null}
+          {project.slug !== 'common' ? <Link href={recordingsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
+            <span className="text-[13px] font-semibold">녹음·전사</span>
+            <span className="text-[12px] text-[var(--bi-muted)]">녹음 종류 선택·자동 전사·원본과 전사본 다운로드</span>
           </Link> : null}
           {flowCategories(project.categories).map((category) => (
             <div key={category.slug} className="mt-3">

@@ -400,6 +400,10 @@ rmdir "$installer_dir"
 Claude Code에서도 `/pm-flow-author`, `/pm-flow-review`로 같은 스킬을 호출할 수 있다.
 설치기 테스트의 `PM_FLOW_CLAUDE_SKILLS_DIR`는 Claude 스킬 경로를 임시 디렉터리로 분리한다.
 
+## 프로젝트 녹음·전사
+
+풀링 프로젝트의 `녹음·전사` 메뉴에서 녹음 종류와 상황 설명을 입력해 파일을 올릴 수 있습니다. 원본은 비공개 OCI, 전사본은 별도 DB 레코드로 저장하고 원본 파일과 TXT를 각각 다운로드합니다. Google Chirp 3가 기존 임베딩 ADC/WIF 인증을 재사용합니다. 별도 작업자 실행은 `pnpm recordings:worker`이며, 필요한 Google 권한·임시 버킷·DB migration·운영 구성은 [docs/recordings.md](docs/recordings.md)를 참고하세요.
+
 ## AI 세션·대화
 
 `/ai-ops/activity`와 `/ai-ops/usage`에서 개인 AI 대화와 사용량을 확인합니다.

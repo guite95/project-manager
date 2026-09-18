@@ -1,0 +1,36 @@
+# Activate after granting Speech permissions and configuring the private staging bucket.
+# docker compose -f docker-compose.yml -f docker-compose.recordings.yml up -d
+services:
+  app:
+    environment:
+      GOOGLE_SPEECH_LOCATION: ${GOOGLE_SPEECH_LOCATION:-asia-northeast1}
+      GOOGLE_SPEECH_BUCKET: ${GOOGLE_SPEECH_BUCKET:?GOOGLE_SPEECH_BUCKET is required}
+  recordings:
+    image: ${APP_IMAGE:-project-management:local}
+    restart: unless-stopped
+    init: true
+    # DB migration is owned by app startup; this process retries if startup races it.
+    command: [node, --experimental-strip-types, scripts/recordings-worker.mjs]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:?GOOGLE_CLOUD_PROJECT is required}
+      GOOGLE_SPEECH_LOCATION: ${GOOGLE_SPEECH_LOCATION:-asia-northeast1}
+      GOOGLE_SPEECH_BUCKET: ${GOOGLE_SPEECH_BUCKET:?GOOGLE_SPEECH_BUCKET is required}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/project-management-wif/adc.json
+      OCI_STORAGE_REGION: ${OCI_STORAGE_REGION:-}
+      OCI_STORAGE_NAMESPACE: ${OCI_STORAGE_NAMESPACE:-}
+      OCI_STORAGE_BUCKET: ${OCI_STORAGE_BUCKET:-}
+      OCI_STORAGE_AUTH: instance_principal
+    volumes:
+      - type: bind
+        source: /run/project-management-wif
+        target: /run/project-management-wif
+        read_only: true
+        bind:
+          create_host_path: false
+    networks: [db]
+    cpus: 1
+    mem_limit: 768m
+    stop_grace_period: 90s
+    depends_on: [app]

@@ -83,6 +83,7 @@ model FlowProject {
   position   Int
   categories FlowCategory[]
   memberships AccessMembership[]
+  recordings ProjectRecording[]
 
   @@map("flow_project")
 }
@@ -319,4 +320,42 @@ model AccessThrottle {
   attempts Int
   expiresAt DateTime @map("expires_at")
   @@map("access_throttle")
+}
+
+/// 원본과 전사 결과는 별도 레코드다. 대기열은 lease token으로 중복 완료를 막는다.
+model ProjectRecording {
+  id String @id
+  projectSlug String @map("project_slug")
+  project FlowProject @relation(fields: [projectSlug], references: [slug], onDelete: Restrict)
+  title String
+  kind String
+  context String @default("")
+  fileName String @map("file_name")
+  contentType String @map("content_type")
+  byteLength Int @map("byte_length")
+  storage Json
+  status String @default("PENDING")
+  attempts Int @default(0)
+  leaseToken String? @map("lease_token")
+  leaseUntil DateTime? @map("lease_until") @db.Timestamptz(6)
+  error String?
+  operation String?
+  staging Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  transcript RecordingTranscript?
+  @@index([projectSlug, createdAt])
+  @@index([status, createdAt])
+  @@map("project_recording")
+}
+model RecordingTranscript {
+  recordingId String @id @map("recording_id")
+  recording ProjectRecording @relation(fields: [recordingId], references: [id], onDelete: Restrict)
+  text String
+  language String
+  engine String
+  model String
+  result Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@map("recording_transcript")
 }

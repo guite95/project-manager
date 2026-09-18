@@ -10,9 +10,8 @@ const withMDX = createMDX({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // 파일 10MB와 multipart 메타데이터가 인증 프록시에서 잘리지 않게 한다.
-  // 실제 업로드 상한은 자료 API가 스트림을 읽으며 별도로 검사한다.
-  experimental: { proxyClientMaxBodySize: '11mb' },
+  // 녹음 100MB와 multipart 메타데이터를 지원한다. 각 업로드 API가 자체 상한을 검사한다.
+  experimental: { proxyClientMaxBodySize: '101mb' },
   // 프로젝트 지침은 직접 관리하며 개발 서버가 AGENTS.md를 덧쓰지 않게 한다.
   agentRules: false,
   pageExtensions: ["ts", "tsx", "mdx"],

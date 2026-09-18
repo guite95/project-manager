@@ -24,6 +24,7 @@ import {
 import { searchSidebarProjects } from "@/lib/navigation/sidebar-search";
 import { meetingsHref } from "@/lib/meetings";
 import { materialsHref } from "@/lib/materials";
+import { recordingsHref } from "@/lib/recordings";
 
 import { isPersonalProject } from "@/lib/personal-projects";
 
@@ -90,6 +91,10 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
 
   // 현재 보고 있는 위치 — 명심할 점 페이지 또는 차트 폴백 규칙으로 판정.
   const active = useMemo(() => {
+    const recordingPath = pathname.match(/^\/flows\/([^/]+)\/recordings$/);
+    if (recordingPath && flowProjects.some(p => p.slug === recordingPath[1])) {
+      return { project: recordingPath[1], category: null, chart: null, view: "recordings" as const };
+    }
     const materialPath = pathname.match(/^\/flows\/([^/]+)\/materials(?:\/[^/]+)?$/);
     if (materialPath && flowProjects.some(p => p.slug === materialPath[1])) {
       return { project: materialPath[1], category: null, chart: null, view: "materials" as const };
@@ -137,7 +142,7 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
   );
 
   const renderProject = (entry: (typeof visibleProjects)[number]) => {
-    const { project, categories, showNotes, showMeetings, showMaterials } = entry;
+    const { project, categories, showNotes, showMeetings, showMaterials, showRecordings } = entry;
     const projectActive = active?.project === project.slug;
     const pCollapsed = expandedProject !== project.slug;
 
@@ -163,6 +168,9 @@ export function AppSidebar({ flowProjects, projectOrder, onProjectOrderChange, i
             {showMeetings ? <Link href={meetingsHref(project.slug)} aria-label={`${project.title} 회의록`}
               aria-current={projectActive && active?.view === "meetings" ? "page" : undefined}
               className={linkCls(projectActive && active?.view === "meetings")}>회의록</Link> : null}
+            {showRecordings ? <Link href={recordingsHref(project.slug)} aria-label={`${project.title} 녹음·전사`}
+              aria-current={projectActive && active?.view === "recordings" ? "page" : undefined}
+              className={linkCls(projectActive && active?.view === "recordings")}>녹음·전사</Link> : null}
             {showNotes ? (
               <Link
                 aria-label={`${project.title} ${isPersonalProject(project.slug) ? "기록" : "명심할 점"}`}
