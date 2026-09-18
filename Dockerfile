@@ -26,7 +26,8 @@ ENV HOSTNAME=0.0.0.0
 ENV LIBREOFFICE_BIN=/usr/bin/soffice
 
 # PPTX는 서버에서 PDF로 변환해 비공개 원본과 함께 제공한다.
-RUN apk add --no-cache libreoffice-impress font-noto-cjk
+# Alpine의 분할 패키지에서는 Writer가 LibreOffice 공통 런타임 구성도 보완한다.
+RUN apk add --no-cache libreoffice-impress libreoffice-writer font-noto-cjk
 
 # standalone 출력에는 실행에 필요한 node_modules 만 들어 있다.
 # 이 저장소에는 public 디렉터리가 없다. 나중에 만들면 여기서 함께 복사한다.
@@ -48,6 +49,9 @@ COPY --from=builder /app/scripts/sql/ai-ops-vector.sql ./scripts/sql/ai-ops-vect
 # 별도 전사 작업자는 같은 이미지와 기존 런타임 identity를 사용한다.
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/scripts/recordings-worker.mjs ./scripts/recordings-worker.mjs
+
+# 패키지가 설치되어 있어도 LibreOffice가 시작되지 않는 조합을 이미지 빌드에서 차단한다.
+RUN PPTX_REAL_CONVERTER=1 node --experimental-strip-types --test lib/server/presentation-converter.integration.test.mjs
 
 EXPOSE 30001
 CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && exec node server.js"]
