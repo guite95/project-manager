@@ -134,7 +134,8 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
       await tx.accessUser.update({where:{id},data:{role:String(body.role),active:body.active as boolean}});
       await tx.accessMembership.deleteMany({where:{userId:id}});
       await tx.accessMembership.createMany({data:memberships});
-      await tx.accessSession.deleteMany({where:{userId:id}});
+      // 권한은 요청마다 DB에서 읽는다. 비활성화할 때만 기존 세션을 폐기한다.
+      if (!body.active) await tx.accessSession.deleteMany({where:{userId:id}});
       await audit(tx,actor,'USER_ACCESS_CHANGED',JSON.stringify({id,role:body.role,active:body.active,memberships}));
     });
     return null;

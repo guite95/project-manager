@@ -8,7 +8,7 @@
 - `GET /api/access` → `{actor:{id,username,name,role:'OWNER'|'ADMIN'|'MEMBER',bootstrap:boolean}, users:[{id,username,name,role,active,memberships:[{projectSlug,role:'VIEWER'|'EDITOR'}]}], projects:[{slug,title,charts:[{slug,title}]}], shares:[{id,projectSlug,chartSlug,expiresAt}]}`. OWNER/ADMIN 전용. bootstrap actor는 OWNER이지만 id='bootstrap'. ADMIN 응답에서 OWNER와 개인 프로젝트 제외.
 - `POST /api/access` `{action:'bootstrap',username,name,password}` → 204 및 새 소유자 세션 설정.
 - `POST /api/access` `{action:'createUser',username,name,password,role:'ADMIN'|'MEMBER'}` → 204. 활성 계정을 즉시 생성한다. 비밀번호는 scrypt 해시로만 저장하며 응답·감사 로그에 포함하지 않는다. 요청한 관리자 세션은 유지한다. 중복 아이디는 409, 관리자 역할 발급은 OWNER만 가능하다.
-- `POST /api/access` `{action:'updateUser',id,active:boolean,role:'ADMIN'|'MEMBER',memberships:[{projectSlug,role:'VIEWER'|'EDITOR'}]}` → 204. 자기 자신/OWNER 수정 불가. 권한 변경 즉시 기존 세션 폐기. ADMIN 계정 생성/역할 변경은 OWNER만 가능.
+- `POST /api/access` `{action:'updateUser',id,active:boolean,role:'ADMIN'|'MEMBER',memberships:[{projectSlug,role:'VIEWER'|'EDITOR'}]}` → 204. 자기 자신/OWNER 수정 불가. 권한 변경은 기존 세션을 유지하며 다음 요청부터 적용. 계정 비활성화 시 기존 세션 폐기. ADMIN 계정 생성/역할 변경은 OWNER만 가능.
 - `POST /api/access` `{action:'share',projectSlug,chartSlug,days:number}` → `{path:'/share/<token>'}`. days 1~90 기본 7. 회사 프로젝트 단일 문서만, TNS ERD 제외.
 - `POST /api/access` `{action:'revokeShare',id}` → 204.
 - `POST /api/invite` → 410. 이전 초대는 더 이상 계정을 만들거나 로그인 세션을 발급하지 않는다. `/invite/<token>`은 계정 발급 방식 전환 안내만 표시한다.
@@ -17,10 +17,10 @@
 ## UI
 `/settings`는 계정/권한/공유 관리. `/account`는 모든 계정의 자신의 비밀번호 변경. 로그인 성공 후 `/flows` 이동. bootstrap 로그인은 `/settings` 이동 가능하나 `/flows`에서도 등록 링크를 안내한다. 공유 URL은 생성 직후만 표시하며 회수/재발급할 수 있다. 비밀번호 최소 12자, 최대 128자; username은 영문 소문자/숫자/점/밑줄/대시 3~64자.
 
-설정 → 계정 및 프로젝트 권한에서 각 계정의 **권한 편집** 버튼으로 역할, 활성 상태, 프로젝트별 접근 불가/열람/편집 권한을 나중에도 수정할 수 있다. 목록에는 저장된 권한 요약이 표시된다. 취소하면 변경 내용을 저장하지 않으며, 저장하면 기존 세션을 종료해 다음 로그인부터 새 권한을 적용한다. 관리자는 회사 프로젝트 전체 권한이므로 프로젝트별 선택은 멤버에게만 표시한다.
+설정 → 계정 및 프로젝트 권한에서 각 계정의 **권한 편집** 버튼으로 역할, 활성 상태, 프로젝트별 접근 불가/열람/편집 권한을 나중에도 수정할 수 있다. 목록에는 저장된 권한 요약이 표시된다. 취소하면 변경 내용을 저장하지 않으며, 저장하면 재로그인 없이 다음 요청부터 새 권한을 적용한다. 이미 열린 화면의 메뉴와 버튼은 새로고침으로 갱신한다. 관리자는 회사 프로젝트 전체 권한이므로 프로젝트별 선택은 멤버에게만 표시한다.
 
 ## 권한과 보관
-OWNER는 개인 프로젝트·AI·업무 기록·전역 UI 설정을 포함한 소유자 데이터에 접근한다. ADMIN은 회사 프로젝트의 관리 권한을 가지며 MEMBER는 부여받은 프로젝트에만 접근한다. VIEWER는 조회, EDITOR는 조회·작성·수정, 삭제는 OWNER/ADMIN만 가능하다. 새 경로는 일반 사용자에게 기본 거부한다. 프로젝트별 권한 변경/계정 비활성화는 기존 세션을 폐기한다.
+OWNER는 개인 프로젝트·AI·업무 기록·전역 UI 설정을 포함한 소유자 데이터에 접근한다. ADMIN은 회사 프로젝트의 관리 권한을 가지며 MEMBER는 부여받은 프로젝트에만 접근한다. VIEWER는 조회, EDITOR는 조회·작성·수정, 삭제는 OWNER/ADMIN만 가능하다. 새 경로는 일반 사용자에게 기본 거부한다. 프로젝트 권한과 계정 역할은 매 요청마다 DB에서 조회하므로 변경 시 기존 세션을 유지한다. 계정 비활성화는 기존 세션을 폐기하며, 재활성화해도 폐기된 세션은 복원하지 않는다.
 
 공유 페이지는 문서의 현재 내용을 조회한다. 한 번 내려받은 내용까지 회수하지는 않는다. 공유 기본 만료는 7일, 최대 90일이며 원본 자료나 AI 데이터의 영구 보관 정책과 무관하다. 개인 프로젝트와 전체 스냅샷을 필요로 하는 TNS ERD는 공유하지 않는다. 공유 토큰은 생성할 때만 화면에 제공하고 DB에는 SHA-256만 저장한다. HTML은 기존 sandbox/CSP 렌더러를 유지한다.
 
