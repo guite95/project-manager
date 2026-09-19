@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Background, Controls, PanOnScrollMode, ReactFlow, ReactFlowProvider } from '@xyflow/react';
+import { Button } from '../erp/button';
 import { Dropdown } from '../erp/dropdown';
 import { FlowNode } from './flow-node';
 import { GroupNode } from './group-node';
@@ -12,7 +13,6 @@ import type { FlowChart, FlowLayout, FlowPort } from './types';
 
 const nodeTypes = { flow: FlowNode, flowGroup: GroupNode };
 const edgeTypes = { flowRoute: RouteEdge };
-const button = 'rounded border border-[var(--bi-border)] px-3 py-1 text-xs disabled:opacity-40';
 const ports = [{ value: '', label: '자동' }, { value: 'left', label: '왼쪽' }, { value: 'right', label: '오른쪽' }, { value: 'top', label: '위' }, { value: 'bottom', label: '아래' }];
 
 export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
@@ -70,23 +70,23 @@ export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
   return createPortal(<div role="dialog" aria-modal="true" aria-label="플로우 배치 편집" className="fixed inset-0 z-[70] flex flex-col bg-[var(--bi-bg)] text-[var(--bi-fg)]">
     <div className="flex flex-wrap items-center gap-3 border-b p-3">
       <strong className="mr-auto text-sm">{chart.title} · 배치 편집</strong>
-      <button className={button} disabled={!base || saving} onClick={() => change({ nodes: {}, edges: {} })}>자동 배치로 초기화</button>
-      <button className={button} disabled={!base} onClick={download}>JSON 다운로드</button>
-      <button className={button} disabled={saving} onClick={() => { if (!dirty || window.confirm('저장하지 않은 배치 변경을 취소할까요?')) onClose(); }}>취소</button>
-      <button className={button} disabled={!base || saving || !dirty} onClick={save}>{saving ? '저장 중…' : '저장'}</button>
+      <Button size="sm" variant="secondary" disabled={!base || saving} onClick={() => change({ nodes: {}, edges: {} })}>자동 배치로 초기화</Button>
+      <Button size="sm" variant="secondary" disabled={!base} onClick={download}>JSON 다운로드</Button>
+      <Button size="sm" variant="secondary" disabled={saving} onClick={() => { if (!dirty || window.confirm('저장하지 않은 배치 변경을 취소할까요?')) onClose(); }}>취소</Button>
+      <Button size="sm" disabled={!base || saving || !dirty} onClick={save}>{saving ? '저장 중…' : '저장'}</Button>
     </div>
     <div className="flex flex-wrap items-center gap-3 border-b px-3 py-2 text-xs">
       <span>노드를 드래그하세요. 선을 선택하면 연결 위치와 경유점을 수정할 수 있습니다.</span>
       {selected && <>
         <span>시작</span><Dropdown ariaLabel="시작 연결 위치" value={layout.edges[selected]?.sourcePort ?? ''} options={ports} disabled={saving} onChange={v => route({ sourcePort: (v || undefined) as FlowPort | undefined })} />
         <span>끝</span><Dropdown ariaLabel="끝 연결 위치" value={layout.edges[selected]?.targetPort ?? ''} options={ports} disabled={saving} onChange={v => route({ targetPort: (v || undefined) as FlowPort | undefined })} />
-        <button className={button} disabled={saving || (layout.edges[selected]?.waypoints?.length ?? 0) >= 100} onClick={() => {
+        <Button size="sm" variant="secondary" disabled={saving || (layout.edges[selected]?.waypoints?.length ?? 0) >= 100} onClick={() => {
           const edge = draft.edges.find(e => e.id === selected)!;
           const from = nodes.find(n => n.id === edge.source)!; const to = nodes.find(n => n.id === edge.target)!;
           const previous = layout.edges[selected]?.waypoints ?? [];
           route({ waypoints: [...previous, { x: (from.position.x + to.position.x) / 2 + 50, y: (from.position.y + to.position.y) / 2 + 40 + previous.length * 25 }] });
-        }}>경유점 추가</button>
-        <button className={button} disabled={saving} onClick={() => route({ waypoints: [] })}>경유점 지우기</button>
+        }}>경유점 추가</Button>
+        <Button size="sm" variant="secondary" disabled={saving} onClick={() => route({ waypoints: [] })}>경유점 지우기</Button>
         <span>원형 경유점을 드래그해 경로를 조정하세요.</span>
       </>}
     </div>

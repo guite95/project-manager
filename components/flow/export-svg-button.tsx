@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { toSvg } from "html-to-image";
 import { HiOutlineDownload } from "react-icons/hi";
+import { Button } from "@/components/erp/button";
 
 /* -------------------------------------------------------------------------
  * 차트 전체를 SVG 파일로 저장.
@@ -90,16 +91,17 @@ export function ExportSvgButton({
       {failed ? (
         <span className="text-[10px] text-[var(--bi-error)]">저장 실패</span>
       ) : null}
-      <button
+      <Button
         type="button"
         onClick={onExport}
         disabled={busy}
-        className="flex items-center gap-1 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-0.5 text-[11px] text-[var(--bi-fg)] transition hover:border-[var(--bi-accent)] hover:text-[var(--bi-accent)] disabled:opacity-50"
         aria-label="SVG 로 저장"
+        size="sm"
+        variant="secondary"
       >
         <HiOutlineDownload size={11} />
         {busy ? "저장 중…" : "SVG 저장"}
-      </button>
+      </Button>
     </span>
   );
 }

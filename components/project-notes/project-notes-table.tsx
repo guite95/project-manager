@@ -415,15 +415,15 @@ export function ProjectNotesTable({ projectSlug }: { projectSlug: string }) {
                       label={`${index + 1}번째 항목 수정`}
                       onClick={() => setEditingId(note.id)}
                     />}
-                    {deletable && <button
+                    {deletable && <Button
                       aria-label={`${index + 1}번째 항목 삭제`}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none hover:bg-[var(--bi-error)]/10 hover:text-[var(--bi-error)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
                       onClick={() => removeNote(note)}
+                      size="icon-sm"
                       title="삭제"
-                      type="button"
+                      variant="danger-ghost"
                     >
                       <HiOutlineTrash aria-hidden size={15} />
-                    </button>}
+                    </Button>}
                   </td>
                 </tr>
               ))

@@ -279,15 +279,15 @@ function ProjectGroup({
           {group.issues.length}건
         </span>
         {group.removable ? (
-          <button
+          <Button
             aria-label={`${group.title} 프로젝트 삭제`}
-            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-error)]/10 hover:text-[var(--bi-error)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
             onClick={() => onRemoveProject(group)}
+            size="icon-sm"
             title="프로젝트 삭제"
-            type="button"
+            variant="danger-ghost"
           >
             <HiOutlineTrash aria-hidden size={14} />
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -333,28 +333,28 @@ function ProjectGroup({
                   {issue.title}
                 </span>
               </InlineEdit>
-              <button
+              <Button
                 aria-label={`${issue.title} 오늘의 할 일로 보내기`}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-accent-light)] hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
                 onClick={() => onSendToToday(issue)}
+                size="icon-sm"
                 title="오늘의 할 일로"
-                type="button"
+                variant="subtle"
               >
                 <HiOutlineArrowLeft aria-hidden size={15} />
-              </button>
+              </Button>
               <EditButton
                 label={`${issue.title} 수정`}
                 onClick={() => setEditingId(issue.id)}
               />
-              <button
+              <Button
                 aria-label={`${issue.title} 삭제`}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-error)]/10 hover:text-[var(--bi-error)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
                 onClick={() => onRemove(issue)}
+                size="icon-sm"
                 title="삭제"
-                type="button"
+                variant="danger-ghost"
               >
                 <HiOutlineTrash aria-hidden size={15} />
-              </button>
+              </Button>
             </li>
           ))
         )}

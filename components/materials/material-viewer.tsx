@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Button } from "@/components/erp/button";
+import { buttonClassName } from "@/components/erp/button-styles";
 import { Badge } from "@/components/erp/badge";
 import { usePathname } from 'next/navigation';
 import { HtmlDocumentViewer } from './html-document-viewer';
 import { materialFileDescriptors, type MaterialContent, type MaterialFileDescriptor } from '@/lib/materials';
 
-const button = 'inline-flex min-h-10 items-center justify-center rounded border border-[var(--bi-border)] px-3 text-[12px] hover:bg-[var(--bi-sidebar-active)]';
+const buttonLinkClass = buttonClassName({ variant: 'secondary' });
 
 export function MaterialViewer({ content, title }: { content: MaterialContent; title: string }) {
   const [file, setFile] = useState<{ downloads: (MaterialFileDescriptor & { url: string })[]; previewUrl: string; html: string } | null>(null);
@@ -26,8 +27,8 @@ export function MaterialViewer({ content, title }: { content: MaterialContent; t
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <Badge variant="primary">{content.format.toUpperCase()}</Badge>
       <span className="min-w-0 flex-1 break-all text-[12px] text-[var(--bi-muted)]">{content.fileName} · {(content.byteLength / 1024 / 1024).toFixed(2)} MB</span>
-      {file ? file.downloads.map(item => <a key={item.role} className={button} href={item.url} download={item.fileName}>{item.label}</a>) : null}
-      {content.format !== 'html' ? <><a className={button} href={pathname} target="_blank" rel="noopener noreferrer">새 창 ↗</a>
+      {file ? file.downloads.map(item => <a key={item.role} className={buttonLinkClass} href={item.url} download={item.fileName}>{item.label}</a>) : null}
+      {content.format !== 'html' ? <><a className={buttonLinkClass} href={pathname} target="_blank" rel="noopener noreferrer">새 창 ↗</a>
       <Button variant="secondary" onClick={async () => {
         try { await frame.current?.requestFullscreen(); }
         catch { setError('이 브라우저에서는 전체화면을 지원하지 않습니다.'); }

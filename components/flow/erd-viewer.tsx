@@ -1,6 +1,7 @@
 "use client";
 
 import { Dropdown } from "@/components/erp/dropdown";
+import { Button } from "@/components/erp/button";
 
 import { useEffect, useMemo, useState } from 'react';
 import { domainOf, fieldKeys, makeErdChart, type ErdSnapshot } from '../../lib/erd/chart';
@@ -42,13 +43,13 @@ export function ErdViewer({ domain, snapshot: tnsSchema, initialLayout }: { doma
     ? chart.nodes.some(n => n.id === m.name)
     : `${m.name} ${m.table} ${domainOf(m.name).title}`.toLowerCase().includes(query.trim().toLowerCase()));
   const relations = model ? tnsSchema.relations.filter(r => r.source === model.name || r.target === model.name) : [];
-  const controlClass = 'rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-1.5 text-[12px] text-[var(--bi-fg)]';
+  const inputClass = 'rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-1.5 text-[12px] text-[var(--bi-fg)]';
   return (
     <>
       <div className="mt-4 flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-[11px] text-[var(--bi-muted)]">
           전체 테이블 검색
-          <input className={controlClass} value={query} onChange={e => setQuery(e.target.value)} placeholder="테이블명 또는 업무 영역" type="search" />
+          <input className={inputClass} value={query} onChange={e => setQuery(e.target.value)} placeholder="테이블명 또는 업무 영역" type="search" />
         </label>
         <div className="flex min-w-0 flex-col gap-1 text-[11px] text-[var(--bi-muted)]">
           <span>테이블 선택 · 연결 및 전체 컬럼 보기</span>
@@ -58,10 +59,10 @@ export function ErdViewer({ domain, snapshot: tnsSchema, initialLayout }: { doma
               ...options.map(m => ({ value: m.name, label: `${m.table} · ${domainOf(m.name).title}` }))]} />
         </div>
         {selected && !focus ? <>
-          <button className={controlClass} onClick={() => setFocus(selected)}>선택 테이블 연결만 보기</button>
-          <button className={controlClass} onClick={() => setSelected('')}>강조 해제</button>
+          <Button variant="secondary" onClick={() => setFocus(selected)}>선택 테이블 연결만 보기</Button>
+          <Button variant="secondary" onClick={() => setSelected('')}>강조 해제</Button>
         </> : null}
-        {focus ? <button className={controlClass} onClick={() => { setFocus(''); setSelected(''); setQuery(''); }}>영역 전체로 돌아가기</button> : null}
+        {focus ? <Button variant="secondary" onClick={() => { setFocus(''); setSelected(''); setQuery(''); }}>영역 전체로 돌아가기</Button> : null}
         {query && !options.length ? <span role="status" className="text-[12px] text-[var(--bi-muted)]">검색 결과가 없습니다.</span> : null}
       </div>
       <p className="my-2 text-[11px] leading-relaxed text-[var(--bi-muted)]">
@@ -72,7 +73,7 @@ export function ErdViewer({ domain, snapshot: tnsSchema, initialLayout }: { doma
       {savedLayout ? <ProcessFlow chart={chart} height={640} onEntitySelect={selectTable} selectedEntity={selected} erdLayout={savedLayout} /> :
         <div className="my-4 rounded border border-[var(--bi-border)] p-6 text-[12px] text-[var(--bi-muted)]">
           <p role="status">{layoutError || (focus ? '저장된 배치를 불러오는 중입니다.' : '저장된 배치가 없습니다. 배치를 등록한 뒤 새로고침해 주세요.')}</p>
-          {layoutError ? <button className={controlClass} onClick={() => setRetry(value => value+1)}>다시 시도</button> : null}
+          {layoutError ? <Button className="mt-3" variant="secondary" onClick={() => setRetry(value => value+1)}>다시 시도</Button> : null}
         </div>}
       {model ? (
         <section aria-label="테이블 상세" className="mt-4 text-[12px]">

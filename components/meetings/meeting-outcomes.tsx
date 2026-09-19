@@ -83,7 +83,7 @@ export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: 
   };
 
   return <div className="space-y-4">
-    {writable && !draft ? <div className="flex justify-end"><Button variant="secondary" className="min-h-10" onClick={() => {
+    {writable && !draft ? <div className="flex justify-end"><Button variant="secondary" onClick={() => {
       setDraft(structuredClone({ decisions: content.decisions, actionItems: content.actionItems }));
       setError(''); setMessage(''); setConflict(false);
     }}>결정 사항·태스크 편집</Button></div> : null}
@@ -102,7 +102,7 @@ export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: 
               onChange={e => setDraft({ ...draft, decisions: draft.decisions.map((value, index) => index === i ? e.target.value : value) })} />
           </div>)}</div>
           {!draft.decisions.length ? <p className="mb-3 text-[12px] text-[var(--bi-muted)]">등록된 결정 사항이 없습니다.</p> : null}
-          <Button variant="secondary" className="mt-3 min-h-10" onClick={() => setDraft({ ...draft, decisions: [...draft.decisions, ''] })}>결정 사항 추가</Button>
+          <Button variant="secondary" className="mt-3" onClick={() => setDraft({ ...draft, decisions: [...draft.decisions, ''] })}>결정 사항 추가</Button>
         </section>
         <section className="rounded-[3px] border border-[var(--bi-border)] p-5">
           <h2 className="mb-3 text-[14px] font-semibold">태스크</h2>
@@ -121,14 +121,14 @@ export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: 
             </div>;
           })}</div>
           {!draft.actionItems.length ? <p className="mb-3 text-[12px] text-[var(--bi-muted)]">등록된 태스크가 없습니다.</p> : null}
-          <Button variant="secondary" className="mt-3 min-h-10" onClick={() => setDraft({ ...draft, actionItems: [...draft.actionItems, { task: '', owner: null, dueDate: null }] })}>태스크 추가</Button>
+          <Button variant="secondary" className="mt-3" onClick={() => setDraft({ ...draft, actionItems: [...draft.actionItems, { task: '', owner: null, dueDate: null }] })}>태스크 추가</Button>
         </section>
       </fieldset>
       {error ? <p role="alert" className="text-[12px] leading-6 text-[var(--bi-error)]">{error}</p> : null}
-      {conflict ? <Button variant="secondary" disabled={busy} className="h-auto min-h-10 whitespace-normal" onClick={() => void reload()}>편집 취소하고 최신 내용 불러오기</Button> : null}
+      {conflict ? <Button variant="secondary" disabled={busy} onClick={() => void reload()}>편집 취소하고 최신 내용 불러오기</Button> : null}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" disabled={busy} className="min-h-10" onClick={() => { setDraft(null); setError(''); setConflict(false); }}>취소</Button>
-        <Button type="submit" disabled={!dirty || conflict} loading={busy} className="min-h-10">저장</Button>
+        <Button variant="secondary" disabled={busy} onClick={() => { setDraft(null); setError(''); setConflict(false); }}>취소</Button>
+        <Button type="submit" disabled={!dirty || conflict} loading={busy}>저장</Button>
       </div>
     </form> : <MeetingOutcomesView content={content} />}
   </div>;

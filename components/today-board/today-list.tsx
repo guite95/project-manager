@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { HiOutlineArrowRight } from "react-icons/hi";
 import { Badge } from "@/components/erp/badge";
+import { Button } from "@/components/erp/button";
 import { EditButton, InlineEdit } from "@/components/inline-edit";
 import {
   ISSUE_DRAG_TYPE,
@@ -138,15 +139,15 @@ export function TodayList({
                   label={`${item.title} 수정`}
                   onClick={() => setEditingId(item.id)}
                 />
-                <button
+                <Button
                   aria-label={`${item.title} 이슈 목록으로 되돌리기`}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-accent-light)] hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
                   onClick={() => onReturn(item)}
+                  size="icon-sm"
                   title="되돌리기"
-                  type="button"
+                  variant="subtle"
                 >
                   <HiOutlineArrowRight aria-hidden size={15} />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>

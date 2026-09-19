@@ -44,8 +44,8 @@ function SidebarAccount({ account }: { account: WorkspaceAccount }) {
       </p>
     </div>
     <div className="mt-2 flex items-center gap-2 text-[11px]">
-      <Link href="/account" className="flex min-h-8 flex-1 items-center justify-center rounded-[3px] border border-[var(--bi-border)] px-2 hover:bg-[var(--bi-sidebar-active)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">내 계정</Link>
-      <LogoutButton className="flex min-h-8 flex-1 items-center justify-center rounded-[3px] border border-[var(--bi-border)] px-2 hover:bg-[var(--bi-sidebar-active)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] disabled:opacity-50" />
+      <Link href="/account" className="flex h-[30px] flex-1 items-center justify-center rounded-[4px] border border-[var(--bi-border)] px-3 text-xs font-semibold hover:bg-[var(--bi-table-header)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">내 계정</Link>
+      <LogoutButton className="flex-1" />
     </div>
   </footer>;
 }
@@ -206,7 +206,9 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
             className="flex min-h-12 items-center justify-center hover:bg-[var(--bi-rail-active)] hover:text-white focus-visible:outline-2 focus-visible:outline-white">
             <HiOutlineUser size={18} aria-hidden />
           </Link>
-          <LogoutButton compact className="flex min-h-12 w-full items-center justify-center hover:bg-[var(--bi-rail-active)] hover:text-white focus-visible:outline-2 focus-visible:outline-white disabled:opacity-50" />
+          <div className="flex min-h-12 items-center justify-center">
+            <LogoutButton compact className="text-[var(--bi-rail-muted)] hover:bg-[var(--bi-rail-active)] hover:text-white focus-visible:outline-white" />
+          </div>
         </div> : null}
       </nav>
 

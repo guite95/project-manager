@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/erp/button";
 import { fetchHistory, type HistoryResponse } from "@/lib/api-client";
 import { groupCompletionsByDate } from "@/lib/completions";
 import { todayDateString } from "@/lib/today-board";
@@ -122,14 +123,14 @@ export function CompletionHistory({ flowProjects }: { flowProjects: {slug:string
         ))
       )}
 
-      <button
-        className="mx-auto rounded-[3px] border border-[var(--bi-border-strong)] px-3 py-1.5 text-[12px] text-[var(--bi-fg)] hover:bg-[var(--bi-sidebar-bg)] disabled:opacity-50"
+      <Button
+        className="mx-auto"
         disabled={pending}
         onClick={() => setDays((current) => current + WINDOW_DAYS)}
-        type="button"
+        variant="secondary"
       >
         {pending ? "불러오는 중…" : `이전 ${WINDOW_DAYS}일 더 보기`}
-      </button>
+      </Button>
     </div>
   );
 }

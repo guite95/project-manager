@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { HiOutlinePencil } from "react-icons/hi";
+import { Button } from "@/components/erp/button";
 
 /* -------------------------------------------------------------------------
  * 연필을 눌러야 입력칸이 열리는 제자리 편집.
@@ -21,15 +22,15 @@ export function EditButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       aria-label={label}
-      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[4px] text-[var(--bi-muted)] outline-none transition hover:bg-[var(--bi-accent-light)] hover:text-[var(--bi-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--bi-accent)]"
       onClick={onClick}
+      size="icon-sm"
       title="수정"
-      type="button"
+      variant="subtle"
     >
       <HiOutlinePencil aria-hidden size={15} />
-    </button>
+    </Button>
   );
 }
 

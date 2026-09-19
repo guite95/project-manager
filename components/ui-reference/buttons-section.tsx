@@ -1,7 +1,14 @@
 import { Button } from "@/components/erp/button";
 import { DetailSection } from "@/components/erp/detail-section";
 
-const VARIANTS = ["primary", "secondary", "ghost", "destructive"] as const;
+const VARIANTS = [
+  "primary",
+  "secondary",
+  "ghost",
+  "subtle",
+  "destructive",
+  "danger-ghost",
+] as const;
 
 export function ButtonsSection() {
   return (
@@ -14,6 +21,7 @@ export function ButtonsSection() {
             <Button size="sm" variant={variant}>sm</Button>
             <Button disabled variant={variant}>disabled</Button>
             <Button loading variant={variant}>loading</Button>
+            <Button aria-label={`${variant} 아이콘`} size="icon-sm" variant={variant}>+</Button>
           </div>
         ))}
       </div>

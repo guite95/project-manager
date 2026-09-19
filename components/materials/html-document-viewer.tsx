@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dropdown } from "@/components/erp/dropdown";
 import { Button } from "@/components/erp/button";
+import { buttonClassName } from "@/components/erp/button-styles";
 import { usePathname, useSearchParams } from 'next/navigation';
 import { sandboxedDocument } from '@/lib/flows/content';
 import { parseHtmlPreview, type HtmlPreview } from '@/lib/html-preview';
 
-const button = 'inline-flex min-h-10 items-center justify-center rounded border border-[var(--bi-border)] px-3 text-[12px] disabled:opacity-40';
+const buttonLinkClass = buttonClassName({ variant: 'secondary' });
 
 export function HtmlDocumentViewer({ html, title }: { html: string; title: string }) {
   const [preview, setPreview] = useState<HtmlPreview | null>(null);
@@ -51,7 +52,7 @@ export function HtmlDocumentViewer({ html, title }: { html: string; title: strin
         <Button variant="secondary" disabled={index === preview!.pages.length - 1} onClick={() => setIndex(i => i + 1)}>다음 페이지</Button>
       </> : <span className="flex-1 text-[12px] text-[var(--bi-muted)]">문서 보기</span>}
       {preview?.pages.length ? <Button variant="secondary" onClick={() => setContinuous(value => !value)}>{continuous ? '페이지 보기' : '전체 문서'}</Button> : null}
-      <a className={button} href={`${pathname}${params.size ? `?${params}` : ''}`} target="_blank" rel="noopener noreferrer">새 창 ↗</a>
+      <a className={buttonLinkClass} href={`${pathname}${params.size ? `?${params}` : ''}`} target="_blank" rel="noopener noreferrer">새 창 ↗</a>
       <Button variant="secondary" onClick={async () => {
         try { if (fullscreen) await document.exitFullscreen(); else await viewer.current?.requestFullscreen(); }
         catch { setError('이 브라우저에서는 전체화면을 지원하지 않습니다.'); }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccess } from "@/components/access/context";
+import { Button } from "@/components/erp/button";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -164,17 +165,17 @@ export function ProcessFlow({
               {chart.caption ?? chart.title} · {HINT}
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
-              {writable && projectSlug && !chart.erdDomain && !chart.content && <button type="button" className="rounded border px-2 py-0.5" onClick={() => setEditing(true)}>배치 편집</button>}
+              {writable && projectSlug && !chart.erdDomain && !chart.content && <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>배치 편집</Button>}
               <ExportSvgButton slug={chart.slug} wrapper={wrapperRef} />
-              <button
-                type="button"
+              <Button
                 onClick={openModal}
-                className="flex shrink-0 items-center gap-1 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-0.5 text-[11px] text-[var(--bi-fg)] transition hover:border-[var(--bi-accent)] hover:text-[var(--bi-accent)]"
                 aria-label="전체화면으로 보기"
+                size="sm"
+                variant="secondary"
               >
                 <HiOutlineArrowsExpand size={11} />
                 전체화면
-              </button>
+              </Button>
             </span>
           </div>
           <div
@@ -205,15 +206,15 @@ export function ProcessFlow({
                     {HINT} · Esc=닫기
                   </span>
                 </div>
-                <button
-                  type="button"
+                <Button
                   onClick={closeModal}
                   title="닫기 (Esc)"
                   aria-label="닫기 (Esc)"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] text-[var(--bi-fg)] transition hover:border-[var(--bi-accent)] hover:text-[var(--bi-accent)]"
+                  size="icon-sm"
+                  variant="secondary"
                 >
                   <HiOutlineX size={14} />
-                </button>
+                </Button>
               </div>
               <div className="relative flex-1">
                 <FlowCanvas key={chart.slug} chart={visibleChart} onEntitySelect={onEntitySelect} selectedEntity={selectedEntity} erdLayout={erdLayout} />
