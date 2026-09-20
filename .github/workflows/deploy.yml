@@ -28,6 +28,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Test scoped image cleanup
+        run: bash scripts/prune-deployment-images.test.sh
+
       - name: Configure SSH
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -70,6 +73,7 @@ jobs:
           cd ~/project-management
           test -r .env || { echo 'Deployment .env is required.' >&2; exit 1; }
           test -w .
+          install -d -m 0755 scripts
           docker info > /dev/null
           docker compose version
           command -v curl > /dev/null
@@ -88,6 +92,7 @@ jobs:
         run: |
           scp "$RUNNER_TEMP/project-management.tar.gz" docker-compose.yml docker-compose.wif.yml \
             deploy-target:project-management/
+          scp scripts/prune-deployment-images.sh deploy-target:project-management/scripts/
 
       - name: Start app and verify response
         run: |
@@ -96,6 +101,14 @@ jobs:
           cd ~/project-management
           export APP_IMAGE="$1"
           docker compose config --quiet
+          if docker inspect project-management > /dev/null 2>&1; then
+            bash scripts/prune-deployment-images.sh snapshot \
+              .deploy-image-state.tsv \
+              project-management=project-management
+          else
+            rm -f .deploy-image-state.tsv
+            echo 'No previous app container; image cleanup state was not created.'
+          fi
           docker load --input project-management.tar.gz
           rm project-management.tar.gz
           docker compose up -d --no-build --pull never app
@@ -130,6 +143,20 @@ jobs:
           printf 'today=[%s] login=[%s]\n' "$response" "$login_status"
           [[ "$response" == '307 https://project.dev-uk.shop/login' ]]
           [[ "$login_status" == '200' ]]
+
+      - name: Retain rollback images and clean old app images
+        run: |
+          ssh deploy-target 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd ~/project-management
+          if [[ -f .deploy-image-state.tsv ]]; then
+            bash scripts/prune-deployment-images.sh cleanup \
+              .deploy-image-state.tsv \
+              project-management=project-management
+          else
+            echo 'Image cleanup skipped: no previous deployment state.'
+          fi
+          REMOTE
 
       - name: Clean up runner credentials
         if: always()
