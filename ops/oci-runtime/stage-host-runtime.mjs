@@ -14,6 +14,7 @@ const files = [
   'lib/server/google-runtime-auth.mjs', 'ops/oci-runtime/identity-readiness.mjs',
   'ops/oci-runtime/imds-guard.py', 'ops/oci-runtime/project-management-imds-guard.service',
   'ops/oci-runtime/project-management-runtime.service',
+  'ops/oci-runtime/project-management-recordings.service',
   'ops/oci-runtime/project-management-object-broker.service',
   'ops/oci-runtime/project-management-google-token.service', 'ops/oci-runtime/project-management-google-token.timer',
   'ops/oci-runtime/vault-secrets.mjs', 'ops/oci-runtime/vault-client.mjs',

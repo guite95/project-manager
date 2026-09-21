@@ -11,7 +11,7 @@ from unittest.mock import patch
 spec = importlib.util.spec_from_file_location('prepare_cutover', pathlib.Path(__file__).with_name('prepare-cutover.py'))
 cutover = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(cutover)
-Path = pathlib.Path
+Path = type(pathlib.Path())
 real_lstat = Path.lstat
 
 
@@ -77,6 +77,24 @@ class PreparationTest(unittest.TestCase):
     def test_invalid_marker_never_falls_back_to_legacy(self):
         marker = self.path('/etc/project-management-vault.enabled')
         marker.write_text('enabled\n'); marker.chmod(0o644)
+        with self.assertRaises(RuntimeError): self.prepare()
+        self.assertEqual(self.env.read_text(), self.original)
+
+    def test_recordings_survives_redeploy_with_vault_only(self):
+        for name in ['project-management-vault.enabled', 'project-management-recordings.enabled']:
+            marker = self.path('/etc/' + name)
+            marker.write_text('enabled\n'); marker.chmod(0o600)
+        for name in ['project-management-secrets.service', 'project-management-vault.conf', 'project-management-recordings.service']:
+            (self.release / 'ops/oci-runtime' / name).write_text('verified fixture unit')
+        self.prepare(); self.prepare()
+        self.assertIn('docker-compose.vault.yml:docker-compose.recordings.yml\n', self.env.read_text())
+        self.assertTrue(self.path('/etc/systemd/system/project-management-recordings.service').is_file())
+        self.path('/etc/project-management-recordings.enabled').chmod(0o644)
+        with self.assertRaises(RuntimeError): self.prepare()
+
+    def test_recordings_cannot_enable_legacy_identity(self):
+        marker = self.path('/etc/project-management-recordings.enabled')
+        marker.write_text('enabled\n'); marker.chmod(0o600)
         with self.assertRaises(RuntimeError): self.prepare()
         self.assertEqual(self.env.read_text(), self.original)
 

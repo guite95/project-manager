@@ -1,0 +1,25 @@
+[Unit]
+Description=Project Management recording transcription worker
+Requires=docker.service project-management-imds-guard.service project-management-object-broker.service project-management-google-token.service project-management-secrets.service
+After=docker.service project-management-imds-guard.service project-management-object-broker.service project-management-google-token.service project-management-secrets.service project-management-runtime.service
+PartOf=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/project-management-runtime.conf
+ExecStartPre=/usr/bin/python3 /opt/project-management-runtime/current/ops/oci-runtime/imds-guard.py --check
+ExecStartPre=/opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/identity-readiness.mjs ${PM_RUNTIME_GID}
+ExecStartPre=/opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/vault-readiness.mjs
+ExecStart=/bin/sh -c '/usr/bin/docker start project-management-recordings >/dev/null && exec /usr/bin/docker wait project-management-recordings'
+ExecStop=/usr/bin/docker stop --time 90 project-management-recordings
+Restart=always
+RestartSec=5
+TimeoutStopSec=105
+LimitCORE=0
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target docker.service
