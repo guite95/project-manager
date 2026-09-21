@@ -23,6 +23,7 @@
 
 ```text
 GOOGLE_CLOUD_PROJECT=<기존 임베딩 프로젝트>
+GOOGLE_CLOUD_PROJECT_NUMBER=<동일 프로젝트의 확인된 숫자 번호>
 GOOGLE_SPEECH_LOCATION=us
 GOOGLE_SPEECH_BUCKET=<비공개 전사 임시 버킷>
 ```

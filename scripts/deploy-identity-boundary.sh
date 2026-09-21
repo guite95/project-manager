@@ -61,7 +61,7 @@ try:
         assert len(volumes)==len(expected) and {m['target'] for m in volumes}==expected
         assert all(m['source']==m['target'] and m['type']=='bind' and m.get('read_only') is True for m in volumes)
         assert not any(k in values for k in ['DATABASE_URL','SESSION_SECRET','APP_PASSWORD_HASH','PM_MIGRATION_SECRET_DIRECTORY'])
-        for key in ['PM_SECRET_DIRECTORY','OCI_STORAGE_AUTH','OCI_STORAGE_BROKER_SOCKET','GOOGLE_ACCESS_TOKEN_FILE','GOOGLE_APPLICATION_CREDENTIALS','GOOGLE_CLOUD_PROJECT','GOOGLE_SPEECH_LOCATION','GOOGLE_SPEECH_BUCKET']:
+        for key in ['PM_SECRET_DIRECTORY','OCI_STORAGE_AUTH','OCI_STORAGE_BROKER_SOCKET','GOOGLE_ACCESS_TOKEN_FILE','GOOGLE_APPLICATION_CREDENTIALS','GOOGLE_CLOUD_PROJECT','GOOGLE_CLOUD_PROJECT_NUMBER','GOOGLE_SPEECH_LOCATION','GOOGLE_SPEECH_BUCKET']:
             assert values.get(key)==env.get(key)
         assert env.get('GOOGLE_SPEECH_LOCATION')=='us' and env.get('GOOGLE_SPEECH_BUCKET')
 except Exception:
@@ -91,6 +91,11 @@ if [[ "$PM_RECORDINGS_MODE" == enabled ]]; then
   sudo -n systemctl enable project-management-recordings.service
   sudo -n systemctl start project-management-recordings.service
   sudo -n systemctl is-active --quiet project-management-recordings.service
+  # Type=simple returns before docker start completes; wait for the container.
+  for attempt in $(seq 1 20); do
+    [[ $(docker inspect project-management-recordings --format '{{.State.Running}}') == true ]] && break
+    sleep 1
+  done
 fi
 python3 - <<'PY'
 import os,json,subprocess
@@ -117,7 +122,7 @@ try:
         assert not worker['HostConfig'].get('PortBindings')
         assert {m['Destination'] for m in worker['Mounts']}==expected and all(not m['RW'] for m in worker['Mounts'])
         assert not any(k in values for k in ['DATABASE_URL','SESSION_SECRET','APP_PASSWORD_HASH','PM_MIGRATION_SECRET_DIRECTORY'])
-        for key in ['PM_SECRET_DIRECTORY','OCI_STORAGE_AUTH','OCI_STORAGE_BROKER_SOCKET','GOOGLE_ACCESS_TOKEN_FILE','GOOGLE_APPLICATION_CREDENTIALS','GOOGLE_CLOUD_PROJECT','GOOGLE_SPEECH_LOCATION','GOOGLE_SPEECH_BUCKET']:
+        for key in ['PM_SECRET_DIRECTORY','OCI_STORAGE_AUTH','OCI_STORAGE_BROKER_SOCKET','GOOGLE_ACCESS_TOKEN_FILE','GOOGLE_APPLICATION_CREDENTIALS','GOOGLE_CLOUD_PROJECT','GOOGLE_CLOUD_PROJECT_NUMBER','GOOGLE_SPEECH_LOCATION','GOOGLE_SPEECH_BUCKET']:
             assert values.get(key)==env.get(key)
         assert any(limit=={'Name':'core','Soft':0,'Hard':0} for limit in worker['HostConfig'].get('Ulimits',[]))
     print('IDENTITY_BOUNDARY_CONTAINER_VERIFIED')
