@@ -8,6 +8,12 @@
 - MinIO 현재 컨테이너 관리자 환경을 사용한 사용자 목록 조회는 `SignatureDoesNotMatch`로 실패. 값 출력/비밀번호 변경 없이 보류했다.
 - PM 운영 문서의 프로젝트/slug64쌍에서 broker 식별자 제약과 충돌하는 항목0개 확인. 본문/업무 데이터는 출력하지 않았다.
 - `/opt/node24`가 없음을 확인하고 공식 Node24.21.0 Linux ARM64 배포본을 설치했다. 배포자 서명과 고정 SHA-256을 모두 검증했다. 기존 앱/컨테이너 Node나 인증 경로는 변경하지 않았다.
+- 준비 코드 `4cc09d6`, 시작 게이트 `8f331a5`, 전환 스크립트 `3c8eddd`를 main에 push했다. 첫 두 Actions 배포 성공 확인. 이 배포들은 기존 앱 인증 경로를 유지했다.
+- `/opt/project-management-runtime/releases/3c8eddd2a96e5c4725cb0ea573ad025a88b22d27`에 호스트 코드를 준비했다. pm-runtime GID987, broker 및 Google token timer 활성, 단기 토큰 권한0640/디렉터리0750 확인.
+- 실제 OCI 테스트 객체 PUT/GET/무결성/DELETE 전부 통과. 테스트 객체는 삭제했으며 기존 업무 객체는 변경하지 않았다.
+- PM DB 백업 `/var/backups/oci-vault-migration/pm-20260921T003525353826Z.dump`: 808183887bytes, 보호된 디렉터리0700/파일0600, pg_restore 목록 확인. 복원 시험은 미실시.
+- runtime/IMDS guard unit은 서버 `systemd-analyze verify` 통과. 로컬 readiness3개, 방화벽3개, 준비 스크립트2개, immutable image 검사1개 추가 검증.
+- 인증서와 token 만료는 별개다. 00:51UTC 조회의 instance leaf certificate 만료02:43:11UTC, 발급한 OCI token의 관측 수명1200초. 이 관측만으로 모든 과거 token의 최대 수명을 증명하지 않으며, 차단 뒤 잔여 신원 만료 검증 없이 Vault 권한을 추가하지 않는다.
 
 ## 후속 재개: 입력 검증 및 읽기 전용 서버 검사
 

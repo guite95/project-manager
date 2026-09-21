@@ -1,7 +1,7 @@
 # PM 호스트 인증 경계 — 운영 전환 전 준비 패키지
 
-현재 코드는 **opt-in 준비 상태**다. 기본 Compose, Actions 배포 경로, 운영 IAM·계정·비밀번호는 바꾸지 않았다.
-`security/oci-vault-migration-20260920`에서 구현한 코드는 검토·main 통합·배포가 별도다.
+호스트 broker/token publisher를 준비했고, Actions가 identity boundary override를 사용하는 전환 경로를 구현했다.
+운영 적용 여부는 `verification.md`의 최신 실행 기록을 확인한다. Vault IAM·계정·비밀번호 전환과는 별도 단계다.
 사용자의 입력 완료·재개 요청 후 `.private/oci-vault-credentials.json`의 읽기 전용 사전 검증까지 진행했다.
 입력 파일은 사용자 요청대로 보존하며 운영 계정 변경·Vault 등록·실제 전환은 아직 하지 않았다.
 
@@ -56,7 +56,11 @@ docker compose --env-file /dev/null -f docker-compose.yml -f docker-compose.wif.
 
 Compose의 read-only **디렉터리** mount를 사용한다. 파일 한 개를 bind하면 atomic rename 뒤 이전 inode를 계속 읽을 수 있다. broker 재시작 시 systemd가 runtime 디렉터리를 제거/재생성하면 기존 bind가 오래된 디렉터리를 참조할 수 있으므로 `RuntimeDirectoryPreserve=yes`를 사용하고, 최종 중단/재부팅 경로도 시험한다.
 
-Actions 기본 경로는 아직 WIF override를 사용한다. 따라서 **이 준비 패키지만으로 재배포 시 전환이 유지된다고 보고하면 안 된다.** 운영 전환 전에 Actions의 업로드 파일·Compose 파일 목록·부팅 게이트도 main에서 함께 변경하고, 이후 한 번의 정상 재배포로 새 경계 유지 여부를 검증해야 한다. 이 단계를 건너뛴 임시 수동 전환은 하지 않는다.
+Actions는 host readiness를 먼저 검사하고 `scripts/deploy-identity-boundary.sh`로 전환한다.
+스크립트는 전체 Compose 결과를 메모리에서 검사하고 기존 `.env`/runtime unit의 보호된 백업을 남긴다.
+`.env`의 비밀값은 이 단계에서 유지하며, 비밀 아닌 `COMPOSE_FILE`과 `PM_RUNTIME_GID`만 고정해 수동 Compose도 같은 override를 사용하게 한다.
+Docker restart policy는 `no`로 바꾸고 systemd가 socket/token/방화벽 검사 후 시작·복구한다.
+소스 반영만으로 완료라고 하지 않고, 실제 Actions 배포와 이후 재배포에서 확인해야 한다.
 
 ## IMDS 차단 및 Vault 권한 부여 전 게이트
 
@@ -69,7 +73,10 @@ Actions 기본 경로는 아직 WIF override를 사용한다. 따라서 **이 �
 7. 기존에 발급된 OCI 세션/Google 토큰의 만료와 IAM 정책 전파 시간을 확인한다. mount 제거·IMDS 차단은 이미 탈취된 자격증명을 즉시 무효화하지 않는다. 노출이 의심되는 신원은 별도 대응 없이는 신뢰하지 않는다.
 8. 위 경계가 운영에서 확인되기 **전에는 VM에 Vault Secret 조회 권한을 추가하지 않는다.**
 
-방화벽 영속화/Actions/부팅 drop-in은 이 패키지의 자동 실행 대상이 아니다. 운영 네트워크·runtime 상태 재확인 후 별도 단계로 적용한다. 모든 게이트가 확인되기 전에는 신원 분리 완료가 아니다.
+방화벽은 `raw PREROUTING`에서 목적지 `169.254.169.254:80` TCP만 차단한다.
+호스트가 직접 보내는 OUTPUT 요청과 DNS/NTP는 이 규칙의 대상이 아니다. bridge 이름이나 Docker filter 체인에 의존하지 않는다.
+`project-management-imds-guard.service`는 Docker보다 먼저 실행되도록 설정하며, PM runtime unit은 방화벽·broker·token 준비를 요구한다.
+host-network/특권 컨테이너 및 호스트 root는 여전히 공통 신뢰 영역이다. 전체 재부팅은 별도 승인 후 검증한다.
 
 ## 녹음 worker
 

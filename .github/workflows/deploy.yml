@@ -31,6 +31,12 @@ jobs:
       - name: Test scoped image cleanup
         run: bash scripts/prune-deployment-images.test.sh
 
+      - name: Test identity deployment guards
+        run: |
+          node --test scripts/deploy-identity-boundary.test.mjs
+          PYTHONDONTWRITEBYTECODE=1 python3 ops/oci-runtime/imds-guard.test.py
+          PYTHONDONTWRITEBYTECODE=1 python3 ops/oci-runtime/prepare-cutover.test.py
+
       - name: Configure SSH
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -77,6 +83,11 @@ jobs:
           docker info > /dev/null
           docker compose version
           command -v curl > /dev/null
+          runtime_gid=$(getent group pm-runtime | cut -d: -f3)
+          [[ "$runtime_gid" =~ ^[0-9]+$ ]]
+          sudo -n /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/identity-readiness.mjs "$runtime_gid"
+          test -r /opt/project-management-runtime/current/ops/oci-runtime/project-management-runtime.service
+          test -r /opt/project-management-runtime/current/ops/oci-runtime/imds-guard.py
           REMOTE
 
       - name: Build ARM64 image and verify Prisma CLI
@@ -90,9 +101,10 @@ jobs:
 
       - name: Upload image and Compose file
         run: |
-          scp "$RUNNER_TEMP/project-management.tar.gz" docker-compose.yml docker-compose.wif.yml \
+          scp "$RUNNER_TEMP/project-management.tar.gz" docker-compose.yml docker-compose.identity-boundary.yml \
             deploy-target:project-management/
-          scp scripts/prune-deployment-images.sh deploy-target:project-management/scripts/
+          scp scripts/prune-deployment-images.sh scripts/deploy-identity-boundary.sh deploy-target:project-management/scripts/
+          scp ops/oci-runtime/prepare-cutover.py deploy-target:project-management/scripts/prepare-identity-cutover.py
 
       - name: Start app and verify response
         run: |
@@ -100,6 +112,9 @@ jobs:
           set -euo pipefail
           cd ~/project-management
           export APP_IMAGE="$1"
+          export PM_RUNTIME_GID
+          PM_RUNTIME_GID=$(getent group pm-runtime | cut -d: -f3)
+          export COMPOSE_FILE=docker-compose.yml:docker-compose.identity-boundary.yml
           docker compose config --quiet
           if docker inspect project-management > /dev/null 2>&1; then
             bash scripts/prune-deployment-images.sh snapshot \
@@ -111,7 +126,7 @@ jobs:
           fi
           docker load --input project-management.tar.gz
           rm project-management.tar.gz
-          docker compose up -d --no-build --pull never app
+          bash scripts/deploy-identity-boundary.sh "$APP_IMAGE"
 
           # migrate deploy 가 끝나고 로그인 화면이 응답할 때까지 최대 30회 확인한다.
           for attempt in $(seq 1 30); do
