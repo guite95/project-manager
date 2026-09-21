@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { open, lstat, mkdir, chown, statfs, readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { syncSecrets, validateManifest } from './vault-secrets.mjs';
 import { createVaultClient } from './vault-client.mjs';
 
@@ -70,7 +70,7 @@ async function main() {
   const client = await createVaultClient({ authenticationDetailsProvider, region: 'ap-chuncheon-1' });
   await syncSecrets({ manifest, client, rootDirectory });
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   // No SDK detail or secret-bearing exception enters journald; unit status is the signal.
   main().catch(() => { process.exitCode = 1; });
 }

@@ -1,6 +1,6 @@
 import { lstat, open, rename, unlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { randomUUID } from 'node:crypto';
 import { GoogleAuth } from 'google-auth-library';
 
@@ -30,7 +30,7 @@ export async function publishGoogleToken({ auth, outputPath, now = Date.now }) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   try {
     // These are host-only fixed paths; never mount the ADC/certificate directory in apps.
     const auth = new GoogleAuth({ keyFilename: '/run/project-management-wif/adc.json', scopes: ['https://www.googleapis.com/auth/cloud-platform'] });

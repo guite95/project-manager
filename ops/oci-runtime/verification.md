@@ -2,6 +2,8 @@
 
 ## 최신 상태: PM 신원 경계 운영 적용 / Vault 전환 준비
 
+- `84f070a` 준비 코드 main push 및 호스트 staging 후, 실제 `--check` 호출에서 `/current` symlink CLI의 main 판별이 실행을 건너뛰는 결함을 확인했다. 따라서 이 호출은 DB 조회/계정 생성 없이 끝났다. 공통 realpath 기반 main 판별과 실제 symlink 회귀 테스트로 수정하며 기존 identity readiness 진입점에도 적용한다. root 경계/방화벽/실제 토큰 및 storage 검증 결과와 CLI 시작 검사 실행 여부는 구분한다.
+
 - host migration/배포 연결 준비: root marker 기반 mode 유지, 별도 migration mount, app secret env 제거, migration 실패 시 기존 앱 stop/up 없음, Vault systemd drop-in 구현. 서버 Compose 실제 파서7검사 통과. 마지막 파일의 개별 `!reset`이 값을 제거하지 않는 동작을 발견해 환경변수 map 전체 `!override`로 검증했다.
 - 이번 집중 Node44개(43통과/Linux전용1skip), Python 준비4개/IMDS3개, 타입 검사 및 비밀값 없는 production build 통과. 실제 Vault mode 운영 배포/Prisma one-off 실행은 아직 미실시다. 신규 root manifest/marker를 설치하지 않았고 VM Vault IAM도 추가하지 않았다.
 

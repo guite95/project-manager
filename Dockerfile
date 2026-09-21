@@ -15,7 +15,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Prisma 클라이언트는 빌드 전에 만들어져 있어야 한다.
 RUN DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build pnpm exec prisma generate
-RUN node --test lib/server/runtime-secrets.test.mjs ops/oci-runtime/vault-*.test.mjs
+RUN node --test lib/server/runtime-secrets.test.mjs ops/oci-runtime/vault-*.test.mjs ops/oci-runtime/cli-symlink.test.mjs
 RUN pnpm build
 
 # --- 실행 ---

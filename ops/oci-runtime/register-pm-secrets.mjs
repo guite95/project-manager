@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { readCredentialInput } from './credential-input.mjs';
 
 export function buildPmSecretEntries(input, existing) {
@@ -76,6 +76,6 @@ async function main() {
   if (result.status !== 0 || reportResult.ok !== true || !Array.isArray(reportResult.secrets)) throw new Error();
   console.log(JSON.stringify({ ok: true, secrets: reportResult.secrets.map(s => ({ name: s.name, id: s.id, versionNumber: s.versionNumber, created: s.created })), vm_iam_granted: false, database_accounts_changed: false }));
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   main().catch(() => { console.log(JSON.stringify({ ok: false, code: 'PM_SECRET_REGISTRATION_FAILED', partial_creations_may_exist: true })); process.exitCode = 1; });
 }

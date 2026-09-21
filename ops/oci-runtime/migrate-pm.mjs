@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, rm, rmdir, statfs } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { createSecretReader } from '../../lib/server/runtime-secrets.mjs';
 
 const secretRoot = '/run/oci-service-secrets/project-management-migration';
@@ -64,6 +64,6 @@ async function main() {
   }
   process.stdout.write('PM_MIGRATION_SUCCEEDED\n');
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   main().catch(() => { process.stderr.write('PM_MIGRATION_FAILED\n'); process.exitCode = 1; });
 }

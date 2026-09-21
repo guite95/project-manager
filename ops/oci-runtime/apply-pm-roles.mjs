@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { readCredentialInput } from './credential-input.mjs';
 
 async function main() {
@@ -30,6 +30,6 @@ async function main() {
     console.log(JSON.stringify({ok:true,available:output.available,created:output.created,runtimeDdl:output.runtimeDdl,connectionsVerified:output.connectionsVerified,backup:output.backup,appCredentialChanged:output.appCredentialChanged,applied:mode==='--apply'}));
   } finally {payload.fill(0);}
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
+if(isMainModule(import.meta.url)) {
   main().catch(()=>{console.log('PM_ROLE_OPERATOR_FAILED');process.exitCode=1;});
 }

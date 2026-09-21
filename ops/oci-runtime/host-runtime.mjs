@@ -1,6 +1,6 @@
 import { chmod, lstat } from 'node:fs/promises';
 import { dirname, isAbsolute } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { createObjectBrokerServer } from './object-broker.mjs';
 
 export async function startObjectBroker({ socketPath, config, store }) {
@@ -63,6 +63,6 @@ async function main() {
   runtime.server.on('error', () => { process.stderr.write('OBJECT_BROKER_RUNTIME_FAILED\n'); process.exit(1); });
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   main().catch(() => { process.stderr.write('OBJECT_BROKER_START_FAILED\n'); process.exitCode = 1; });
 }

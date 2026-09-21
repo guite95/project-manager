@@ -18,7 +18,7 @@ const files = [
   'ops/oci-runtime/project-management-google-token.service', 'ops/oci-runtime/project-management-google-token.timer',
   'ops/oci-runtime/vault-secrets.mjs', 'ops/oci-runtime/vault-client.mjs',
   'ops/oci-runtime/vault-runtime.mjs', 'ops/oci-runtime/project-management-secrets.service',
-  'lib/server/runtime-secrets.mjs',
+  'lib/server/runtime-secrets.mjs', 'lib/server/cli-entry.mjs',
   'ops/oci-runtime/migrate-pm.mjs', 'ops/oci-runtime/pg-roles.mjs',
   'ops/oci-runtime/provision-pm-roles.mjs',
   'ops/oci-runtime/vault-readiness.mjs', 'ops/oci-runtime/project-management-vault.conf',

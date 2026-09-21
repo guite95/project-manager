@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { lstat, open } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import pg from 'pg';
 import { provisionPmRoles } from './pg-roles.mjs';
 
@@ -59,6 +59,6 @@ async function main() {
     console.log(JSON.stringify({ok:true,...result,connectionsVerified:2,backup,appCredentialChanged:false}));
   } finally {await admin.end();}
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href) {
+if(isMainModule(import.meta.url)) {
   main().catch(()=>{process.stdout.write('PM_ROLE_PROVISION_FAILED\n');process.exitCode=1;});
 }

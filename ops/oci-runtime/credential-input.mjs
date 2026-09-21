@@ -1,7 +1,7 @@
 import { constants } from 'node:fs';
 import { open, lstat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 
 // 로컬 전환 정책이다. 모든 제품의 전체 허용 문법을 표현하지 않는다.
 const groups = {
@@ -129,7 +129,7 @@ export async function readCredentialInput(inputPath) {
   finally { if (handle) await handle.close().catch(() => {}); }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isMainModule(import.meta.url)) {
   let report;
   try {
     if (process.argv.length > 3) throw new Error();

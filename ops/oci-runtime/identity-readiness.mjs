@@ -1,6 +1,6 @@
 import { lstat } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import net from 'node:net';
 import { createGoogleRuntimeAuth } from '../../lib/server/google-runtime-auth.mjs';
 
@@ -32,7 +32,7 @@ export async function checkIdentityReadiness({
   } catch { throw new Error('IDENTITY_BOUNDARY_NOT_READY'); }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isMainModule(import.meta.url)) {
   try {
     if (process.argv.length !== 3 || !/^\d+$/.test(process.argv[2])) throw new Error();
     await checkIdentityReadiness({ expectedGid: Number(process.argv[2]) });

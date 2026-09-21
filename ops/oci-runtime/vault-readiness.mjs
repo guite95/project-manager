@@ -1,5 +1,5 @@
 import { statfs, readFile } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { createSecretReader } from '../../lib/server/runtime-secrets.mjs';
 
 export function checkVaultReadiness({ directory, ownerUid = 0 }) {
@@ -11,7 +11,7 @@ export function checkVaultReadiness({ directory, ownerUid = 0 }) {
     return true;
   } catch { throw new Error('VAULT_NOT_READY'); }
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta.url)) {
   try {
     const directory = '/run/oci-service-secrets/project-management';
     if (process.getuid() !== 0 || process.argv.length !== 2 || (await statfs(directory)).type !== 0x01021994
