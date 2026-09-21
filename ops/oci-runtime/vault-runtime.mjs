@@ -59,7 +59,8 @@ export async function prepareRuntimeDirectory({ rootDirectory, manifest }) {
 }
 
 async function main() {
-  const profiles = { '--migration': 'project-management-migration', '--flight': 'flight', '--flight-migration': 'flight-migration' };
+  const profiles = { '--migration': 'project-management-migration', '--flight': 'flight', '--flight-migration': 'flight-migration',
+    '--youtube-backend': 'youtube-backend', '--youtube-media': 'youtube-media', '--youtube-migration': 'youtube-migration' };
   if (process.getuid() !== 0 || process.argv.length > 3 || (process.argv[2] !== undefined && !Object.hasOwn(profiles, process.argv[2]))) throw new Error();
   const service = profiles[process.argv[2]] ?? 'project-management';
   const manifest = await readRuntimeManifest(`/etc/oci-service-secrets/${service}.json`);

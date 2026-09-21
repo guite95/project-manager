@@ -8,6 +8,9 @@ const profiles = Object.freeze({
   'project-management-migration': { required: ['DATABASE_URL'], optional: [], gid: 0 },
   'flight': { required: ['CONFIG_JSON'], optional: [] },
   'flight-migration': { required: ['DATABASE_URL'], optional: [], gid: 0 },
+  'youtube-backend': { required: ['CONFIG_JSON'], optional: [] },
+  'youtube-media': { required: ['CONFIG_JSON'], optional: [] },
+  'youtube-migration': { required: ['CONFIG_JSON'], optional: [], gid: 0 },
 });
 function exactKeys(value, keys) {
   return value && typeof value === 'object' && !Array.isArray(value)

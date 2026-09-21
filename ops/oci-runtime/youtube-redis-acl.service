@@ -1,0 +1,13 @@
+[Unit]
+Description=Restore scoped YouTube Redis ACLs after Redis restart
+Requires=docker.service youtube-secrets@backend.service youtube-secrets@media.service
+After=docker.service youtube-secrets@backend.service youtube-secrets@media.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/project-management-runtime/current/ops/oci-runtime/youtube-redis-acl.py
+TimeoutStartSec=45
+UMask=0077
+LimitCORE=0
+StandardOutput=null
+StandardError=null

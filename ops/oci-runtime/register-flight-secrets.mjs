@@ -30,7 +30,7 @@ export function buildFlightSecretEntries(input, existing) {
   }catch{throw new Error('FLIGHT_SECRET_REGISTRATION_INPUT_INVALID');}
 }
 
-const register = String.raw`
+export const register = String.raw`
 import sys,json,base64,oci
 try:
  payload=json.load(sys.stdin)

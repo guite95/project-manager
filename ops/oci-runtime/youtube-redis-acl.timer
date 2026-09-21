@@ -1,0 +1,11 @@
+[Unit]
+Description=Reconcile YouTube-only Redis ACLs without restarting shared Redis
+
+[Timer]
+OnBootSec=20
+OnUnitInactiveSec=15
+AccuracySec=1
+Unit=youtube-redis-acl.service
+
+[Install]
+WantedBy=timers.target

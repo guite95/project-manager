@@ -190,3 +190,25 @@ git diff --check
 별도 사전 검사에서는 실제 입력 파일과 운영 사용자 목록을 읽었다. Compose 병합7개는 서버 Compose5.1.3으로 검증했다.
 호스트 인증 경계, 실제 Vault 전환 및 main 자동 배포의 전체 host migration을 검증했다.
 전체 VM 재부팅은 미실시이며 최신 운영 증거는 `verification.md`를 따른다.
+# YouTube Sync extension (2026-09-21)
+
+Three fixed profiles (`youtube-backend`, `youtube-media`, `youtube-migration`) use the same
+atomic tmpfs publisher. `vault-access.youtube.json` grants only those three Secret IDs at the
+existing VM egress source; the OCI MySQL administrator Secret is deliberately excluded.
+`youtube-operator.mjs` is operator-only (stdin credentials); the host receives only separate
+runtime/migration credentials. New MySQL accounts require TLS and the VM private source IP.
+
+`migrate-youtube.mjs` serializes schema-scoped backup, immutable-image Flyway and runtime table
+grants; its root-only migration mount is removed after its owned container is confirmed absent.
+The MySQL Shell dump uses a brief **YouTube-schema-only** read lock, no global read lock.
+Backups are root-only on encrypted OCI block storage; dump completion/hash checks are not a
+restore rehearsal. Migration has DB-scoped DML grant option for future runtime table grants,
+but no account creation, global privileges, or access to another application's DB.
+
+`youtube-runtime@.service` gates Docker startup on published files and the metadata guard.
+`youtube-redis-acl.timer` restores the two named users after Redis loses in-memory ACLs, without
+restarting Redis or persisting password files. **The existing shared default Redis user remains
+`nopass` until the other consumers (including Ilchul) are migrated. Named ACLs do not establish
+isolation while that unrestricted identity remains accessible.** This is a tracked exception.
+Do not disable it in a YouTube-only deployment. Do not restart publisher units during deploy;
+start/reload preserves the last complete generation on Vault failure.

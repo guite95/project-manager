@@ -1,0 +1,5 @@
+{
+  "service": "youtube-media",
+  "gid": 984,
+  "files": [{"name": "CONFIG_JSON", "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaatzbcbmyazlmugbhznh3lemuwyem2o6u4dqamg3rvcjng46o2pyra", "versionNumber": 1}]
+}

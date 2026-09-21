@@ -1,0 +1,5 @@
+{
+  "service": "youtube-migration",
+  "gid": 0,
+  "files": [{"name": "CONFIG_JSON", "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaatzbcbmyaw7jj2hy6kksp3mezqg2xjbiaeqpvtkac75e32s7ovxna", "versionNumber": 1}]
+}

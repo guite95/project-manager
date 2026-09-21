@@ -28,6 +28,10 @@ const files = [
   'ops/oci-runtime/service-readiness.mjs', 'ops/oci-runtime/migrate-flight.mjs',
   'ops/oci-runtime/backup-flight-db.sh',
   'ops/oci-runtime/flight-roles.mjs', 'ops/oci-runtime/provision-flight-roles.mjs',
+  'ops/oci-runtime/youtube-secrets@.service', 'ops/oci-runtime/youtube-runtime@.service',
+  'ops/oci-runtime/youtube-redis-acl.service', 'ops/oci-runtime/youtube-redis-acl.timer',
+  'ops/oci-runtime/youtube-redis-acl.py', 'ops/oci-runtime/youtube-database.py',
+  'ops/oci-runtime/youtube-backup.py', 'ops/oci-runtime/migrate-youtube.mjs',
 ];
 const payload = Buffer.from(JSON.stringify({ revision,
   packageHash: createHash('sha256').update(execFileSync('git', ['show', `${revision}:package.json`])).digest('hex'),

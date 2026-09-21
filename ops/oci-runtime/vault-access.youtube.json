@@ -1,0 +1,7 @@
+{
+  "policyId": "ocid1.policy.oc1..aaaaaaaa7hen4ccssknifnxdml5ndigvws6jydlx6ibyvtx5ymqx66ckqopq",
+  "networkSourceReference": "vault-access.json",
+  "resourceType": "secret-bundles",
+  "verb": "read",
+  "manifests": ["vault-manifest.youtube-backend.json", "vault-manifest.youtube-media.json", "vault-manifest.youtube-migration.json"]
+}

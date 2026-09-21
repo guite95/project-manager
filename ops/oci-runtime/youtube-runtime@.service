@@ -1,0 +1,24 @@
+[Unit]
+Description=YouTube %i with Vault startup gate
+Requires=docker.service youtube-secrets@backend.service youtube-secrets@media.service project-management-imds-guard.service
+After=docker.service youtube-secrets@backend.service youtube-secrets@media.service project-management-imds-guard.service
+PartOf=docker.service
+StartLimitIntervalSec=90
+StartLimitBurst=10
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/python3 /opt/project-management-runtime/current/ops/oci-runtime/imds-guard.py --check
+ExecStartPre=/opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/service-readiness.mjs youtube-%i
+ExecStartPre=/usr/bin/python3 /opt/project-management-runtime/current/ops/oci-runtime/youtube-redis-acl.py
+ExecStart=/bin/sh -c 'case %i in backend) name=youtube-sync-backend-1;; media) name=youtube-sync-media-service-1;; *) exit 1;; esac; /usr/bin/docker start "$$name" >/dev/null && exec /usr/bin/docker wait "$$name"'
+ExecStop=/bin/sh -c 'case %i in backend) name=youtube-sync-backend-1;; media) name=youtube-sync-media-service-1;; *) exit 1;; esac; exec /usr/bin/docker stop --time 30 "$$name"'
+Restart=always
+RestartSec=5
+TimeoutStopSec=45
+LimitCORE=0
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target docker.service

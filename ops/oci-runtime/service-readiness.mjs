@@ -3,7 +3,8 @@ import { constants } from 'node:fs';
 import { isMainModule } from '../../lib/server/cli-entry.mjs';
 
 export async function readServiceFile(service, name) {
-  if (!['flight','flight-migration'].includes(service) || !['CONFIG_JSON','DATABASE_URL'].includes(name)) throw new Error('SERVICE_SECRET_NOT_READY');
+  const profiles={'flight':['CONFIG_JSON'],'flight-migration':['DATABASE_URL'],'youtube-backend':['CONFIG_JSON'],'youtube-media':['CONFIG_JSON'],'youtube-migration':['CONFIG_JSON']};
+  if (!Object.hasOwn(profiles,service) || !profiles[service].includes(name)) throw new Error('SERVICE_SECRET_NOT_READY');
   const directory=`/run/oci-service-secrets/${service}`;
   const parent=await lstat(directory), link=await lstat(`${directory}/current`), target=await readlink(`${directory}/current`);
   if(!parent.isDirectory()||parent.uid!==0||(parent.mode&0o777)!==0o750||!link.isSymbolicLink()||link.uid!==0||!/^g-[A-Za-z0-9]{6}$/.test(target))throw new Error('SERVICE_SECRET_NOT_READY');
@@ -18,6 +19,12 @@ export async function readServiceFile(service, name) {
 
 export async function checkServiceReadiness(service) {
   if(process.getuid()!==0||(await statfs('/run')).type!==0x01021994||(await readFile('/proc/swaps','utf8')).trim().split('\n').length!==1)throw new Error();
+  if(['youtube-backend','youtube-media'].includes(service)){
+    const values=JSON.parse(await readServiceFile(service,'CONFIG_JSON'));
+    const names=service==='youtube-backend'?['DB_USER','DB_PASSWORD','REDIS_USERNAME','REDIS_PASSWORD','JWT_ACCESS_SECRET','JWT_REFRESH_SECRET','MEDIA_TOKEN_SECRET']:['REDIS_USERNAME','REDIS_PASSWORD','MEDIA_TOKEN_SECRET','YOUTUBE_COOKIES'];
+    if(Object.keys(values).sort().join(',')!==names.sort().join(',')||!names.every(n=>typeof values[n]==='string'&&(n==='YOUTUBE_COOKIES'||values[n].length>0)))throw new Error();
+    return;
+  }
   if(service!=='flight')throw new Error();
   const values=JSON.parse(await readServiceFile(service,'CONFIG_JSON'));
   const names=['DATABASE_URL','SECRET_KEY','SMTP_PASSWORD','KAKAO_CLIENT_SECRET','KAKAO_REST_API_KEY','GOOGLE_CLIENT_CONFIG'];
