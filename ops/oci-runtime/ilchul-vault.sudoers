@@ -1,0 +1,2 @@
+# The migration wrapper validates exactly one immutable Ilchul image argument.
+begae ALL=(root) NOPASSWD: /usr/local/sbin/ilchul-vault-preflight "", /usr/local/sbin/ilchul-vault-preflight --new-deployment, /usr/bin/systemctl reload ilchul-secrets.service, /usr/local/sbin/ilchul-vault-migrate

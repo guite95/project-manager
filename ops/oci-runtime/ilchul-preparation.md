@@ -51,3 +51,23 @@ publisher permissions and failed reload preservation, Redis application operatio
 metadata blocking, root-only migration backup/restore, boot recovery rehearsal,
 public settings, sudo path and rollback inventory. GitHub production/main/guite95
 approval configuration has been read back successfully.
+
+## Live verification after installation
+
+- Actual host publication and Redis restorers active; old Ilchul blue backend/frontend
+  and nginx retain original image/start times and healthy status.
+- Migration-account authentication/backup and isolated MySQL restore PASS: 18 tables,
+  Flyway 260920120100. Backup `/var/backups/ilchul-vault/20260921T072624267620Z.sql.gz`.
+- Configuration/old credentials root-only backup:
+  `/var/backups/ilchul-vault/configuration-20260921T072907157185Z` (includes nginx).
+- Real Vault invalid-version failure preserves previous generation. App GID can read
+  its own file but not migration/admin/other services. Real private-mount-namespace
+  empty-tmpfs publication PASS, without changing host mounts or rebooting the VM.
+- Redis real synthetic hash/index/draft/list/sorted-set probes PASS and cleaned up.
+- Both Ilchul frontend/backend IMDS requests denied; IPv4/IPv6 host guard check PASS.
+- Existing begae had no sudo: installed a narrow, visudo-validated command grant.
+  preflight (two modes), publisher reload and fixed migration wrapper allowed;
+  arbitrary shell and service stop denied. No broad sudo grant or SSH key change.
+- Actual application boot recovery, user OAuth/upload acceptance and VM reboot are
+  NOT VERIFIED; fresh tmpfs, retry/fail-closed code and Docker rebind are tested separately.
+- Readiness attestation is written only after these checks, not by the installer.

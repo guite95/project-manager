@@ -39,6 +39,14 @@ try:
    'docker-compose.blue.yml':'/etc/ilchul/docker-compose.blue.yml','docker-compose.green.yml':'/etc/ilchul/docker-compose.green.yml'}[name]
   write_new(target,base64.b64decode(value),0o750 if target.startswith('/usr/local/sbin/') else 0o644)
  write_new('/etc/ilchul/host-artifact-source.json',(json.dumps({'repository':'BEGAE4/ilchul','revision':d['revision'],'appDeployed':False})+'\n').encode(),0o644)
+ phase='sudoers'
+ sudoers='/etc/sudoers.d/ilchul-vault'
+ content=base64.b64decode(d['sudoers'])
+ if os.path.lexists(sudoers):write_new(sudoers,content,0o440)
+ else:
+  temporary=sudoers+'.tmp';write_new(temporary,content,0o440)
+  run(['visudo','-cf',temporary]);os.replace(temporary,sudoers)
+ run(['visudo','-c'])
  phase='public-settings'
  color=open('/home/begae/ilchul/current_environment.txt').read().strip();assert color in ['blue','green']
  app=json.loads(run(['docker','inspect','ilchul-backend-'+color]))[0]
@@ -84,5 +92,6 @@ try{
  const paths=['scripts/vault_preflight.py','infrastructure/vault/ilchul-vault-migrate.py','docker-compose.blue.yml','docker-compose.green.yml'];
  const artifacts=Object.fromEntries(paths.map(p=>[p,execFileSync('git',['show',revision+':'+p],{cwd:repo}).toString('base64')]));
  const manifests=Object.fromEntries(['ilchul-backend','ilchul-migration','redis-admin'].map(s=>[s,JSON.parse(readFileSync(new URL('./vault-manifest.'+s+'.json',import.meta.url),'utf8'))]));
- const result=operatorSsh(program,{revision,artifacts,manifests});console.log(JSON.stringify(result));if(!result.ok)process.exitCode=1;
+ const sudoers=readFileSync(new URL('./ilchul-vault.sudoers',import.meta.url)).toString('base64');
+ const result=operatorSsh(program,{revision,artifacts,manifests,sudoers});console.log(JSON.stringify(result));if(!result.ok)process.exitCode=1;
 }catch{console.log(JSON.stringify({ok:false,code:'ILCHUL_INSTALL_FAILED',partialArtifactsPreserved:true}));process.exitCode=1;}
