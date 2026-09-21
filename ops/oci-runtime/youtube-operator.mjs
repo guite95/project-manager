@@ -16,7 +16,7 @@ export function operatorSsh(program, data) {
   try {
     const result=spawnSync('ssh',args,{input:payload,encoding:'utf8',timeout:210000,maxBuffer:131072});
     if(result.status!==0){
-      try{const safe=JSON.parse(result.stdout);if(safe.ok===false&&/^YOUTUBE_[A-Z_]+$/.test(safe.code??''))return {ok:false,code:safe.code,...(typeof safe.phase==='string'&&/^[a-z-]+$/.test(safe.phase)?{phase:safe.phase}:{})};}catch{}
+      try{const safe=JSON.parse(result.stdout);if(safe.ok===false&&/^YOUTUBE_[A-Z_]+$/.test(safe.code??''))return {ok:false,code:safe.code,...(typeof safe.phase==='string'&&/^[a-z-]+$/.test(safe.phase)?{phase:safe.phase}:{}),...(safe.code==='YOUTUBE_CUTOVER_CHECK'&&safe.checks&&Object.entries(safe.checks).every(([k,v])=>/^[A-Za-z]+$/.test(k)&&typeof v==='boolean')?{checks:safe.checks}:{})};}catch{}
       throw new Error('YOUTUBE_OPERATOR_FAILED');
     }
     return JSON.parse(result.stdout);
@@ -25,7 +25,7 @@ export function operatorSsh(program, data) {
 
 async function main(){
   const mode=process.argv[2];
-  if(!['inspect','backup','provision','verify','retire'].includes(mode)||process.argv.length!==3)throw new Error();
+  if(!['inspect','backup','provision','verify','retire','live'].includes(mode)||process.argv.length!==3)throw new Error();
   const {credentials:c,report}=await readCredentialInput('.private/oci-vault-credentials.json');if(!report.ok)throw new Error();
   const cfg=JSON.parse(readFileSync(join(homedir(),'.config/oci-mysql-free/config.json'),'utf8'));
   const data={mode,user:cfg.adminUsername,password:c.infrastructure_admins.mysql_oci_admin.new_password,

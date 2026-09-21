@@ -215,3 +215,49 @@ YouTube backend/media의 공유 키 일치를 확인했다. 앞부분 및 나머
 - Flight secret reader tests 4 PASS; backend suite 91 PASS / 1 FAIL. The same guest-submission 422-vs-201 test fails on unchanged HEAD in an isolated source extraction; recorded as pre-existing, not silently fixed in this security cutover.
 - Flight deployment failure fixtures PASS: publisher reload or migration failure does not stop the existing app or run compose up. Whole environment injection and app-startup migration are removed in the pending Flight release.
 - YouTube OCI MySQL administrator reset is NOT authorized: user chose to provide the existing password in ignored, mode-0600 `.private/youtube-mysql-current-admin.json`. Existing new-credential input remains unchanged.
+# YouTube Vault cutover — 2026-09-21
+
+- YouTube main runtime commit `b4413ba39d08f2d0f4f7307d038e2342f2f04baf` is deployed for all three
+  containers. Validation Actions `35564908695`, image build `35564908532`, approved production
+  cutover `35565479450` all PASS. A fixed-SHA one-time workflow obtained the existing Actions
+  short-lived GHCR token because local gh used another account and the server login had expired;
+  it was removed after success. No new long-lived GitHub credential or paid OCI resource created.
+- Host release `6c022fd0b2396674695c45b74d971827852d4e97` stages the fixed YouTube profiles/units,
+  Redis reconciler and host-only migration runner. Later operator/checker fixes are in main;
+  they do not change the running publisher, migration runner or application code.
+- Three version1 Secrets registered with retained signing keys and cookies checked against the
+  old runtime before registration. Exact-three-secret, existing-egress-only IAM policy created;
+  the MySQL administrator Secret is not granted by this policy. Separate GIDs985/984; migration0.
+- Pre-change schema backup `/var/backups/youtube-sync-vault/20260921T052508583113Z`, 50 files,
+  completed MySQL Shell 26.7 dump and SHA-256 inventory. Additional successful backups were made
+  through the new migration identity during precheck and both real deployment invocations.
+  Root-only archives on encrypted OCI block storage; **restore rehearsal NOT VERIFIED**.
+- Two new MySQL logins: TLS required, only VM private source10.0.0.172, no global privilege.
+  Runtime has exact business-table CRUD/history SELECT. Host migration owns schema-scoped DDL
+  plus DML grant option for future runtime table grants, no account creation/global privileges.
+  Both old YouTube-only OCI accounts locked after connections drained. Shared MySQL untouched.
+- Live MySQL: two runtime TLS sessions, 11 tables, six successful migrations. App Flyway disabled;
+  one-off host Flyway succeeded twice, leaving no migration container or tmpfs credentials.
+- New backend/media Redis users have distinct scoped prefixes and command sets; actual AUTH,
+  allowed-command DRYRUN and forbidden-command/key DRYRUN PASS. Persistent startup gate and
+  15-second reconciliation timer enabled. Redis was not restarted/flushed and no legacy identity
+  was revoked. **Existing shared default user is nopass: full Redis isolation remains incomplete
+  until Ilchul/other consumers are migrated.** Explicitly reported, not hidden by named ACLs.
+- Live checker29/29 PASS before and after repeat deployment. No secret Docker Env, nonroot,
+  read-only roots, own-only read-only mounts, healthy backend/media/frontend, active/enabled
+  units/timer, public readiness/frontend/CSRF and metadata guard verified. Actual container IMDS
+  connectivity probes were also performed separately. Browser verification not requested.
+- Invalid Vault version999999 reload tests on **both** publishers PASS: rejected fetch, old
+  generation retained, container ID/start time and health unchanged. Original manifests restored
+  in finally blocks; successful reload and actual repeat deployment followed.
+- Legacy `.env` and `youtube-cookies.txt` moved into root-only
+  `/var/backups/youtube-sync-vault/retired-files-20260921T054459851211Z`; not deleted. Active
+  `production.env` contains only non-secret settings. Local ignored input file remains untouched.
+- Backend174 tests + bootJar PASS, media95 tests PASS, deployment failure gates3 PASS, common
+  publisher/operator focused tests PASS (Linux fixture skipped locally). Protected input values
+  scanned against both committed diffs: zero matches. No Codex-owned browser/server left running.
+- Helper issues resolved: input usernames legitimately contain hyphens (validation corrected);
+  MySQL Shell Row equality must compare converted values; live checker initially used the wrong
+  CSRF route and now uses the real `/api/v1/auth/csrf`. These did not require app/data changes.
+- NOT VERIFIED: whole-VM reboot, isolated DB restore, interactive login/playback, multi-browser
+  recovery, independent shared-Redis restart. Ilchul remains deferred/user-assisted.

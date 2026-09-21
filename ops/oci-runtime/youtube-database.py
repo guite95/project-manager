@@ -32,7 +32,7 @@ try:
    util.dump_schemas(['youtube_sync'],d['backup'],{'consistent':False,'threads':1,'showProgress':False,'routines':False,'events':False,'triggers':False})
   finally:s.run_sql('UNLOCK TABLES')
   result['schemaReadLockUsed']=True
- elif mode in ['inspect','provision','verify','retire']:
+ elif mode in ['inspect','provision','verify','retire','live']:
   phase='account-input'
   accounts=d['accounts']; names=[a['new_username'] for a in accounts.values()]
   if len(set(names))!=2 or any(not re.fullmatch('[A-Za-z_][A-Za-z0-9_-]{0,31}',n) for n in names):raise RuntimeError()
@@ -51,7 +51,7 @@ try:
      s.run_sql('GRANT SELECT,INSERT,UPDATE,DELETE ON `youtube_sync`.* TO '+identity+' WITH GRANT OPTION')
      s.run_sql('GRANT CREATE,ALTER,INDEX,REFERENCES,LOCK TABLES,SHOW VIEW ON `youtube_sync`.* TO '+identity)
    result['createdAccounts']=2
-  if mode in ['verify','provision']:
+  if mode in ['verify','provision','live']:
    phase='verify-grants'
    for kind,a in accounts.items():
     options=dict(d['connection'],user=a['new_username'],password=a['new_password']); check=mysql.get_session(options)
@@ -67,6 +67,13 @@ try:
      if {(r[1],r[2]) for r in grants}!=expected or any(r[0]!='youtube_sync' or r[3]!='NO' for r in grants):raise RuntimeError()
     if list(s.run_sql('SELECT ssl_type,account_locked FROM mysql.user WHERE User=? AND Host=?',[a['new_username'],'10.0.0.172']).fetch_one())!=['ANY','N']:raise RuntimeError()
    result['newLoginsVerified']=True;result['noGlobalPrivileges']=True
+  if mode=='live':
+   phase='live-tls'
+   rows=s.run_sql("SELECT s.VARIABLE_VALUE FROM performance_schema.threads t LEFT JOIN performance_schema.status_by_thread s ON s.THREAD_ID=t.THREAD_ID AND s.VARIABLE_NAME='Ssl_cipher' WHERE t.PROCESSLIST_USER=? AND t.TYPE='FOREGROUND'",[accounts['runtime']['new_username']]).fetch_all()
+   if not rows or not all(r[0] for r in rows):raise RuntimeError()
+   old=s.run_sql("SELECT account_locked FROM mysql.user WHERE Host='10.0.0.172' AND User IN ('youtube_sync_app','youtube_sync_migration')").fetch_all()
+   if len(old)!=2 or any(r[0]!='Y' for r in old):raise RuntimeError()
+   result.update(appLiveTlsConnections=len(rows),oldYoutubeAccountsLocked=True,successfulMigrations=s.run_sql('SELECT COUNT(*) FROM youtube_sync.flyway_schema_history WHERE success=1').fetch_one()[0])
   if mode=='retire':
    # Fixed historical YouTube-only identities; never touch shared/default/admin users.
    for old in ['youtube_sync_app','youtube_sync_migration']:
