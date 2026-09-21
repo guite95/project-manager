@@ -13,6 +13,7 @@ PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용�
 - 앱에는 서비스 디렉터리만 읽기 전용으로 mount하고 `PM_SECRET_DIRECTORY` 경로만 전달한다. 앱은 한 세대를 고정하므로 값 교체에는 명시적인 프로세스 재시작이 필요하다. 변수 존재 시 파일 실패를 env fallback으로 숨기지 않는다.
 - 아직 운영 Compose에 Secret mount를 켜지 않았다. `docker-compose.vault.yml`은 앱 command를 `node server.js`로 바꿔 inline migration을 없애며, 비밀 환경변수 전체를 제거한다. 호스트 root0600 `/etc/project-management-vault.enabled`의 정확한 `enabled` 한 줄로 전환한 뒤에만 배포 스크립트가 이 override와 host migration을 선택한다. 잘못된 marker는 legacy fallback 없이 배포를 중단한다.
 - Vault 배포는 Secret 동기화/시작 검사 → 보호된 DB 백업 → 별도 migration 성공 → 기존 앱 교체 순서다. `prepare-cutover.py`는 Vault mode를 재배포 때 보존하고 서버 `.env`의 DB/session/bootstrap 값을 제거한다(보호된 최초 백업 보존). systemd drop-in이 Secret 서비스 및 tmpfs 준비 검사를 요구한다. **marker 생성/서비스 활성화/실제 host migration 성공 검증은 별도 전환 게이트다.**
+- 배포 전 Secret 갱신은 `start` 후 `reload`로 한다. `restart`는 Requires 의존 앱까지 미리 멈출 수 있어 사용하지 않는다. 갱신 실패 시 기존 서비스/세대를 유지하고 배포만 실패한다. 단, migration 자체의 DB 변경을 자동 rollback한다는 의미는 아니다.
 - Secret 조회 성공/재부팅 시 시작 순서는 아직 실검증하지 않았다. 일반 배포는 현재 DB env 방식을 유지한다. 이전 세대 폐기는 모든 소비자의 전환을 확인한 뒤 별도로 한다.
 
 ### 운영자 PM Secret 등록

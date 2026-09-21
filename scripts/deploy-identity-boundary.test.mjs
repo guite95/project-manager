@@ -31,7 +31,7 @@ if(command==='getent')process.stdout.write('pm-runtime:x:987:\\n');
 else if(command==='sudo'){
   if(args.includes('--mode'))process.stdout.write('vault\\n');
   else if(args.some(a=>a.endsWith('/migrate-pm.mjs')))process.exit(1);
-  else if(!args.includes('restart')&&!args.some(a=>a.endsWith('/vault-readiness.mjs')||a.endsWith('/identity-readiness.mjs')))process.exit(9);
+  else if(!['restart','start','reload'].some(a=>args.includes(a))&&!args.some(a=>a.endsWith('/vault-readiness.mjs')||a.endsWith('/identity-readiness.mjs')))process.exit(9);
 }else if(command==='docker'){
   if(args.join(' ')==='compose config --format json')process.stdout.write(fs.readFileSync(path.join(dir,'compose.json')));
   else process.exit(9);
@@ -48,4 +48,7 @@ else if(command==='sudo'){
   const calls=readFileSync(join(dir,'calls'),'utf8').trim().split('\n').map(JSON.parse);
   assert.equal(calls.filter(args=>args.some(a=>a.endsWith('/migrate-pm.mjs'))).length,1);
   assert.equal(calls.some(args=>args.includes('stop')||args.includes('up')),false);
+  // Restarting a Requires= dependency can stop the current app before migration.
+  assert.deepEqual(calls.filter(args=>args.includes('project-management-secrets.service'))
+    .map(args=>args.find(a=>['restart','start','reload'].includes(a))),['start','reload']);
 });

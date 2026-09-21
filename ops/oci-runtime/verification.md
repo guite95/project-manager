@@ -2,6 +2,8 @@
 
 ## 최신 상태: PM 신원 경계 운영 적용 / Vault 전환 준비
 
+- Secret dependency를 재시작하면 기존 앱이 migration 전에 멈출 수 있는 경로를 제거했다. start+ExecReload로 교체하고 회귀 테스트 RED→GREEN 확인. 서버의 격리된 systemd publisher/consumer fixture에서 reload 실패 후 두 서비스 모두 active 유지 확인, fixture unit/파일은 제거했다. 실제 Vault 서비스는 여전히 inactive/disabled이며 운영 Vault reload를 실행한 것은 아니다.
+
 - 보호된 원본 full dump를2CPU/5GiB/네트워크 격리 DB에 실제 복원해 성공했다(540초). 테이블28개/완료 migration7개/pgvector0.8.1 확인. 테스트 컨테이너·볼륨·복사용 파일 제거, 운영 DB 미변경·원본 백업 보존 확인. 이전1CPU/600초 시험의 미완료 기록은 아래 이력이며 현재 복원 검증 결과는 PASS다. 이 복원은 no-owner/no-privileges 옵션의 데이터·스키마 검증으로, 운영 역할/ACL의 재난복구까지 검증한 것은 아니다.
 
 - `a80bb68` main push/Actions35554715888 성공 및 호스트 staging 완료. Vault mode는 여전히 비활성이다.

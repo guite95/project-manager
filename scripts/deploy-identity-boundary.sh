@@ -17,7 +17,10 @@ PM_DEPLOYMENT_MODE=$(sudo -n python3 scripts/prepare-identity-cutover.py --mode)
 [[ "$PM_DEPLOYMENT_MODE" == identity || "$PM_DEPLOYMENT_MODE" == vault ]]
 if [[ "$PM_DEPLOYMENT_MODE" == vault ]]; then
   export COMPOSE_FILE="$COMPOSE_FILE:docker-compose.vault.yml"
-  sudo -n systemctl restart project-management-secrets.service
+  # A restart of a Requires= dependency can stop the still-serving app.
+  # Reload refreshes the generation without deactivating that dependency.
+  sudo -n systemctl start project-management-secrets.service
+  sudo -n systemctl reload project-management-secrets.service
   sudo -n /bin/bash -c 'ulimit -c 0; exec "$@"' pm-vault-readiness /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/vault-readiness.mjs
 fi
 sudo -n /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/identity-readiness.mjs "$PM_RUNTIME_GID"
