@@ -1,0 +1,17 @@
+{
+  "region": "ap-chuncheon-1",
+  "instanceId": "ocid1.instance.oc1.ap-chuncheon-1.an4w4ljrtzbcbmycuygmfh6tle46r5jakdjcnndxknx45obn7ohxdjem4mqa",
+  "dynamicGroupId": "ocid1.dynamicgroup.oc1..aaaaaaaaltr3wr4rkkhr6zf2gj2h3nxydmq64cyqq7igpke3syngdqsp4sha",
+  "policyId": "ocid1.policy.oc1..aaaaaaaapcazenbockvyeyil352phljrpupiypuxghjuzopshqiiejpvsgsq",
+  "networkSourceId": "ocid1.identitynetworksource.oc1..aaaaaaaa474rlaesjdfw7fertfa5jpo3xgfnnxunsujmszz4turhjc6wtnra",
+  "networkSourceName": "pm-vault-host-egress",
+  "publicSourceList": ["168.107.55.237/32"],
+  "virtualSourceList": [],
+  "services": ["none"],
+  "resourceType": "secret-bundles",
+  "verb": "read",
+  "manifests": [
+    "vault-manifest.project-management.json",
+    "vault-manifest.project-management-migration.json"
+  ]
+}

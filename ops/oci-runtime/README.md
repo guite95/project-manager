@@ -1,5 +1,25 @@
 # PM 호스트 인증 경계 및 Vault 전환
 
+## 2026-09-21 실제 전환 재개
+
+사용자가 PM 완료 범위를 실제 Vault 전환까지로 재확인했다. 아래 이전 준비 기록과 달리
+VM에 PM Secret4개만 읽는 IAM policy를 적용하고 실제 host publisher 시작을 확인했다.
+앱 전환/기존 계정 폐기는 각각 별도 실검증 결과를 `verification.md`에 기록한다.
+
+- `vault-access.json`은 비밀 없는 실제 IAM 리소스와 출발지 제한이다. 기존 VM 한 대만
+  매칭하는 dynamic group + Secret별 OCID + `request.networkSource.name`을 모두 요구한다.
+- Network Source는 서버 public egress `/32`만 허용한다. `virtualSourceList=[]`,
+  `services=["none"]`을 유지한다. CLI update에서 `services`를 생략하면 `all`로
+  돌아가는 동작을 확인했으므로 세 필드를 항상 명시하고 저장 후 다시 조회한다.
+- 합성 canary에서 허용→출발지 불일치 거부를 실제로 확인한 뒤 PM Secret4개로 교체했다.
+  최종 policy에는 canary/다른 앱/관리자 Secret 또는 Secret 수정 권한이 없다.
+- 과거 인증서/토큰이 모두 만료됐다고 주장하지 않는다. 외부 반출 신원에 대한 출발지
+  제한으로 보완한다. 같은 VM에서 탈취 신원을 재사용하거나 root/특권 컨테이너가
+  장악되는 위험은 이 조건으로 분리되지 않으며, 사용자 승인 단일 VM 신뢰 경계다.
+- 서버 public IP/egress가 바뀌면 새 Secret 조회는 실패한다. 임의 wildcard로 완화하지 말고
+  운영자가 실제 경로를 확인한 뒤 Network Source와 이 파일을 함께 갱신한다.
+- 전체 VM 재부팅은 여전히 별도 승인 작업이다.
+
 PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용했다.
 운영 검증은 `verification.md`의 최신 기록을 따른다. **Vault IAM·DB 계정·비밀번호 전환은 아직 별도다.**
 사용자 입력 파일은 보존한다. 일반 Vault/SOFTWARE key와 PM Secret4개 및 새 PM DB 역할2개를 생성했다. 앱 DB 계정 전환 및 VM 조회 권한은 아직 적용하지 않았다.

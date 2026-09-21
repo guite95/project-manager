@@ -1,5 +1,19 @@
 # 로컬 검증 기록 — 2026-09-21
 
+## 실제 Vault 전환 재개 — 2026-09-21
+
+- 사용자 완료 범위 재확인으로 PM 실제 전환을 재개했다. 다른 서비스 전환은 진행하지 않는다.
+- VM 한 대의 기존 dynamic group, PM Secret4개의 개별 ID, 서버 public egress `/32`
+  Network Source를 모두 요구하는 읽기 전용 IAM policy를 적용했다. Secret/키/IAM 관리 권한 없음.
+- 실제 VM으로 합성 canary 조회 성공 후 Network Source를 TEST-NET 주소로 바꾸자404 거부됨을
+  확인했다. 서버 주소를 복구하고 policy를 실제 PM4개로 변경했다. Network Source 최종
+  `services=["none"]`, VCN 우회 없음. CLI update 생략 시 services=all 복귀 동작도 확인/수정했다.
+- `project-management-secrets.service` 실제 시작 성공(active). 앱은 아직 기존 계정으로 실행 중이다.
+- 기존 PM DB 계정은 컨테이너 설정상 PM만 소비하고 다른 DB 소유0개, migration7개 완료/미완료0개를
+  읽기 전용 확인했다. 이후 실제 앱 전환, host migration, 기존 로그인 폐기는 별도로 검증한다.
+- 잔여 OCI token 만료를 증명했다는 의미가 아니다. 외부 출발지 차단으로 보완하며 같은 호스트의
+  root/탈취 신원 재사용 한계는 유지한다. source IP 변경 시 운영자가 재검증해야 한다.
+
 ## 최신 상태: PM 신원 경계 운영 적용 / Vault 전환 준비
 
 - Secret dependency를 재시작하면 기존 앱이 migration 전에 멈출 수 있는 경로를 제거했다. start+ExecReload로 교체하고 회귀 테스트 RED→GREEN 확인. 서버의 격리된 systemd publisher/consumer fixture에서 reload 실패 후 두 서비스 모두 active 유지 확인, fixture unit/파일은 제거했다. 실제 Vault 서비스는 여전히 inactive/disabled이며 운영 Vault reload를 실행한 것은 아니다.
