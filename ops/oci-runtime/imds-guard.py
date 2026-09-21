@@ -9,20 +9,23 @@ import sys
 
 
 def ensure_guard(check_only=False, run=subprocess.run):
-    base = ['/usr/sbin/iptables', '-w', '5', '-t', 'raw']
-    match = ['-d', '169.254.169.254/32', '-p', 'tcp', '--dport', '80',
-             '-m', 'comment', '--comment', 'pm-container-imds-boundary', '-j', 'DROP']
-    def call(operation):
-        try:
-            return run(base + operation + match, capture_output=True, timeout=10).returncode
-        except Exception:
-            raise RuntimeError('IMDS_GUARD_FAILED') from None
-    status = call(['-C', 'PREROUTING'])
-    if status == 0: return True
-    if status != 1: raise RuntimeError('IMDS_GUARD_FAILED')
-    if check_only: raise RuntimeError('IMDS_GUARD_MISSING')
-    if call(['-I', 'PREROUTING', '1']) != 0: raise RuntimeError('IMDS_GUARD_FAILED')
-    if call(['-C', 'PREROUTING']) != 0: raise RuntimeError('IMDS_GUARD_FAILED')
+    # OCI SDK also supports IPv6 IMDS. Protect it even before an IPv6 route exists.
+    for binary, destination in [('/usr/sbin/iptables', '169.254.169.254/32'),
+                                ('/usr/sbin/ip6tables', 'fd00:c1::a9fe:a9fe/128')]:
+        base = [binary, '-w', '5', '-t', 'raw']
+        match = ['-d', destination, '-p', 'tcp', '--dport', '80',
+                 '-m', 'comment', '--comment', 'pm-container-imds-boundary', '-j', 'DROP']
+        def call(operation):
+            try:
+                return run(base + operation + match, capture_output=True, timeout=10).returncode
+            except Exception:
+                raise RuntimeError('IMDS_GUARD_FAILED') from None
+        status = call(['-C', 'PREROUTING'])
+        if status == 0: continue
+        if status != 1: raise RuntimeError('IMDS_GUARD_FAILED')
+        if check_only: raise RuntimeError('IMDS_GUARD_MISSING')
+        if call(['-I', 'PREROUTING', '1']) != 0: raise RuntimeError('IMDS_GUARD_FAILED')
+        if call(['-C', 'PREROUTING']) != 0: raise RuntimeError('IMDS_GUARD_FAILED')
     return True
 
 

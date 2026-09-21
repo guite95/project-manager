@@ -13,7 +13,6 @@ try {
     chunks.push(chunk);
   }
   const batch = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  if (!process.env.DATABASE_URL) throw new Error("configuration");
   pool = createPool();
   let result;
   if (batch?.version === 1 && batch?.probe === true) {

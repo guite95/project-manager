@@ -6,6 +6,7 @@ import { isSessionTokenValid } from '../session.ts';
 import { isPersonalProject } from '../personal-projects.ts';
 import { type Actor, isAdmin } from './policy.ts';
 import { readFlowCatalog } from '../server/flow-catalog-store.ts';
+import { getRuntimeSecret } from '../server/runtime-secrets.mjs';
 
 export class AccessError extends Error {
   status: number;
@@ -23,7 +24,7 @@ export async function resolveActor(token: string): Promise<Actor | null> {
     const row = await prisma.accessSession.findUnique({where:{tokenHash:tokenHash(raw)},include:{user:{select:userSelect}}});
     return row && row.expiresAt > new Date() && row.user.active ? row.user : null;
   }
-  const secret = process.env.SESSION_SECRET;
+  const secret = getRuntimeSecret('SESSION_SECRET');
   if (!secret || !token || !await isSessionTokenValid(token,secret,Date.now())) return null;
   if (await hasOwner()) return null;
   return {id:'bootstrap',username:'',name:'소유자 등록',role:'OWNER',bootstrap:true,memberships:[]};
@@ -70,7 +71,7 @@ export async function loginAccount(username: string, password: string) {
   await throttle('login:global',200);
   await throttle(`login:${username || 'bootstrap'}`);
   if (!username) {
-    const hash = process.env.APP_PASSWORD_HASH;
+    const hash = getRuntimeSecret('APP_PASSWORD_HASH');
     if (await hasOwner() || !hash || !await verifyPassword(password,hash)) throw new AccessError('계정 또는 비밀번호가 맞지 않습니다.',401);
     return null;
   }

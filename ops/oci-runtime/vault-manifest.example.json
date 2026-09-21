@@ -1,0 +1,9 @@
+{
+  "service": "project-management",
+  "gid": 987,
+  "files": [
+    { "name": "DATABASE_URL", "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.REPLACEWITHRUNTIMESECRET", "versionNumber": 1 },
+    { "name": "SESSION_SECRET", "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.REPLACEWITHSESSIONSECRET", "versionNumber": 1 },
+    { "name": "APP_PASSWORD_HASH", "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.REPLACEWITHBOOTSTRAPHASH", "versionNumber": 1 }
+  ]
+}

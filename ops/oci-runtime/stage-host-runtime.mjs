@@ -16,6 +16,9 @@ const files = [
   'ops/oci-runtime/project-management-runtime.service',
   'ops/oci-runtime/project-management-object-broker.service',
   'ops/oci-runtime/project-management-google-token.service', 'ops/oci-runtime/project-management-google-token.timer',
+  'ops/oci-runtime/vault-secrets.mjs', 'ops/oci-runtime/vault-client.mjs',
+  'ops/oci-runtime/vault-runtime.mjs', 'ops/oci-runtime/project-management-secrets.service',
+  'lib/server/runtime-secrets.mjs',
 ];
 const payload = Buffer.from(JSON.stringify({ revision,
   packageHash: createHash('sha256').update(execFileSync('git', ['show', `${revision}:package.json`])).digest('hex'),

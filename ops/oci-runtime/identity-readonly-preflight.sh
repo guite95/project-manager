@@ -6,7 +6,7 @@ def run(args):
     return p.returncode, p.stdout.strip()
 out = {}
 out['compose_version'] = run(['docker','compose','version','--short'])[1]
-out['native_node_present'] = shutil.which('node') is not None
+out['native_node_present'] = shutil.which('node') is not None or os.path.isfile('/opt/node24/bin/node')
 out['run_filesystem'] = run(['findmnt','-n','-o','FSTYPE','/run'])[1]
 out['swap_active'] = bool(run(['swapon','--noheadings','--show=NAME'])[1])
 try: out['runtime_group_present'] = bool(grp.getgrnam('pm-runtime'))

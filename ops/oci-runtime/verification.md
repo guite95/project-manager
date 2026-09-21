@@ -1,5 +1,24 @@
 # 로컬 검증 기록 — 2026-09-21
 
+## 최신 상태: PM 신원 경계 운영 적용 / Vault 전환 준비
+
+- `0997df5` main push와 Actions35549067826 성공. PM이 broker 및 Google 파일 토큰을 사용하고 WIF mount가 없음을 실제 컨테이너에서 확인했다.
+- app IMDSv1/v2 차단, 호스트 IMDSv2 HTTP200, 새 Docker bridge의 IMDSv1/v2 차단 확인. 임시 probe 컨테이너/네트워크 제거. 전체 Docker 재시작·VM 재부팅은 미실시.
+- 배포된 실제 앱 코드로 OCI 객체 PUT/GET/무결성/DELETE 및 Google1536차원 임베딩 성공. 테스트 객체는 제거했고 기존 업무 객체는 건드리지 않았다.
+- 컨테이너 restart policy=no, systemd runtime active/running, guard active/exited, Google token timer 활성 확인. 이후 재배포 검증은 다음 코드 릴리스에서 다시 수행한다.
+- 새 `service-runtime-secrets` compartment / DEFAULT Vault / AES256 SOFTWARE key 생성·ACTIVE/ENABLED 확인. 식별자만 `vault-resources.json`에 기록했다. Virtual Private Vault/HSM key는 만들지 않았다. Secret 값 등록 및 VM Secret-read IAM grant는 아직 없다.
+- 새 KMS endpoint는 로컬 DNS에서 조회되지 않았다. VM DNS 결과와 정상 TLS 검증으로 도달 가능함을 확인하고 OCI CLI 한 프로세스에서만 주소 해석을 지정해 key 생성·ENABLED를 확인했다. 전역 DNS/hosts/인증서 검증을 변경하지 않았다.
+- Vault 전달기: 고정 PM manifest/Secret ID/version, CURRENT stage/만료/삭제 예약 검사, 부분 전환 방지, tmpfs+swap 검사, root 소유 경로, 0640파일/0750서비스 디렉터리. 앱 reader는 완전한 한 세트를 고정하며 교체 시 프로세스 재시작이 필요하다.
+- 로컬 집중 테스트61개 중60통과, Linux-root/tmpfs 전용1개 skip. 서버 실제 `/run`에서는 합성 데이터로 해당 검사 포함3개 통과. systemd Secret unit 문법 검증 통과. 테스트 디렉터리는 제거했다. 실제 Vault 조회 성공으로 보고하지 않는다.
+- `pnpm typecheck`, `pnpm build` 통과. Python IMDS guard3개 통과. 새 단위 테스트는 먼저 실패를 확인한 뒤 구현했다.
+- PM DB/세션/AI 수집기/운영 CLI에 파일 reader를 준비했다. 운영 `PM_SECRET_DIRECTORY`는 아직 활성화하지 않았고 DB 비밀번호도 바꾸지 않았다. 별도 migration credential/일회성 migration 실행 및 Compose/시작 게이트의 Vault 전환은 남아 있다.
+- 로컬 SSH 래퍼는 기존 고정 사용자명 대신 SSH로 읽은 앱 자격증명의 실제 사용자와 DB를 검증하며 superuser/createdb/createrole/replication/bypassrls 계정을 거부한다. 현재 PM 계정이 이 제한을 통과함을 읽기 전용으로 확인했다.
+- 공식 OCI Python SDK의 IPv6 IMDS 주소를 추가 확인했다. 호스트에 현재 해당 IPv6 route는 없지만 raw IPv6 규칙은 지원한다. IPv6 차단 코드는 추가했으며 호스트 적용·실패 여부는 별도 배포 검증으로 기록한다.
+- VM Vault grant는 보류한다: 기존 leaf certificate 만료02:43:11UTC(11:43:11KST), 관측 token수명20분만으로 모든 과거 token 만료를 증명할 수 없다. 인증서 만료만으로 안전한 재권한 부여 시각이라고 단정하지 않는다.
+- Flight/YouTube/Ilchul 자격증명 전환은 아직 시작하지 않았다. Ilchul 마지막·사용자 공동 전환 및 공유 계정 보존 경계를 유지한다. 사용자 입력 파일은 수정/삭제하지 않았다.
+
+아래는 시간순 이전 기록이며, 현재 상태와 다른 항목은 위 최신 기록이 우선한다.
+
 ## 순차 운영 전환 준비 (사용자 승인 후)
 
 - 사용자가 PM/Flight/YouTube Sync main push 및 순차 작업을 승인했다. Ilchul은 마지막에 함께 전환하며 자동 push/전환하지 않는다.

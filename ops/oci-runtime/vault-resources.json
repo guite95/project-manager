@@ -1,0 +1,10 @@
+{
+  "region": "ap-chuncheon-1",
+  "compartmentId": "ocid1.compartment.oc1..aaaaaaaaqyclgexao5muf3xvie2pevj3rj3zlsy2qh2ok73pwse6r4qniyla",
+  "vaultId": "ocid1.vault.oc1.ap-chuncheon-1.gjvlbatoaaay2.ab4w4ljr2mlx5q4sdt2xui4f4dtluzghs3ukyamzotnjfqe3if3zydysgv7a",
+  "keyId": "ocid1.key.oc1.ap-chuncheon-1.gjvlbatoaaay2.ab4w4ljr5g4bhew3kegizde56jmavhnfuyucc2myls45pe5xzh3dm7766qmq",
+  "vaultType": "DEFAULT",
+  "keyProtectionMode": "SOFTWARE",
+  "keyAlgorithm": "AES",
+  "keyLengthBytes": 32
+}

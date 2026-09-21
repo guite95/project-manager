@@ -25,7 +25,8 @@
 서로 다름을 확인했다(에이전트가 사용자명을 변경한 것은 아님). 전체 형식/운영 사전 검증은 여전히 별도다.
 입력 사전 검사 결과는 `ops/oci-runtime/credential-preflight.md`, PM 구현 상태는
 `2026-09-20-pm-oci-identity-boundary.md`와 `ops/oci-runtime/verification.md` 참조.
-실제 계정/Vault 전환은 아직 실행하지 않았다.
+2026-09-21 후속: PM 신원 경계 main 배포 및 실제 OCI/Google 호출 검증 완료. 일반 Vault와 SOFTWARE key 생성 완료.
+파일 전달기 및 PM reader를 준비했으나 Secret 등록/VM grant/DB 계정·비밀번호 전환은 미실행이다. 상세 증거는 verification.md의 최신 절을 따른다.
 
 ## Global Constraints
 
@@ -64,11 +65,11 @@
 
 **Files:** 새 `ops/oci-runtime/vault-secrets.mjs`, `.test.mjs`, `project-management-secrets.service`, 비밀 없는 manifest 예제와 설치 문서.
 
-- [ ] 무료 한도/현재 사용량을 다시 조회하고 일반 Vault + software-protected symmetric key를 생성한다. Virtual Private Vault는 선택하지 않는다.
+- [x] 무료 한도/현재 사용량을 다시 조회하고 일반 Vault + software-protected symmetric key를 생성한다. Virtual Private Vault는 선택하지 않는다.
 - [ ] Secret 단위 runtime read 권한만 추가한다. Secret 생성/버전 변경/폐기 및 IAM 관리 권한은 운영자에게만 둔다.
-- [ ] `syncSecrets(manifest, sdkClient)`가 고정된 Secret ID/version만 조회하고 서비스별 tmpfs 세대를 생성하도록 한다. 파일 내용은 반환/로그하지 않는다.
-- [ ] 합성 SDK 응답으로 다른 서비스 경로·symlink·부분 파일 갱신·실패 시 기존 세대 보존·버전 불일치 거부를 테스트한다.
-- [ ] 여러 파일은 완전한 세대를 먼저 생성한 뒤 전환한다. 단일 파일 bind inode 갱신 문제를 피하도록 디렉터리를 mount한다.
+- [x] `syncSecrets(manifest, sdkClient)`가 고정된 Secret ID/version만 조회하고 PM pilot tmpfs 세대를 생성하도록 한다. 파일 내용은 반환/로그하지 않는다.
+- [x] 합성 SDK 응답으로 다른 서비스 경로·symlink·부분 파일 갱신·실패 시 기존 세대 보존·버전 불일치 거부를 테스트한다.
+- [ ] 여러 파일은 완전한 세대를 먼저 생성한 뒤 전환한다(구현/합성 검증 완료). 단일 파일 bind inode 갱신 문제를 피하도록 운영 디렉터리를 mount한다(미전환).
 - [ ] 재부팅 후 Vault 불가용 시 앱을 비밀값 없이 시작하지 않는다. 폐기된 버전이나 옛 `.env`로 fallback하지 않는다.
 
 ## Task 4: PM pilot과 PostgreSQL 권한 분리
@@ -126,4 +127,4 @@
 ## 재개 조건
 
 사용자가 입력을 마치고 재개를 요청하면 Task 1부터 진행한다. 이 파일의 체크박스는
-계획이며 완료 증거가 아니다. 현재 계정/비밀번호/VM IAM/방화벽/배포는 변경하지 않았다.
+계획이며 완료 증거가 아니다. 계정/비밀번호/VM Vault IAM은 아직 바꾸지 않았다. 방화벽/PM 배포와 Vault/key 생성은 최신 verification.md에 기록했다.

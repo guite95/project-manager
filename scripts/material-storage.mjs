@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import pg from 'pg';
+import { getRuntimeSecret } from '../lib/server/runtime-secrets.mjs';
 import { sha256, storageConfig } from '../lib/server/object-storage.mjs';
 import { storeMaterial, restoreMaterial, compactMaterial, encodeMaterial, encodeMaterialPreview, materialWithoutStorage } from '../lib/server/material-storage.mjs';
 import { validateProjectContent } from '../lib/flows/content.ts';
@@ -15,7 +16,7 @@ const canonical = value => JSON.stringify(value, function (_key, v) {
 });
 const sql = `SELECT project_slug,slug,revision,document FROM flow_document
   WHERE document->'content'->>'kind' IN ('material','html','slides') ORDER BY project_slug,slug`;
-const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+const db = new pg.Client({ connectionString: getRuntimeSecret('DATABASE_URL') });
 try {
   if (!['inspect','prepare','copy','compact','verify'].includes(mode)) throw new Error('inspect|prepare|copy|compact|verify 명령이 필요합니다.');
   await db.connect();

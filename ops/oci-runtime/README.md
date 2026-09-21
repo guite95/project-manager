@@ -1,9 +1,18 @@
-# PM 호스트 인증 경계 — 운영 전환 전 준비 패키지
+# PM 호스트 인증 경계 및 Vault 전환
 
-호스트 broker/token publisher를 준비했고, Actions가 identity boundary override를 사용하는 전환 경로를 구현했다.
-운영 적용 여부는 `verification.md`의 최신 실행 기록을 확인한다. Vault IAM·계정·비밀번호 전환과는 별도 단계다.
-사용자의 입력 완료·재개 요청 후 `.private/oci-vault-credentials.json`의 읽기 전용 사전 검증까지 진행했다.
-입력 파일은 사용자 요청대로 보존하며 운영 계정 변경·Vault 등록·실제 전환은 아직 하지 않았다.
+PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용했다.
+운영 검증은 `verification.md`의 최신 기록을 따른다. **Vault IAM·DB 계정·비밀번호 전환은 아직 별도다.**
+사용자 입력 파일은 보존한다. 일반 Vault/SOFTWARE key만 생성했고 Secret 값 및 VM 조회 권한은 등록하지 않았다.
+
+## Vault 전달기 준비 상태
+
+- `vault-resources.json`은 실제 생성한 리소스의 비밀 아닌 ID만 가진다. `vault-manifest.example.json`은 예제이지 실제 설치 manifest가 아니다.
+- 운영자만 `/etc/oci-service-secrets/project-management.json`을 root:root0600, 부모 root:root0700으로 설치한다. 서비스/파일명/Secret ID/버전을 고정하며 앱의 임의 경로나 요청을 받지 않는다.
+- `project-management-secrets.service`는 아직 설치/enable하지 않았다. 설치 전 VM 잔여 신원 안전 게이트, Secret별 최소 조회 IAM, migration/admin Secret 제외를 확인한다.
+- host CLI는 `/run/oci-service-secrets/project-management`에 완전한 세대를 만든다. `/run` tmpfs와 swap 비활성을 강제하고 파일0640/디렉터리0750을 사용한다. 부분 실패 시 기존 세대는 그대로 두고 실패한다.
+- 앱에는 서비스 디렉터리만 읽기 전용으로 mount하고 `PM_SECRET_DIRECTORY` 경로만 전달한다. 앱은 한 세대를 고정하므로 값 교체에는 명시적인 프로세스 재시작이 필요하다. 변수 존재 시 파일 실패를 env fallback으로 숨기지 않는다.
+- 아직 운영 Compose에 Secret mount를 켜지 않았다. Prisma migration은 별도 자격증명/일회성 실행으로 옮기고, runtime unit의 Requires/시작 검사에 Vault 준비를 통합한 후 전환해야 한다. 현재 Dockerfile의 자동 migration을 둔 채 runtime 전용 계정으로 바꾸면 안 된다.
+- Secret 조회 성공/재부팅 시 시작 순서는 아직 실검증하지 않았다. 일반 배포는 현재 DB env 방식을 유지한다. 이전 세대 폐기는 모든 소비자의 전환을 확인한 뒤 별도로 한다.
 
 ## 재실행 가능한 사전 검사
 
@@ -29,7 +38,7 @@ python3 /Users/janguk/.codex/skills/oci-ssh/scripts/oci_ssh.py --script < ops/oc
 - 토큰 재발행 실패 시 마지막 파일을 유지한다. 앱은 남은 유효기간 30초 미만이면 실패하며 ADC로 돌아가지 않는다. 무기한 캐시/장기 키가 아니다.
 - OCI SDK에 전달하기 전에 실패 응답 본문을 버리고 고정 오류로 바꾼다. 인증 갱신 SDK의 내부 로그까지 통제하기 위해 두 host unit의 stdout/stderr를 journal에 저장하지 않는다. 상태/종료 코드와 socket·파일 만료 상태로 감시한다. 장애 분석 시 SDK debug 로그를 무심코 켜지 않는다. 앱/중계 요청 내용은 로깅하지 않는다.
 
-## 설치 전 필수 확인 (아직 실행하지 않음)
+## 호스트 경계 설치 절차 (현재 설치 기록은 verification.md 참조)
 
 1. PM 코드와 호스트 코드를 검토해 main 기준의 동일 릴리스로 만든다. 이미지 digest와 Git SHA를 기록한다. 자동 배포를 먼저 전환하지 않는다.
 2. 호스트의 `/run` tmpfs, swap 비활성/보호 상태, 디스크·메모리 여유, 기존 `project-management-wif.service/.timer`를 확인한다. 호스트 런타임은 조사 당시 없었으므로 **Node 24 Linux ARM64**를 공식 배포본의 서명/체크섬으로 검증한 뒤 `/opt/node24/bin/node`에 설치해야 한다. curl-to-shell이나 검증 없는 실행 파일 복사는 금지한다.
@@ -73,7 +82,8 @@ Docker restart policy는 `no`로 바꾸고 systemd가 socket/token/방화벽 검
 7. 기존에 발급된 OCI 세션/Google 토큰의 만료와 IAM 정책 전파 시간을 확인한다. mount 제거·IMDS 차단은 이미 탈취된 자격증명을 즉시 무효화하지 않는다. 노출이 의심되는 신원은 별도 대응 없이는 신뢰하지 않는다.
 8. 위 경계가 운영에서 확인되기 **전에는 VM에 Vault Secret 조회 권한을 추가하지 않는다.**
 
-방화벽은 `raw PREROUTING`에서 목적지 `169.254.169.254:80` TCP만 차단한다.
+방화벽은 `raw PREROUTING`에서 목적지 `169.254.169.254:80` 및 `[fd00:c1::a9fe:a9fe]:80` TCP만 차단한다.
+IPv6 주소는 [공식 OCI SDK](https://github.com/oracle/oci-python-sdk/blob/master/src/oci/auth/signers/instance_principals_security_token_signer.py)의 endpoint와 일치시킨다.
 호스트가 직접 보내는 OUTPUT 요청과 DNS/NTP는 이 규칙의 대상이 아니다. bridge 이름이나 Docker filter 체인에 의존하지 않는다.
 `project-management-imds-guard.service`는 Docker보다 먼저 실행되도록 설정하며, PM runtime unit은 방화벽·broker·token 준비를 요구한다.
 host-network/특권 컨테이너 및 호스트 root는 여전히 공통 신뢰 영역이다. 전체 재부팅은 별도 승인 후 검증한다.

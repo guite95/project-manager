@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { getRuntimeSecret } from "./server/runtime-secrets.mjs";
 
 /**
  * Prisma 7 은 쿼리 컴파일러를 쓰므로 Rust 엔진 대신 드라이버 어댑터로 붙는다.
@@ -16,9 +17,9 @@ function getClient(): PrismaClient {
   const cached = globalForPrisma.prisma ?? client;
   if (cached) return cached;
 
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = getRuntimeSecret('DATABASE_URL');
   if (!connectionString) {
-    throw new Error("DATABASE_URL 이 없습니다. .env 를 확인하세요.");
+    throw new Error("DATABASE_URL 설정을 확인하세요.");
   }
 
   client = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });

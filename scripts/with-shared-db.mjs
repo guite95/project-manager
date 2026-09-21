@@ -4,7 +4,7 @@ import {promisify} from 'node:util';
 import {createConnection, createServer} from 'node:net';
 import {homedir} from 'node:os';
 import {once} from 'node:events';
-import {tunnelDatabaseUrl} from '../lib/shared-database.ts';
+import {tunnelDatabaseUrl,isSharedDatabaseIdentity} from '../lib/shared-database.ts';
 
 // Only connection metadata belongs in .env. The production URL is never written to disk.
 try {process.loadEnvFile('.env');} catch(error) {if(error.code !== 'ENOENT') throw error;}
@@ -71,18 +71,22 @@ try {
   tunnel.stderr.resume();
   await waitForTunnel(port);
   const {stdout}=await run('ssh',[...sshArgs,target,
-    "docker exec project-management node -e 'process.stdout.write(process.env.DATABASE_URL || \"\")'"],{timeout:15000,maxBuffer:16384});
+    "docker exec project-management node --input-type=module -e 'try { const value = Object.hasOwn(process.env, \"PM_SECRET_DIRECTORY\") ? (await import(\"/app/lib/server/runtime-secrets.mjs\")).getRuntimeSecret(\"DATABASE_URL\") : process.env.DATABASE_URL; if (!value) throw new Error(); process.stdout.write(value); } catch { process.exitCode = 1; }'"],{timeout:15000,maxBuffer:16384});
   const databaseUrl=tunnelDatabaseUrl(stdout.trim(),port);
   const {default:pg}=await import('pg');
   const probe=new pg.Client({connectionString:databaseUrl,connectionTimeoutMillis:5000});
   try {
     await probe.connect();
-    const {rows}=await probe.query('SELECT current_database() AS db, current_user AS role');
-    if(rows[0].db!=='project_management'||rows[0].role!=='project_management_app') throw new Error('공유 DB 또는 앱 계정이 예상과 다릅니다.');
+    const {rows}=await probe.query('SELECT current_database() AS db, current_user AS role, rolsuper AS superuser, rolcreaterole AS "createRole", rolcreatedb AS "createDb", rolreplication AS replication, rolbypassrls AS "bypassRls" FROM pg_roles WHERE rolname=current_user');
+    if(!isSharedDatabaseIdentity(databaseUrl,rows[0])) throw new Error('공유 DB 또는 앱 계정이 예상과 다릅니다.');
   } finally {await probe.end();}
   if(stopping) throw new Error('실행이 중단되었습니다.');
   console.error(`[shared-db] 서버 project_management 연결 확인 · 로컬 포트 ${port}`);
-  child=spawn(args[0],args.slice(1),{stdio:'inherit',detached:true,env:{...process.env,DATABASE_URL:databaseUrl,SHARED_DATABASE:'1',REQUIRE_LOGIN:'1'}});
+  const childEnv={...process.env,DATABASE_URL:databaseUrl,SHARED_DATABASE:'1',REQUIRE_LOGIN:'1'};
+  // The verified SSH credential is intentionally passed only in this child's memory.
+  // A copied server-only mount path must not override the local tunnel URL.
+  delete childEnv.PM_SECRET_DIRECTORY;
+  child=spawn(args[0],args.slice(1),{stdio:'inherit',detached:true,env:childEnv});
   const childExit=once(child,'exit');
   tunnel.once('exit',()=>{if(!stopping){console.error('[shared-db] 터널이 종료되어 실행 중인 명령을 중단합니다.');stopProcess(child);}});
   const [code,signal]=await childExit;

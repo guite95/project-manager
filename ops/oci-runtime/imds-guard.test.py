@@ -11,14 +11,13 @@ spec.loader.exec_module(guard)
 class GuardTest(unittest.TestCase):
     def test_adds_only_metadata_ingress_rule_and_is_idempotent(self):
         calls = []
-        present = False
+        present = set()
         def run(args, **kwargs):
-            nonlocal present
             calls.append(args)
             if '-C' in args:
-                return subprocess.CompletedProcess(args, 0 if present else 1)
+                return subprocess.CompletedProcess(args, 0 if args[0] in present else 1)
             if '-I' in args:
-                present = True
+                present.add(args[0])
                 return subprocess.CompletedProcess(args, 0)
             self.fail('unexpected firewall mutation')
         guard.ensure_guard(run=run)
@@ -26,6 +25,10 @@ class GuardTest(unittest.TestCase):
         self.assertEqual([call for call in calls if '-I' in call], [[
             '/usr/sbin/iptables', '-w', '5', '-t', 'raw', '-I', 'PREROUTING', '1',
             '-d', '169.254.169.254/32', '-p', 'tcp', '--dport', '80',
+            '-m', 'comment', '--comment', 'pm-container-imds-boundary', '-j', 'DROP',
+        ], [
+            '/usr/sbin/ip6tables', '-w', '5', '-t', 'raw', '-I', 'PREROUTING', '1',
+            '-d', 'fd00:c1::a9fe:a9fe/128', '-p', 'tcp', '--dport', '80',
             '-m', 'comment', '--comment', 'pm-container-imds-boundary', '-j', 'DROP',
         ]])
         self.assertTrue(guard.ensure_guard(check_only=True, run=run))
