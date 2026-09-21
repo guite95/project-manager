@@ -21,7 +21,7 @@ try:
     env = {'PATH':'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
         'HOME':'/nonexistent', 'PM_RUNTIME_GID':'23456', 'DATABASE_URL':'postgresql://fixture:fixture@db/fixture',
         'APP_PASSWORD_HASH':'fixture-hash', 'SESSION_SECRET':'fixture-secret', 'DB_NETWORK_NAME':'fixture-network',
-        'GOOGLE_CLOUD_PROJECT':'fixture-project', 'GOOGLE_SPEECH_BUCKET':'fixture-speech',
+        'GOOGLE_CLOUD_PROJECT':'fixture-project', 'GOOGLE_CLOUD_PROJECT_NUMBER':'616373009012', 'GOOGLE_SPEECH_BUCKET':'fixture-speech',
         'OCI_STORAGE_REGION':'us-ashburn-1','OCI_STORAGE_NAMESPACE':'fixture','OCI_STORAGE_BUCKET':'fixture'}
     def check(indices, runtime_gid=True, vault=False, recordings=False, bucket=True):
         command = ['docker','compose','--env-file','/dev/null','--project-directory','/tmp','-p','pm-boundary-validation']
@@ -48,7 +48,7 @@ try:
                 wenv.get('OCI_STORAGE_AUTH') == 'broker', wenv.get('GOOGLE_APPLICATION_CREDENTIALS') == '',
                 wenv.get('GOOGLE_ACCESS_TOKEN_FILE') == '/run/project-management-google/access-token.json',
                 wenv.get('PM_SECRET_DIRECTORY') == '/run/oci-service-secrets/project-management',
-                all(app.get('environment',{}).get(k)==wenv.get(k) for k in ['GOOGLE_SPEECH_BUCKET','GOOGLE_SPEECH_LOCATION','GOOGLE_CLOUD_PROJECT']),
+                all(app.get('environment',{}).get(k)==wenv.get(k) for k in ['GOOGLE_SPEECH_BUCKET','GOOGLE_SPEECH_LOCATION','GOOGLE_CLOUD_PROJECT','GOOGLE_CLOUD_PROJECT_NUMBER']),
                 wenv.get('GOOGLE_SPEECH_LOCATION') == 'us',
             ]): return False
         expected = {'/run/project-management-broker','/run/project-management-google'}
