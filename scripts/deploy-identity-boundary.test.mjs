@@ -14,15 +14,20 @@ test('deployment rejects mutable, missing and shell-like image references before
   }
 });
 
-test('failed host migration stops deployment before the running application is stopped or replaced', t => {
+for (const recordings of [false, true]) test(`failed migration preserves running app and worker (recordings=${recordings})`, t => {
   const dir=mkdtempSync(join(tmpdir(),'pm-deploy-order-'));
   t.after(()=>rmSync(dir,{recursive:true,force:true}));
   const mounts=['/run/project-management-broker','/run/project-management-google','/run/oci-service-secrets/project-management']
     .map(path=>({type:'bind',source:path,target:path,read_only:true}));
-  writeFileSync(join(dir,'compose.json'),JSON.stringify({services:{app:{volumes:mounts,group_add:['987'],restart:'no',command:['node','server.js'],environment:{
+  const config={services:{app:{image:`project-management:${'a'.repeat(40)}`,volumes:mounts,group_add:['987'],restart:'no',command:['node','server.js'],environment:{
     OCI_STORAGE_AUTH:'broker',GOOGLE_APPLICATION_CREDENTIALS:'',
     GOOGLE_ACCESS_TOKEN_FILE:'/run/project-management-google/access-token.json',PM_SECRET_DIRECTORY:'/run/oci-service-secrets/project-management',
-  }}}}));
+  }}}};
+  if(recordings){
+    Object.assign(config.services.app.environment,{GOOGLE_CLOUD_PROJECT:'fixture-project',GOOGLE_SPEECH_BUCKET:'fixture-bucket',GOOGLE_SPEECH_LOCATION:'us'});
+    config.services.recordings={...config.services.app,command:['node','--experimental-strip-types','scripts/recordings-worker.mjs'],ulimits:{core:{}}};
+  }
+  writeFileSync(join(dir,'compose.json'),JSON.stringify(config));
   const executable=`#!${process.execPath}
 const fs=require('node:fs'),path=require('node:path');
 const command=path.basename(process.argv[1]),args=process.argv.slice(2),dir=process.env.PM_FIXTURE_DIR;
@@ -30,6 +35,7 @@ fs.appendFileSync(path.join(dir,'calls'),JSON.stringify([command,...args])+'\\n'
 if(command==='getent')process.stdout.write('pm-runtime:x:987:\\n');
 else if(command==='sudo'){
   if(args.includes('--mode'))process.stdout.write('vault\\n');
+  else if(args.includes('--recordings'))process.stdout.write(process.env.PM_FIXTURE_RECORDINGS+'\\n');
   else if(args.some(a=>a.endsWith('/migrate-pm.mjs')))process.exit(1);
   else if(!['restart','start','reload'].some(a=>args.includes(a))&&!args.some(a=>a.endsWith('/vault-readiness.mjs')||a.endsWith('/identity-readiness.mjs')))process.exit(9);
 }else if(command==='docker'){
@@ -42,7 +48,7 @@ else if(command==='sudo'){
   // commands, validation and control flow execute unchanged against process doubles.
   const script=readFileSync('scripts/deploy-identity-boundary.sh','utf8').replace('cd /home/ubuntu/project-management',`cd '${dir}'`);
   const result=spawnSync('bash',['-c',script,'deployment-test',`project-management:${'a'.repeat(40)}`],{
-    encoding:'utf8',env:{...process.env,PATH:`${dir}:${process.env.PATH}`,PM_FIXTURE_DIR:dir},
+    encoding:'utf8',env:{...process.env,PATH:`${dir}:${process.env.PATH}`,PM_FIXTURE_DIR:dir,PM_FIXTURE_RECORDINGS:recordings?'enabled':'disabled'},
   });
   assert.equal(result.status,1,result.stderr);
   const calls=readFileSync(join(dir,'calls'),'utf8').trim().split('\n').map(JSON.parse);

@@ -139,7 +139,9 @@ host-network/특권 컨테이너 및 호스트 root는 여전히 공통 신뢰 �
 
 ## 녹음 worker
 
-현재 없는 worker를 이 변경으로 시작하지 않는다. Speech/GCS 권한·DB migration·유료 작업은 별도 승인 단계다. 향후 활성화할 때 `docker-compose.recordings.yml`의 worker에도 broker mode, token file env, GID, WIF를 **대체하는** 두 디렉터리 mount를 적용한 별도 override가 필요하다. 현재 app-only boundary override는 worker를 보호하지 않는다. 해당 override 없이 두 구성을 함께 활성화하지 않는다.
+녹음 활성화는 root 소유0600 `/etc/project-management-recordings.enabled`의 `enabled` 한 줄로 선택한다. Vault mode에서만 허용되며 `prepare-cutover.py`가 이후 배포에도 Compose 선택을 보존한다. `docker-compose.recordings.yml`을 Vault 뒤에 적용하면 앱에 Speech 설정이 추가되고, 같은 이미지의 worker가 broker/Google token/runtime Secret 세 디렉터리만 read-only로 받는다. DB 환경변수/호스트 WIF/migration Secret과 public port가 없음을 배포 전후 검사한다.
+
+`project-management-recordings.service`가 guard/신원/Secret 준비 뒤 컨테이너를 실행한다. Docker restart policy는 `no`다. 배포는 호스트 migration이 성공한 후 worker와 앱을 교체한다. worker 중단 시 알려진 operation과 DB lease로 재개하며 불명확한 요청을 자동 재전송하지 않는다. 환경의 `GOOGLE_SPEECH_BUCKET`과 `GOOGLE_SPEECH_LOCATION=us`, 비공개 GCS 및 Speech 권한을 먼저 준비한다. 자세한 절차와 검증 범위는 `docs/recordings.md`를 따른다.
 
 ## 장애·롤백
 

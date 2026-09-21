@@ -21,9 +21,22 @@ def deployment_mode():
     return 'vault'
 
 
+def recordings_enabled():
+    marker = pathlib.Path('/etc/project-management-recordings.enabled')
+    try: s = marker.lstat()
+    except FileNotFoundError: return False
+    if not stat.S_ISREG(s.st_mode) or s.st_uid != 0 or stat.S_IMODE(s.st_mode) != 0o600 or s.st_nlink != 1: raise RuntimeError()
+    fd = os.open(marker, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as source:
+        if source.read(32) != b'enabled\n': raise RuntimeError()
+    if deployment_mode() != 'vault': raise RuntimeError()
+    return True
+
+
 def prepare():
     if os.getuid() != 0: raise RuntimeError()
     mode = deployment_mode()
+    recordings = recordings_enabled()
     release = pathlib.Path('/opt/project-management-runtime/current').resolve(strict=True)
     if release.parent != pathlib.Path('/opt/project-management-runtime/releases'): raise RuntimeError()
     for path in [release, release.parent, release.parent.parent]:
@@ -32,6 +45,7 @@ def prepare():
     sources = [release / 'ops/oci-runtime' / name for name in [
         'project-management-runtime.service', 'project-management-imds-guard.service']]
     if mode == 'vault': sources.append(release / 'ops/oci-runtime/project-management-secrets.service')
+    if recordings: sources.append(release / 'ops/oci-runtime/project-management-recordings.service')
     dropin = release / 'ops/oci-runtime/project-management-vault.conf'
     for path in sources + ([dropin] if mode == 'vault' else []):
         s = path.lstat()
@@ -56,6 +70,7 @@ def prepare():
     lines = kept
     compose = 'docker-compose.yml:docker-compose.identity-boundary.yml'
     if mode == 'vault': compose += ':docker-compose.vault.yml'
+    if recordings: compose += ':docker-compose.recordings.yml'
     lines.append('COMPOSE_FILE=' + compose)
     lines.append(f'PM_RUNTIME_GID={gid}')
     backup = pathlib.Path('/var/backups/oci-vault-migration')
@@ -91,6 +106,7 @@ def prepare():
 if __name__ == '__main__':
     try:
         if sys.argv[1:] == ['--mode']: print(deployment_mode())
+        elif sys.argv[1:] == ['--recordings']: print('enabled' if recordings_enabled() else 'disabled')
         elif len(sys.argv) == 1: prepare()
         else: raise RuntimeError()
     except Exception:

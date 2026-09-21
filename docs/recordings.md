@@ -15,8 +15,8 @@
 
 신원 분리 후에는 앱/worker가 `GOOGLE_ACCESS_TOKEN_FILE`로 호스트 발행 단기 토큰을 읽는다.
 파일을 명시하면 잘못된 파일/만료 시 ADC로 돌아가지 않는다. 404/412 상태 처리와
-불명확한 BatchRecognize 자동 재제출 금지를 유지한다. worker는 이 변경으로 자동 활성화되지 않으며,
-아래 기존 WIF 배포 절차 대신 worker 전용 경계 override가 필요하다.
+불명확한 BatchRecognize 자동 재제출 금지를 유지한다. 운영 worker는 Vault 전용
+`docker-compose.recordings.yml`로 앱과 같은 broker/token/runtime Secret 경계를 사용한다.
 [설치·전환 조건](../ops/oci-runtime/README.md#녹음-worker)을 먼저 확인한다.
 
 `google-auth-library` ADC로 임베딩과 동일한 `GOOGLE_APPLICATION_CREDENTIALS` 또는 런타임 WIF를 사용한다. 별도 API key나 서비스 계정 키를 만들지 않는다. 임베딩의 `GOOGLE_CLOUD_LOCATION=global`과 전사 리전은 독립적이다.
@@ -58,12 +58,13 @@ pnpm db:shared -- pnpm recordings:worker --once
 1. 기존 서비스 계정에 프로젝트 범위 `roles/speech.client` 등 필요한 `speech.recognizers.recognize`, `speech.operations.get` 권한을 부여하고 Speech-to-Text API 활성화를 확인한다.
 2. 같은 프로젝트의 `us` 멀티 리전에 전용 비공개 staging 버킷을 만든다. uniform bucket-level access와 public access prevention을 켠다. 기존 서비스 계정에 해당 버킷의 객체 생성/조회/삭제 권한만 부여한다. Speech 서비스 에이전트도 입력 객체를 읽을 수 있어야 한다. 기존 보관 버킷에 만료 규칙을 추가하지 않는다.
 3. 공유 DB를 읽기 전용으로 검사·백업한 뒤 `20260918120000_project_recordings`를 `prisma migrate deploy`로 적용한다. 새 테이블만 추가하며 기존 데이터 변환은 없다.
-4. 이미지와 앱 환경을 반영하고 기존 WIF override에 `docker-compose.recordings.yml`을 함께 적용한다. 앱과 worker는 같은 이미지, worker는 기존 `/run/project-management-wif` read-only mount를 사용한다. worker는 포트를 열지 않는다.
+4. 검증된 main 릴리스의 호스트 코드를 준비한다. root 소유0600 `/etc/project-management-recordings.enabled`에 `enabled` 한 줄을 기록하고, 비밀 아닌 `GOOGLE_SPEECH_BUCKET`/`GOOGLE_SPEECH_LOCATION=us`를 운영 설정에 추가한다. Vault marker가 없는 환경에서는 활성화를 거부한다. 정상 배포는 Vault override 다음에 recordings override를 적용하고, 앱과 같은 immutable 이미지의 worker를 생성한다. systemd가 호스트 준비 상태를 확인하고 시작/재시작한다. worker는 포트를 열지 않으며 WIF/OCI 신원과 migration Secret을 받지 않는다.
 5. Nginx의 이 앱 location에 `client_max_body_size 101m`과 업로드에 충분한 timeout을 적용한다. Next proxy는 101MB, 업로드 API는 100MiB + 64KiB multipart 상한이다.
 6. 짧은 승인된 녹음으로 인증된 업로드 → 완료 → 두 다운로드를 확인한다. OCI SHA-256, TXT 내용, GCS 임시 객체 정리, 프로젝트/VIEWER 권한도 별도 확인한다.
 
 ```sh
-docker compose -f docker-compose.yml -f docker-compose.wif.yml -f docker-compose.recordings.yml up -d
+systemctl status project-management-recordings.service
+docker inspect project-management-recordings --format '{{.State.Status}}'
 ```
 
 2026-09-18 최초 구현 시 로컬 ADC 검사에서는 Speech 호출 권한과 staging 버킷이 없었다. 후속 로컬 검증에서 사용자 승인 후 기존 서비스 계정에 `roles/speech.client`를 추가했고, `speech.recognizers.recognize` 및 `speech.operations.get`을 재확인했다. 새 키 발급·GCS 버킷 생성·공유 DB migration·배포는 수행하지 않았다.

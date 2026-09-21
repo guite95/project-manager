@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const files = await Promise.all(['docker-compose.yml', 'docker-compose.wif.yml', 'docker-compose.identity-boundary.yml', 'docker-compose.vault.yml']
+const files = await Promise.all(['docker-compose.yml', 'docker-compose.wif.yml', 'docker-compose.identity-boundary.yml', 'docker-compose.vault.yml', 'docker-compose.recordings.yml']
   .map(name => readFile(resolve(root, name), 'utf8')));
 const payload = Buffer.from(JSON.stringify(files)).toString('base64');
 const script = `sudo python3 - <<'PY'
@@ -20,19 +20,37 @@ try:
         fds.append(fd)
     env = {'PATH':'/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
         'HOME':'/nonexistent', 'PM_RUNTIME_GID':'23456', 'DATABASE_URL':'postgresql://fixture:fixture@db/fixture',
-        'APP_PASSWORD_HASH':'fixture-hash', 'SESSION_SECRET':'fixture-secret', 'DB_NETWORK_NAME':'fixture-network'}
-    def check(indices, runtime_gid=True, vault=False):
+        'APP_PASSWORD_HASH':'fixture-hash', 'SESSION_SECRET':'fixture-secret', 'DB_NETWORK_NAME':'fixture-network',
+        'GOOGLE_CLOUD_PROJECT':'fixture-project', 'GOOGLE_SPEECH_BUCKET':'fixture-speech',
+        'OCI_STORAGE_REGION':'us-ashburn-1','OCI_STORAGE_NAMESPACE':'fixture','OCI_STORAGE_BUCKET':'fixture'}
+    def check(indices, runtime_gid=True, vault=False, recordings=False, bucket=True):
         command = ['docker','compose','--env-file','/dev/null','--project-directory','/tmp','-p','pm-boundary-validation']
         for index in indices:
             command += ['-f','/proc/self/fd/' + str(fds[index])]
         effective_env = dict(env)
         if not runtime_gid: effective_env.pop('PM_RUNTIME_GID')
+        if not bucket: effective_env.pop('GOOGLE_SPEECH_BUCKET')
         if vault:
             for key in ['DATABASE_URL','APP_PASSWORD_HASH','SESSION_SECRET']: effective_env.pop(key)
         process = subprocess.run(command + ['config','--format','json'], env=effective_env,
             pass_fds=fds, capture_output=True, text=True, timeout=30)
         if process.returncode: return None
-        app = json.loads(process.stdout)['services']['app']
+        services = json.loads(process.stdout)['services']
+        app = services['app']
+        if recordings:
+            worker = services['recordings']; wenv = worker.get('environment', {}); wm = worker.get('volumes', [])
+            if not all([
+                worker.get('restart') == 'no', not worker.get('ports'), worker.get('group_add') == ['23456'],
+                worker.get('command') == ['node','--experimental-strip-types','scripts/recordings-worker.mjs'],
+                len(wm) == 3, {m['target'] for m in wm} == {'/run/project-management-broker','/run/project-management-google','/run/oci-service-secrets/project-management'},
+                all(m['source']==m['target'] and m.get('read_only') is True for m in wm),
+                not any(k in wenv for k in ['DATABASE_URL','SESSION_SECRET','APP_PASSWORD_HASH','PM_MIGRATION_SECRET_DIRECTORY']),
+                wenv.get('OCI_STORAGE_AUTH') == 'broker', wenv.get('GOOGLE_APPLICATION_CREDENTIALS') == '',
+                wenv.get('GOOGLE_ACCESS_TOKEN_FILE') == '/run/project-management-google/access-token.json',
+                wenv.get('PM_SECRET_DIRECTORY') == '/run/oci-service-secrets/project-management',
+                all(app.get('environment',{}).get(k)==wenv.get(k) for k in ['GOOGLE_SPEECH_BUCKET','GOOGLE_SPEECH_LOCATION','GOOGLE_CLOUD_PROJECT']),
+                wenv.get('GOOGLE_SPEECH_LOCATION') == 'us',
+            ]): return False
         expected = {'/run/project-management-broker','/run/project-management-google'}
         if vault: expected.add('/run/oci-service-secrets/project-management')
         mounts = app.get('volumes', [])
@@ -59,7 +77,10 @@ try:
         'missing_gid_rejected':check([0,2],False) is None, 'wrong_order_detected':check([0,2,1]) is False,
         'vault_no_env_secrets':check([0,2,3],vault=True) is True,
         'vault_replaces_wif':check([0,1,2,3],vault=True) is True,
-        'vault_wrong_order_rejected':check([0,3,2],vault=True) is False}
+        'vault_wrong_order_rejected':check([0,3,2],vault=True) is False,
+        'recordings_boundary':check([0,2,3,4],vault=True,recordings=True) is True,
+        'recordings_wrong_order':check([0,2,4,3],vault=True,recordings=True) is False,
+        'recordings_bucket_required':check([0,2,3,4],vault=True,recordings=True,bucket=False) is None}
     print(json.dumps({'ok':all(results.values()),'checks':results}))
     raise SystemExit(0 if all(results.values()) else 1)
 except Exception:
@@ -77,7 +98,8 @@ try {
   const report = JSON.parse(result.stdout);
   if (typeof report.ok !== 'boolean') throw new Error();
   const keys = ['base_boundary', 'base_wif_boundary', 'missing_gid_rejected', 'wrong_order_detected',
-    'vault_no_env_secrets', 'vault_replaces_wif', 'vault_wrong_order_rejected'];
+    'vault_no_env_secrets', 'vault_replaces_wif', 'vault_wrong_order_rejected',
+    'recordings_boundary', 'recordings_wrong_order', 'recordings_bucket_required'];
   const checks = Object.fromEntries(keys.map(key => [key, report.checks?.[key] === true]));
   const ok = result.status === 0 && report.ok && Object.values(checks).every(Boolean);
   console.log(JSON.stringify({ ok, checks }));
