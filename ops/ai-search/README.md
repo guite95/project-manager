@@ -1,5 +1,8 @@
 # OCI embedding runtime
 
+현재 전처리 검증 전 임베딩을 중단했다. 운영 timer는 disabled/inactive다. 아래 enable 명령은 사용자가 재개를 요청하고 전처리 검증을 마친 뒤에만 실행한다. 앱의 `AI_OPS_EMBEDDING_ENABLED` 기본값은 false이며 재개 시에만 true로 설정한다. 원본 수집·저장은 계속한다.
+
+
 The runtime uses the existing PostgreSQL 16.15 container and the existing OCI instance.
 No personal ADC, service-account JSON key, new DB container, or public DB port is required.
 

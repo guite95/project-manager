@@ -47,3 +47,6 @@
 
 - AI search keeps raw `ai_ops_session/message/usage` authoritative. FTS uses PostgreSQL `simple`; derived chunks/extractive summaries, embedding jobs and profile-scoped cache live in `ai_ops_search_*`/`ai_ops_embedding_*`. No Elasticsearch. Default embeddings: Vertex AI `gemini-embedding-2`, 1536 dimensions, cosine. Gemini 2 retrieval uses query/document text instructions, not `task_type`.
 - Embedding calls run outside raw ingestion transactions. Run `ai:search inspect` before explicit backfill/worker writes; indexed source revisions and leased jobs are durable checkpoints. Keep provider/model/dimensions/version/input version and content SHA-256 together; never search across embedding spaces. ADC/workload identity only, no new API key. Optional pgvector activation is SQL-owned in `scripts/sql/ai-ops-vector.sql`, outside automatic Prisma startup migrations; install extension files and back up first. See `docs/ai-search.md`.
+
+- work-sum은 Git 로그와 완료 목록만 참조한다. AI 대화를 조회하거나 요약 근거로 사용하지 않는다.
+- AI 대화는 전처리 검증 및 사용자의 명시적 재개 요청 전까지 원본 저장만 유지한다. `AI_OPS_EMBEDDING_ENABLED`는 기본 false이며 embedding backfill/worker/retry와 검색 쿼리 임베딩을 중단한다. 기존 원본·벡터를 삭제하지 말고 운영 embedding timer를 임의로 재활성화하지 않는다.

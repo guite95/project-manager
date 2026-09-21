@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { embeddingsEnabled } from "../lib/ai-ops/search/policy.mjs";
 import { readFile } from "node:fs/promises";
 import { createPool } from "../lib/ai-ops/store.mjs";
 import {
@@ -28,6 +29,10 @@ const batchesIndex = args.indexOf("--batches");
 const batches = batchesIndex < 0 ? 1 : Number(args[batchesIndex + 1]);
 if (!Number.isInteger(batches) || batches < 1 || batches > 10000)
   throw new Error("Invalid --batches");
+if (["backfill", "worker", "retry"].includes(command) && args.includes("--apply") && !embeddingsEnabled()) {
+  console.log(JSON.stringify({ status: "paused", reason: "EMBEDDING_PAUSED" }));
+  process.exit(0);
+}
 const pool = createPool();
 try {
   if (
@@ -38,6 +43,7 @@ try {
     console.log(
       JSON.stringify(
         {
+          embeddingsEnabled: embeddingsEnabled(),
           profile: {
             id: config.id,
             provider: config.provider,

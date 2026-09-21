@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
-import { readFile, writeFile, unlink } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { homedir } from "node:os";
 import { createHash } from "node:crypto";
@@ -14,11 +14,10 @@ import { assertTestDatabase } from "../../../lib/test-database.ts";
 import { todayInSeoul } from "../../../lib/format/date-time.ts";
 const help = `work-sum (Node 22.18+, 저장소 의존성 필요)
 projects                                      연결된 앱의 프로젝트 slug/title 조회
-collect --output FILE [--date YYYY-MM-DD] [--root DIR] [--mapping FILE] [--ai-mapping FILE] [--authors EMAIL,EMAIL]
+collect --output FILE [--date YYYY-MM-DD] [--root DIR] [--mapping FILE] [--authors EMAIL,EMAIL]
   기본: 한국 시간 오늘, ~/Documents/project, 저장소별 git user.email. 로컬 모든 ref/HEAD의 작성자 일치 커밋.
   --mapping JSON: {"루트 기준 저장소 경로":"앱 프로젝트 slug"}. 정확히 일치하는 경로 구간만 자동 연결.
-  당일 AI 메시지를 함께 수집. 전문은 FILE.ai.json (0600), 저장 근거에는 메시지 식별자만 포함.
-  --ai-mapping JSON: {"세션의 절대 cwd":"앱 프로젝트 slug"}. Git 루트 밖 세션도 수집.
+  Git 로그와 완료 목록만 수집. AI 대화는 조회하거나 참조하지 않음.
 validate --evidence FILE --file DRAFT           DB 연결 없이 증거 배정 검사, 검토 해시 출력
 save --evidence FILE --file DRAFT --sha256 HASH [--backup-dir DIR]
   백업·버전 확인 후 앱의 완료 이력 > 작업 정리에 저장. 원본 완료 기록은 변경하지 않음.
@@ -35,7 +34,6 @@ try {
           "date",
           "root",
           "mapping",
-          "ai-mapping",
           "authors",
           "evidence",
           "file",
@@ -69,6 +67,8 @@ try {
       const a = await read(required("evidence"));
       const b = await read(required("file"));
       evidence = parseEvidence(JSON.parse(a));
+      if (evidence.sources.some(source => source.kind === "ai"))
+        throw new WorkSummaryError("AI 근거는 사용하지 않습니다. Git 로그와 완료 목록으로 다시 collect 하세요.");
       draft = parseSummaryDraft(JSON.parse(b), evidence);
       hash = createHash("sha256")
         .update(a)
@@ -130,9 +130,6 @@ try {
           const mapping = values.mapping
             ? JSON.parse(await read(values.mapping))
             : {};
-          const aiMapping = values["ai-mapping"]
-            ? JSON.parse(await read(values["ai-mapping"]))
-            : {};
           if (
             !mapping ||
             typeof mapping !== "object" ||
@@ -142,9 +139,6 @@ try {
             throw new WorkSummaryError(
               "매핑은 저장소 상대 경로: 프로젝트 slug 객체여야 합니다.",
             );
-          if (!aiMapping || typeof aiMapping !== "object" || Array.isArray(aiMapping) ||
-              Object.values(aiMapping).some(v => typeof v !== "string"))
-            throw new WorkSummaryError("AI 매핑은 절대 cwd: 프로젝트 slug 객체여야 합니다.");
           const authors =
             values.authors
               ?.split(",")
@@ -174,8 +168,6 @@ try {
                 key: `app:${c.projectSlug}`,
                 title: c.projectSlug || "미분류",
               });
-          const { collectAi } = await import("../../../lib/server/work-ai.ts");
-          const ai = await collectAi(date, root, git.projects, git.repositories, aiMapping);
           const result = parseEvidence({
             version: 1,
             date,
@@ -184,8 +176,6 @@ try {
             target,
             expectedRevision: current?.revision ?? 0,
             ...git,
-            projects: ai.projects,
-            ai: ai.status,
             sources: [
               ...git.sources,
               ...completions.map((c) => ({
@@ -196,29 +186,19 @@ try {
                 completionId: c.id,
                 completedAt: c.completedAt,
               })),
-              ...ai.sources,
             ],
           });
           const output = resolve(required("output"));
           const evidenceJson = JSON.stringify(result, null, 2) + "\n";
           if (Buffer.byteLength(evidenceJson) > 10 * 1024 * 1024)
             throw new WorkSummaryError("수집 증거가 검증 입력 한도 10MB를 초과합니다.");
-          const aiTranscript = `${output}.ai.json`;
-          await writeFile(aiTranscript, JSON.stringify(ai.transcript, null, 2) + "\n", { flag: "wx", mode: 0o600 });
-          try {
-            await writeFile(output, evidenceJson, { flag: "wx", mode: 0o600 });
-          } catch (error) {
-            await unlink(aiTranscript);
-            throw error;
-          }
+          await writeFile(output, evidenceJson, { flag: "wx", mode: 0o600 });
           console.log(
             JSON.stringify({
               status: "collected",
               date,
               output: resolve(values.output),
               sources: result.sources.length,
-              ai: ai.status,
-              aiTranscript,
               repositories: git.repositories,
               expectedRevision: result.expectedRevision,
             }),
