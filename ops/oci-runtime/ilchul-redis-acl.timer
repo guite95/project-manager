@@ -1,0 +1,10 @@
+[Unit]
+Description=Reconcile Ilchul Redis ACL without restarting Redis
+
+[Timer]
+OnBootSec=20
+OnUnitActiveSec=15
+Unit=ilchul-redis-acl.service
+
+[Install]
+WantedBy=timers.target

@@ -11,6 +11,9 @@ const profiles = Object.freeze({
   'youtube-backend': { required: ['CONFIG_JSON'], optional: [] },
   'youtube-media': { required: ['CONFIG_JSON'], optional: [] },
   'youtube-migration': { required: ['CONFIG_JSON'], optional: [], gid: 0 },
+  'ilchul-backend': { required: ['CONFIG_JSON'], optional: [] },
+  'ilchul-migration': { required: ['CONFIG_JSON'], optional: [], gid: 0 },
+  'redis-admin': { required: ['CONFIG_JSON'], optional: [], gid: 0 },
 });
 function exactKeys(value, keys) {
   return value && typeof value === 'object' && !Array.isArray(value)

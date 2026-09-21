@@ -32,6 +32,9 @@ const files = [
   'ops/oci-runtime/youtube-redis-acl.service', 'ops/oci-runtime/youtube-redis-acl.timer',
   'ops/oci-runtime/youtube-redis-acl.py', 'ops/oci-runtime/youtube-database.py',
   'ops/oci-runtime/youtube-backup.py', 'ops/oci-runtime/migrate-youtube.mjs',
+  'ops/oci-runtime/ilchul-secrets.service', 'ops/oci-runtime/redis-admin-secrets.service',
+  'ops/oci-runtime/ilchul-runtime.service', 'ops/oci-runtime/ilchul-runtime.py',
+  'ops/oci-runtime/ilchul-redis-acl.py', 'ops/oci-runtime/ilchul-redis-acl.service', 'ops/oci-runtime/ilchul-redis-acl.timer',
 ];
 const payload = Buffer.from(JSON.stringify({ revision,
   packageHash: createHash('sha256').update(execFileSync('git', ['show', `${revision}:package.json`])).digest('hex'),

@@ -1,0 +1,13 @@
+[Unit]
+Description=Restore scoped Ilchul Redis ACL after Redis restart
+Requires=docker.service ilchul-secrets.service redis-admin-secrets.service
+After=docker.service ilchul-secrets.service redis-admin-secrets.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/project-management-runtime/current/ops/oci-runtime/ilchul-redis-acl.py
+TimeoutStartSec=45
+UMask=0077
+LimitCORE=0
+StandardOutput=null
+StandardError=null

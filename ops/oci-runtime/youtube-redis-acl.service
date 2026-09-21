@@ -1,7 +1,7 @@
 [Unit]
 Description=Restore scoped YouTube Redis ACLs after Redis restart
-Requires=docker.service youtube-secrets@backend.service youtube-secrets@media.service
-After=docker.service youtube-secrets@backend.service youtube-secrets@media.service
+Requires=docker.service youtube-secrets@backend.service youtube-secrets@media.service redis-admin-secrets.service
+After=docker.service youtube-secrets@backend.service youtube-secrets@media.service redis-admin-secrets.service
 
 [Service]
 Type=oneshot

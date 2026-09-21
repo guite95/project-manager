@@ -12,11 +12,13 @@ import sys
 
 
 def secret(service):
-    if service not in ['youtube-backend', 'youtube-media', 'youtube-migration']:
+    if service not in ['youtube-backend', 'youtube-media', 'youtube-migration', 'ilchul-backend', 'ilchul-migration', 'redis-admin']:
         raise RuntimeError()
     root = Path('/run/oci-service-secrets') / service
     parent = root.lstat()
     if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != 0 or stat.S_IMODE(parent.st_mode) != 0o750:
+        raise RuntimeError()
+    if service in ['redis-admin', 'ilchul-migration', 'youtube-migration'] and parent.st_gid != 0:
         raise RuntimeError()
     link = root / 'current'
     if not link.is_symlink() or link.lstat().st_uid != 0:
@@ -76,19 +78,47 @@ class Redis:
         return self.read()
 
 
+def authenticate_admin(client, values, check_only=False):
+    user, password = values['REDIS_USERNAME'], values['REDIS_PASSWORD']
+    if not re.fullmatch('[A-Za-z_][A-Za-z0-9_-]{0,63}', user) or user == 'default' or not password:
+        raise RuntimeError()
+    try:
+        if client.command('AUTH', user, password) == 'OK': return
+    except RuntimeError as error:
+        if str(error) != 'REDIS_OPERATION_REJECTED': raise
+    if check_only: raise RuntimeError()
+    # Bootstrap only a missing named user while the legacy default is still open.
+    # A changed password/existing principal is never silently overwritten.
+    if client.command('ACL', 'GETUSER', user) is not None: raise RuntimeError()
+    raw = client.command('ACL', 'GETUSER', 'default')
+    default = dict(zip(raw[::2], raw[1::2]))
+    if 'nopass' not in default['flags']: raise RuntimeError()
+    client.command('ACL', 'SETUSER', user, 'reset', 'on', '>'+password, '-@all',
+                   '+ping', '+acl|getuser', '+acl|setuser', '+acl|dryrun', '+acl|list', '+info', '+client|list')
+    if client.command('AUTH', user, password) != 'OK': raise RuntimeError()
+
+
+def admin_client(host, check_only=False):
+    client = Redis(host)
+    try:
+        authenticate_admin(client, secret('redis-admin'), check_only)
+        return client
+    except Exception:
+        client.close()
+        raise
+
+
 def reconcile(check_only=False):
     if os.getuid() != 0: raise RuntimeError()
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     container = json.loads(subprocess.check_output(['docker', 'inspect', 'redis'], timeout=10))[0]
     host = container['NetworkSettings']['Networks']['shared-infra']['IPAddress']
     if not re.fullmatch(r'172\.27\.\d{1,3}\.\d{1,3}', host): raise RuntimeError()
-    client = Redis(host)
+    client = admin_client(host, check_only)
     try:
-        # Current shared Redis has a nopass default user. Preserve it for Ilchul;
-        # if its authentication changes, fail closed until this bootstrap is updated.
+        # Preserve default unchanged; named host authentication also works after closure.
         default_raw = client.command('ACL', 'GETUSER', 'default')
         default = dict(zip(default_raw[::2], default_raw[1::2]))
-        if 'nopass' not in default['flags']: raise RuntimeError()
         accounts = []
         for service, prefix in [('youtube-backend', 'youtube-sync:room:runtime:v3:'), ('youtube-media', 'youtube-sync:media:resolved:v1:')]:
             values = secret(service)
@@ -123,7 +153,7 @@ def reconcile(check_only=False):
                 if probe.command('AUTH', user, password) != 'OK' or probe.command('PING') != 'PONG': raise RuntimeError()
             finally: probe.close()
         if len(set(accounts)) != 2: raise RuntimeError()
-        return {'ok': True, 'scopedUsers': 2, 'defaultUserUnchanged': True, 'defaultNopassException': True}
+        return {'ok': True, 'scopedUsers': 2, 'defaultUserUnchanged': True, 'defaultNopassException': 'nopass' in default['flags'], 'namedAdmin': True}
     finally: client.close()
 
 
