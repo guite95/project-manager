@@ -13,10 +13,12 @@ export async function provisionPmRoles(client, { runtime, migration, expectedDat
     if (identity?.db !== expectedDatabase || identity.rolsuper !== true) throw new Error();
     // Set outside the transaction: even a failed transaction must not restore
     // statement/parameter logging before the connection is closed by its owner.
-    for (const [name,value] of Object.entries({log_statement:'none',log_min_duration_statement:'-1',log_duration:'off',log_min_error_statement:'panic',log_parameter_max_length:'0',log_parameter_max_length_on_error:'0',password_encryption:'scram-sha-256'})) {
+    for (const [name,value] of Object.entries({log_statement:'none',log_min_duration_statement:'-1',log_duration:'off',log_min_error_statement:'panic',
+      log_min_messages:'panic',log_error_verbosity:'terse',log_min_duration_sample:'-1',log_statement_sample_rate:'0',log_transaction_sample_rate:'0',
+      log_parameter_max_length:'0',log_parameter_max_length_on_error:'0',password_encryption:'scram-sha-256'})) {
       await client.query('SELECT set_config($1,$2,false)',[name,value]);
     }
-    const { rows:[audit] } = await client.query("SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname='pgaudit') AS present");
+    const { rows:[audit] } = await client.query("SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname='pgaudit') OR position('pgaudit' in current_setting('shared_preload_libraries'))>0 AS present");
     if (audit.present) throw new Error();
     await client.query('BEGIN'); transaction = true;
     await client.query("SET LOCAL lock_timeout='5s'; SET LOCAL statement_timeout='15s'");

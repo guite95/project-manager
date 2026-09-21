@@ -26,6 +26,8 @@ test('isolated PostgreSQL grants runtime CRUD only and migration ownership witho
     await admin.query('CREATE SCHEMA fixture_other');
     await admin.query('CREATE TABLE fixture_other.hidden(id text)');
     assert.deepEqual(await provisionPmRoles(admin, { runtime, migration, expectedDatabase: 'project_management_test' }), { created: 2, runtimeDdl: false });
+    const {rows:[logging]}=await admin.query("SELECT current_setting('log_min_messages') AS minimum, current_setting('log_error_verbosity') AS verbosity, current_setting('log_min_duration_sample') AS sampled, current_setting('log_transaction_sample_rate') AS transactions");
+    assert.deepEqual(logging,{minimum:'panic',verbosity:'terse',sampled:'-1',transactions:'0'});
     app = new pg.Client({ ...runtime, user: runtime.username, host:'localhost',port:5432,database:'project_management_test' });
     migrator = new pg.Client({ user:migration.username,password:migration.password,host:'localhost',port:5432,database:'project_management_test' });
     old = new pg.Client({ user:'pm_role_fixture_owner',password:'FixtureOwnerOnly1!',host:'localhost',port:5432,database:'project_management_test' });

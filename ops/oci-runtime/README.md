@@ -31,9 +31,10 @@ PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용�
 - host migration마다 현재 PM DB의 custom-format 백업과 archive 목록 검증을 선행한다. 디스크 여유4GiB 미만이면 중단하며 백업을 자동 삭제하지 않는다. 이 백업은 실제 restore rehearsal을 대신하지 않는다. 스키마 변경은 기존 앱과 호환되는 expand/contract 방식이어야 하며 실패했다고 DB를 자동 downgrade하지 않는다.
 - `node ops/oci-runtime/check-migration-container.mjs project-management:<검증할 SHA>`는 서버의 기존 이미지와 일회성 네트워크 격리 PostgreSQL을 사용한다. 운영 Secret 없이 합성 파일로 실제 Prisma7개 migration 및 재실행/읽기 전용 rootfs를 검증하고 소유한 테스트 자원을 정리한다. 운영 DB/restore rehearsal/Vault IAM 통합 검증을 대체하지 않는다.
 - 호스트 migration/파일 readiness 및 Vault 앱·일회성 컨테이너에는 core dump를 비활성화한다. SDK/Prisma 상세 출력도 외부 로그로 전달하지 않는다.
+- `check-pg-role-permissions.mjs project-management:<SHA>`는 별도 격리 DB에서 계정 분리의 실제 SQL/SCRAM/권한 경계를 검증한다. 계정 생성 세션은 오류 문맥·샘플링 로그도 제한하며 pgaudit 설치 또는 preload가 있으면 비밀값을 DB에 보내기 전에 중단한다. 이 설정은 해당 연결에만 적용하고 서버 전역 로그 정책은 바꾸지 않는다.
 - 값은 PG bind parameter로 전달한다. utility DDL의 식별자/값은 서버 format의 `%I`/`%L`로 처리하고 작업 세션의 statement/parameter 로그를 끈다. pgaudit가 설치된 경우 임의 우회하지 않고 중단한다. 결과/예외에서 SQL·비밀번호를 출력하지 않는다.
-- 실제 계정 생성은 아직 하지 않았다. core grant 로직은 네트워크/포트/데이터가 운영 DB와 분리된 일회성 PostgreSQL에서 `localhost:5432/project_management_test` guard를 통과시켜 검증했다. 실제 SCRAM 로그인/틀린 비밀번호 거부, runtime CRUD, DDL/타 schema/role 전환/migration 이력 쓰기/sequence setval 거부, migration ALTER 및 future default grant를 확인했다. 테스트 컨테이너·tmpfs 데이터는 제거했다.
-- `migrate-pm.mjs`는 호스트의 고정 작업으로 준비 중이다. migration profile만 별도로 읽고 read-only/cap-drop/no-new-privileges/비밀값 로그 미보관의 일회성 컨테이너로 Prisma를 실행한다. 종료 확인 뒤 migration tmpfs를 정리한다. 실제 실행/CI 통합/실패 복구 검증 전에는 운영에 활성화하지 않는다.
+- core grant 로직은 네트워크/포트/데이터가 운영 DB와 분리된 일회성 PostgreSQL에서 `localhost:5432/project_management_test` guard를 통과시켜 검증했다. 실제 SCRAM 로그인/틀린 비밀번호 거부, runtime CRUD, DDL/타 schema/role 전환/migration 이력 쓰기/sequence setval 거부, migration ALTER 및 future default grant를 확인했다. 이후 실제 PM 역할2개도 보호 백업 후 생성하고 각 로그인/권한을 읽기 전용 검증했다. 기존 앱 계정은 유지한다.
+- `migrate-pm.mjs`는 호스트의 고정 작업이다. migration profile만 별도로 읽고 read-only/cap-drop/no-new-privileges/비밀값 로그 미보관의 일회성 컨테이너로 Prisma를 실행한다. 종료 확인 뒤 migration tmpfs를 정리한다. 배포 경로 연결과 격리 이미지 실행은 검증했으나, 실제 VM Vault 조회/전체 host job 실행 및 실패 복구 검증 전에는 운영에 활성화하지 않는다.
 
 ## 재실행 가능한 사전 검사
 
@@ -131,5 +132,5 @@ git diff --check
 ```
 
 집중 테스트는 합성 토큰·임시 Unix socket·가짜 외부 SDK 응답만 사용한다. 실제 입력 파일/공유 DB/OCI/Google 호출은 없다.
-별도 사전 검사에서는 실제 입력 파일과 운영 사용자 목록을 읽었다. Compose 병합4개는 서버 Compose5.1.3으로 검증했다.
-Linux systemd unit 검증·운영 전환·재부팅·실제 토큰 갱신은 여전히 별도다.
+별도 사전 검사에서는 실제 입력 파일과 운영 사용자 목록을 읽었다. Compose 병합7개는 서버 Compose5.1.3으로 검증했다.
+호스트 인증 경계와 정상 재배포는 검증했다. Vault 실제 전환·전체 host migration·재부팅 검증은 별도이며 최신 운영 증거는 `verification.md`를 따른다.
