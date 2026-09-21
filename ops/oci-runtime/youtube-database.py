@@ -52,6 +52,7 @@ try:
      s.run_sql('GRANT CREATE,ALTER,INDEX,REFERENCES,LOCK TABLES,SHOW VIEW ON `youtube_sync`.* TO '+identity)
    result['createdAccounts']=2
   if mode in ['verify','provision']:
+   phase='verify-grants'
    for kind,a in accounts.items():
     options=dict(d['connection'],user=a['new_username'],password=a['new_password']); check=mysql.get_session(options)
     if not check.run_sql("SHOW SESSION STATUS LIKE 'Ssl_cipher'").fetch_one()[1]:raise RuntimeError()
@@ -64,7 +65,7 @@ try:
      grants=s.run_sql('SELECT TABLE_SCHEMA,TABLE_NAME,PRIVILEGE_TYPE,IS_GRANTABLE FROM information_schema.TABLE_PRIVILEGES WHERE GRANTEE=?',[grantee]).fetch_all()
      expected={(t,p) for t in tables for p in (['SELECT'] if t=='flyway_schema_history' else ['SELECT','INSERT','UPDATE','DELETE'])}
      if {(r[1],r[2]) for r in grants}!=expected or any(r[0]!='youtube_sync' or r[3]!='NO' for r in grants):raise RuntimeError()
-    if s.run_sql('SELECT ssl_type,account_locked FROM mysql.user WHERE User=? AND Host=?',[a['new_username'],'10.0.0.172']).fetch_one()!=['ANY','N']:raise RuntimeError()
+    if list(s.run_sql('SELECT ssl_type,account_locked FROM mysql.user WHERE User=? AND Host=?',[a['new_username'],'10.0.0.172']).fetch_one())!=['ANY','N']:raise RuntimeError()
    result['newLoginsVerified']=True;result['noGlobalPrivileges']=True
   if mode=='retire':
    # Fixed historical YouTube-only identities; never touch shared/default/admin users.
