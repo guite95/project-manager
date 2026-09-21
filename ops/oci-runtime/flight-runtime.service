@@ -1,0 +1,23 @@
+[Unit]
+Description=Flight backend with Vault startup gate
+Requires=docker.service flight-secrets.service project-management-imds-guard.service
+After=docker.service flight-secrets.service project-management-imds-guard.service
+PartOf=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/python3 /opt/project-management-runtime/current/ops/oci-runtime/imds-guard.py --check
+ExecStartPre=/opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/service-readiness.mjs flight
+ExecStart=/bin/sh -c '/usr/bin/docker start flight-backend >/dev/null && exec /usr/bin/docker wait flight-backend'
+ExecStop=/usr/bin/docker stop --time 30 flight-backend
+Restart=always
+RestartSec=5
+TimeoutStopSec=45
+LimitCORE=0
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target docker.service

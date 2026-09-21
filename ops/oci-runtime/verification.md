@@ -187,3 +187,11 @@ YouTube backend/media의 공유 키 일치를 확인했다. 앞부분 및 나머
 필드 이름이 `new_secret`/`new_password`여도 이 15개는 **기존 값 재사용**이며 신규 발급이나
 회전이 아니다. 운영 설정·계정·비밀번호·Vault는 변경하지 않았다. 향후 적용 과정에서
 이를 교체 완료로 취급하거나, 노출 의심 자격증명을 안전해졌다고 판정하면 안 된다.
+# Flight / YouTube Sync follow-on cutover (2026-09-21, in progress)
+
+- Flight host publisher and migration profiles are separate; migration mount is root-group only. Fixed `flight-db` backup precedes host-only Alembic.
+- Isolated PostgreSQL fixture: runtime CRUD, migration DDL and future-object grants PASS; runtime DDL, migration-history writes, SET ROLE, sequence setval and temporary DDL denied. Fixture/container/network removed; no production role changes at this checkpoint.
+- Common host tests: 38 PASS / 1 Linux-only SKIP; PM typecheck/build PASS. Existing PM cutover is not changed by the added inactive Flight units.
+- Flight secret reader tests 4 PASS; backend suite 91 PASS / 1 FAIL. The same guest-submission 422-vs-201 test fails on unchanged HEAD in an isolated source extraction; recorded as pre-existing, not silently fixed in this security cutover.
+- Flight deployment failure fixtures PASS: publisher reload or migration failure does not stop the existing app or run compose up. Whole environment injection and app-startup migration are removed in the pending Flight release.
+- YouTube OCI MySQL administrator reset is NOT authorized: user chose to provide the existing password in ignored, mode-0600 `.private/youtube-mysql-current-admin.json`. Existing new-credential input remains unchanged.

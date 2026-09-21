@@ -23,6 +23,10 @@ const files = [
   'ops/oci-runtime/provision-pm-roles.mjs',
   'ops/oci-runtime/vault-readiness.mjs', 'ops/oci-runtime/project-management-vault.conf',
   'ops/oci-runtime/prepare-cutover.py', 'ops/oci-runtime/backup-pm-db.sh',
+  'ops/oci-runtime/flight-secrets.service', 'ops/oci-runtime/flight-runtime.service',
+  'ops/oci-runtime/service-readiness.mjs', 'ops/oci-runtime/migrate-flight.mjs',
+  'ops/oci-runtime/backup-flight-db.sh',
+  'ops/oci-runtime/flight-roles.mjs', 'ops/oci-runtime/provision-flight-roles.mjs',
 ];
 const payload = Buffer.from(JSON.stringify({ revision,
   packageHash: createHash('sha256').update(execFileSync('git', ['show', `${revision}:package.json`])).digest('hex'),

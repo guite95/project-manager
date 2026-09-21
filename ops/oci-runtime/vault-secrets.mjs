@@ -2,10 +2,12 @@ import { lstat, mkdir, mkdtemp, open, chmod, chown, readlink, symlink, rename, r
 import { isAbsolute, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
-// PM pilot only. Other service profiles are added after their actual consumers are verified.
+// Fixed profiles only; migration credentials never share an application's mount.
 const profiles = Object.freeze({
   'project-management': { required: ['DATABASE_URL', 'SESSION_SECRET'], optional: ['APP_PASSWORD_HASH'] },
   'project-management-migration': { required: ['DATABASE_URL'], optional: [], gid: 0 },
+  'flight': { required: ['CONFIG_JSON'], optional: [] },
+  'flight-migration': { required: ['DATABASE_URL'], optional: [], gid: 0 },
 });
 function exactKeys(value, keys) {
   return value && typeof value === 'object' && !Array.isArray(value)
