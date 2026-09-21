@@ -1,0 +1,14 @@
+{
+  "completedAtUtc": "2026-09-21T04:58:04.615Z",
+  "dbSystemId": "ocid1.mysqldbsystem.oc1.ap-chuncheon-1.aaaaaaaa6tcxsmmgpncdf5zkfdazz7m766hdukyysrkunq7fqbqmqnegw5ja",
+  "workRequestId": "ocid1.mysqlworkrequest.oc1.ap-chuncheon-1.amaaaaaatzbcbmyax3lnf7t5kanf7rryes7ddo5f6fkarun5u5heh5t3lb4a",
+  "status": "SUCCEEDED",
+  "vaultSecretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaatzbcbmyamctq6n7rlhamwsld27uxl3intyenebi5dcrlotwrhh5q",
+  "vaultVersion": 1,
+  "vmPrincipalCanReadAdminSecret": false,
+  "newAdminTlsLoginVerified": true,
+  "existingKeychainUpdatedAndVerified": true,
+  "appCredentialsChanged": false,
+  "youtubeContainersRestarted": false,
+  "youtubeVaultCutoverCompleted": false
+}

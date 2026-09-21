@@ -187,7 +187,17 @@ YouTube backend/media의 공유 키 일치를 확인했다. 앞부분 및 나머
 필드 이름이 `new_secret`/`new_password`여도 이 15개는 **기존 값 재사용**이며 신규 발급이나
 회전이 아니다. 운영 설정·계정·비밀번호·Vault는 변경하지 않았다. 향후 적용 과정에서
 이를 교체 완료로 취급하거나, 노출 의심 자격증명을 안전해졌다고 판정하면 안 된다.
-# Flight / YouTube Sync follow-on cutover (2026-09-21: Flight complete, YouTube awaiting input)
+# OCI MySQL administrator recovery (2026-09-21 04:58 UTC)
+
+- User explicitly authorized resetting the forgotten OCI MySQL administrator password. Only `dev-uk-mysql-free` was targeted; OCI console credentials and VM/Linux root authentication were not changed. No application schema/data writes, app deployment or infrastructure restart was issued.
+- Existing protected input `infrastructure_admins.mysql_oci_admin.new_password` used without modification. Value passed through process/SSH stdin, not argv, output or environment. Existing DEFAULT/SOFTWARE Vault stores administrator password version1 separately; no new VM IAM permission was granted. Host Instance Principal can read its allowed Flight Secret but receives404 for this administrator Secret.
+- Found the existing administrator identity and Keychain reference in the personal OCI MySQL connection metadata. Updated that existing Keychain item through the native API and verified readback. The separate blank old-password input is no longer required; retained input files were not deleted.
+- First update was rejected with412, confirmed from OCI Audit. No blind retry: new-password authentication still failed and no successful update work request existed. Re-read current DB ETag immediately before the next guarded update; the later request completed SUCCEEDED at04:58:04.615Z. Exact resource/work-request/Secret references are in `mysql-admin-recovery.json`.
+- New administrator login PASS using the private DNS endpoint and VERIFY_IDENTITY TLS. Existing app login/TLS precheck and final readiness PASS. YouTube backend/media/frontend container IDs/start times unchanged and all healthy; Flight, shared MySQL/Redis and Ilchul container snapshots also unchanged.
+- PM retained the same container ID but its start time changed during observation; this recovery issued no PM restart. PM was running at the final check. This exception is not claimed as an unchanged-service check.
+- This recovers administrator access only. YouTube's application Vault cutover and runtime/migration/Redis credential separation remain pending. The previous checkpoint below records the state before this reset approval.
+
+# Flight / YouTube Sync follow-on cutover (prior checkpoint: Flight complete, YouTube awaiting input)
 
 - Flight first live Vault deployment: `c402394664c3a269f6ee4167a987e58abfd2d51c`, Actions `35561308234` PASS. Runtime file-only config, dedicated CRUD identity, separate host Alembic identity, root-read-only container, restart=no and enabled publisher/runtime units verified. Live checker: 19/19 PASS. PM runtime remains active.
 - Existing DEFAULT/SOFTWARE Vault reused; 2 Flight secrets at version1 and a separate source-restricted, exact-secret IAM policy. See `vault-access.flight.json` and both Flight manifests. PM policy unchanged.
