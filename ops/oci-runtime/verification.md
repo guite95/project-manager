@@ -2,6 +2,9 @@
 
 ## 최신 상태: PM 신원 경계 운영 적용 / Vault 전환 준비
 
+- 준비 코드 `eae1ffa` 및 IPv6 unit 보정 `ae7d570`는 main에 push했으나 Actions35550798324/35550858154는 이미지 빌드에서 실패했다. 운영 앱 교체 전 실패이며 운영 이미지는 이전 성공 릴리스로 유지했다.
+- 원인: AI HTTP 모듈의 eager createPool이 빌드 중 DATABASE_URL을 요구했다. 로컬 `.env`가 앞선 로컬 빌드에서 이를 가렸다. HTTP pool만 실제 DB 접근까지 지연 초기화하고 CLI의 엄격한 설정 검사는 유지했다. 누락된 설정으로 pg 기본 계정을 선택하지 않는다.
+- 회귀 테스트 RED→GREEN 및 `DATABASE_URL='' PM_SECRET_DIRECTORY=/nonexistent-build-secret-mount pnpm build` 통과. 후속 집중 테스트62개(61통과/Linux전용1skip), 타입 검사 통과. 수정 후 Actions 성공 여부는 별도 확인해야 한다.
 - `0997df5` main push와 Actions35549067826 성공. PM이 broker 및 Google 파일 토큰을 사용하고 WIF mount가 없음을 실제 컨테이너에서 확인했다.
 - app IMDSv1/v2 차단, 호스트 IMDSv2 HTTP200, 새 Docker bridge의 IMDSv1/v2 차단 확인. 임시 probe 컨테이너/네트워크 제거. 전체 Docker 재시작·VM 재부팅은 미실시.
 - 배포된 실제 앱 코드로 OCI 객체 PUT/GET/무결성/DELETE 및 Google1536차원 임베딩 성공. 테스트 객체는 제거했고 기존 업무 객체는 건드리지 않았다.

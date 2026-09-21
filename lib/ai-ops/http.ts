@@ -1,10 +1,10 @@
 import { currentActor } from '../access/http';
 import { NextResponse } from "next/server";
-import { AiOpsInputError, createPool } from "./store.mjs";
+import { AiOpsInputError, createLazyPool } from "./store.mjs";
 const globalPool = globalThis as typeof globalThis & {
-  aiOpsPool?: ReturnType<typeof createPool>;
+  aiOpsPool?: ReturnType<typeof createLazyPool>;
 };
-export const pool = (globalPool.aiOpsPool ??= createPool());
+export const pool = (globalPool.aiOpsPool ??= createLazyPool());
 export async function aiOpsRead(action: () => Promise<unknown>) {
   const actor = await currentActor();
   const headers = { "Cache-Control": "private, no-store" };
