@@ -1,0 +1,7 @@
+{
+  "policyId": "ocid1.policy.oc1..aaaaaaaaeb7xcvy6yiizgs65hboujq4c4nzsym2nsxn323wiukjgrfsbvtsa",
+  "networkSourceReference": "vault-access.json",
+  "resourceType": "secret-bundles",
+  "verb": "read",
+  "manifests": ["vault-manifest.flight.json", "vault-manifest.flight-migration.json"]
+}

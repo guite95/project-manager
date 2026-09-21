@@ -1,0 +1,11 @@
+{
+  "service": "flight",
+  "gid": 986,
+  "files": [
+    {
+      "name": "CONFIG_JSON",
+      "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaatzbcbmya2esl7pytggvmpwbr6fiwwmxi44qstftdcp6aije5wziq",
+      "versionNumber": 1
+    }
+  ]
+}

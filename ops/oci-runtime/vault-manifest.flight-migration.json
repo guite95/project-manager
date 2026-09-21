@@ -1,0 +1,11 @@
+{
+  "service": "flight-migration",
+  "gid": 0,
+  "files": [
+    {
+      "name": "DATABASE_URL",
+      "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaatzbcbmyaxkyauluupuxlxn4667vm5rbozwyxjnmrlrfqwpeelqfa",
+      "versionNumber": 1
+    }
+  ]
+}

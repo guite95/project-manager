@@ -187,7 +187,17 @@ YouTube backend/media의 공유 키 일치를 확인했다. 앞부분 및 나머
 필드 이름이 `new_secret`/`new_password`여도 이 15개는 **기존 값 재사용**이며 신규 발급이나
 회전이 아니다. 운영 설정·계정·비밀번호·Vault는 변경하지 않았다. 향후 적용 과정에서
 이를 교체 완료로 취급하거나, 노출 의심 자격증명을 안전해졌다고 판정하면 안 된다.
-# Flight / YouTube Sync follow-on cutover (2026-09-21, in progress)
+# Flight / YouTube Sync follow-on cutover (2026-09-21: Flight complete, YouTube awaiting input)
+
+- Flight first live Vault deployment: `c402394664c3a269f6ee4167a987e58abfd2d51c`, Actions `35561308234` PASS. Runtime file-only config, dedicated CRUD identity, separate host Alembic identity, root-read-only container, restart=no and enabled publisher/runtime units verified. Live checker: 19/19 PASS. PM runtime remains active.
+- Existing DEFAULT/SOFTWARE Vault reused; 2 Flight secrets at version1 and a separate source-restricted, exact-secret IAM policy. See `vault-access.flight.json` and both Flight manifests. PM policy unchanged.
+- Pre-cutover Flight snapshot restored in an isolated, no-network, no-published-port PostgreSQL fixture: 12 tables, Alembic `017`. First rehearsal failed without sufficient phase detail. Changing the readiness check from the init socket to TCP made the second rehearsal pass; startup race is suspected, not conclusively established. Both fixtures removed. Backup preserved under `/var/backups/oci-vault-migration/flight-20260921T042743993957Z.dump`.
+- New role provisioning PASS, both role connections/privileges verified. Role backup `flight-roles-before-20260921T042958474Z.sql`; shared PostgreSQL administrator retained for remaining infrastructure users. Prior Flight `.env`/Compose are root-only in `flight-precutover-20260921T043107770771Z` under the same backup root. Active `.env` now contains only 10 non-secret config fields.
+- Real Vault failure test: requested nonexistent version999999, ExecReload failed, generation and running container/start time preserved, publisher/runtime stayed active. Restored version1 and successful reload. Container TCP access to IMDS denied; host IPv4/IPv6 guard checker PASS.
+- Public edge returns403 to Python urllib but200 to curl for the same three URLs; live checker uses the CI curl client. This was a verification-client failure, not a deployed DB/Vault failure.
+- GitHub `ENV_FILE` is no longer referenced as an input by deployment, but the operator API receives403 for repository Secrets management. Existing repository Secret deletion is NOT complete; an owner must delete it. No claim of retiring shared PostgreSQL admin or retained signing/OAuth secrets.
+- Follow-up `9893cc9ab60d04df36fc3c90b5ca70631beeaa1c` also rejects legacy env-only configuration when ENV=production, even if the file-directory variable is missing. Standalone reader tests5 PASS; backend suite92 PASS/1 pre-existing guest-submission failure. Actions `35561708237` and actual redeployment PASS; deployed immutable revision matches, final live checker19/19 PASS, migration containers/files absent. Common host/deployment tests42 PASS/1 Linux-only SKIP. All34 protected input password/signing values checked against committed PM/Flight diffs: zero matches.
+- No VM reboot or browser test was performed. SMTP delivery and interactive OAuth were not exercised. YouTube runtime/admin credentials and Ilchul remain unchanged; resume YouTube after the user confirms the existing admin password input.
 
 - Flight host publisher and migration profiles are separate; migration mount is root-group only. Fixed `flight-db` backup precedes host-only Alembic.
 - Isolated PostgreSQL fixture: runtime CRUD, migration DDL and future-object grants PASS; runtime DDL, migration-history writes, SET ROLE, sequence setval and temporary DDL denied. Fixture/container/network removed; no production role changes at this checkpoint.
