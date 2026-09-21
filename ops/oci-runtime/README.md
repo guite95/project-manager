@@ -145,6 +145,32 @@ host-network/특권 컨테이너 및 호스트 root는 여전히 공통 신뢰 �
 
 ## 장애·롤백
 
+### 대용량 업로드 메모리 경계
+
+OCI SDK의 `getSignerAndReqBody`는 빈 body 검사에서 `Object.keys`를 호출한다.
+바이너리 Buffer를 직접 넘기면 바이트마다 문자열 키를 생성해 V8 heap OOM으로 종료될 수 있다.
+`createOciObjectStore`는 검증된 Buffer를 복사 없이 `Readable`로 감싸 SDK에 전달하고,
+성공·실패 모두 스트림을 닫는다. 자동 재전송은 하지 않으며 길이·MD5·조건부 생성은 유지한다.
+broker의 수신 버퍼는 허용 크기만큼 한 번 할당해 청크 누적 후 concat의 이중 복사를 피한다.
+무결성을 확인한 뒤에만 OCI에 전달하므로 전체 경로가 무버퍼 스트리밍인 것은 아니다.
+
+`node --test ops/oci-runtime/large-upload.test.mjs`는 실제 Unix socket/broker/설치 SDK로
+100MiB 합성 파일4개를 동시 처리한다. 외부 HTTP만 대체하며 JS heap96MiB,
+RSS850MiB 미만, SHA-256/MD5/길이, 다섯 번째 요청503을 검사한다.
+2026-09-21 로컬 수정 전 중복 버퍼 경로는 약899MiB로 실패했고 수정 후 약480MiB로 통과했다.
+실제 운영 네트워크 속도나 브라우저 multipart 경로의 메모리 검증과는 구분한다.
+
+호스트 소스 변경은 main에 반영한 뒤 `stage-host-runtime.mjs <sha>`로 준비하고
+broker를 명시적으로 재시작해야 실행 중인 프로세스에 적용된다. 일반 앱 이미지 교체만으로는
+호스트 broker 코드가 갱신되지 않는다. 소켓 잔여물 자동 삭제 정책은 이번 변경에 포함하지 않는다.
+
+운영 검증(2026-09-21): 호스트 릴리스 `311f662ada119c879990ef926d9c2e70cb0d9d76`
+적용 및 broker/app/worker active 확인. ARM64 Node24의 격리 동시4개 테스트는
+peak RSS512MiB로 통과했다. 실제 앱→broker→OCI에서 합성100MiB 객체 저장·읽기
+SHA-256 일치 및 삭제 후404를 확인했다. DB 녹음 행이나 Google 전사 호출은 만들지 않았다.
+실제 왕복 후 broker 재시작0회, cgroup peak 약478MiB, 로그인HTTP200이다.
+브라우저 multipart 업로드와 실제 사용자 녹음 재전사는 수행하지 않았다.
+
 - 잘못된 파일/권한/만료, host unit 실패, 자료 hash 불일치, Google 실패, Compose 버전/마운트 미확인 시 전환 중단. 새 계정·Secret 등록도 진행하지 않는다.
 - refresh 실패 시 기존 단기 토큰의 유효기간까지만 동작한다. 새 파일이 유효하면 앱이 다음 요청부터 읽는다. 만료된 토큰 또는 ADC/env로 조용히 돌아가지 않는다.
 - 이 A 단계는 DB 계정/스키마를 바꾸지 않는다. 앱 코드의 이전 검증 이미지로 롤백할 수 있지만 그 이미지가 broker/file-auth를 지원하는지 먼저 확인한다.
