@@ -2,6 +2,8 @@
 services:
   app:
     command: ["node", "server.js"]
+    ulimits:
+      core: 0
     # Replace the whole map: per-key !reset in the last file was not reliably
     # removed by the installed Compose parser. Never carry secret-valued env keys.
     environment: !override

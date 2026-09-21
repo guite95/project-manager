@@ -2,6 +2,14 @@
 
 ## 최신 상태: PM 신원 경계 운영 적용 / Vault 전환 준비
 
+- `84f070a` Actions35553417694 및 `49af918` Actions35553684284 모두 성공. 실제 `49af918` 컨테이너 running, broker mode, Secret file mode 아직 false, migration env 없음, restart=no, mount2개, 네 host unit active 확인. symlink readiness 정상 호출 exit0/잘못된 호출 exit1을 호스트에서 확인했다.
+- root0600 manifest2개(부모0700) 및 Secret unit 설치 완료. runtime3개/migration1개 Secret ID가 서로 겹치지 않고 migration GID0임을 실제 manifest reader로 확인했다. 서비스 inactive/disabled, 전환 marker 없음, Vault IAM 미추가 상태다. 운영자 재조회로 Secret4개 version1/CURRENT/값 일치 및 기존ID 유지 확인(새로 생성0).
+- 최신 회귀 Node66개 중65통과/Linux전용1skip, 타입 검사/비밀값 없는 build 통과. 실제 `49af918` 이미지에서도 core dump 비활성화 migration args로 격리 Prisma7개 적용 및 재실행 성공.
+- Vault Compose의 core dump 제한은 합성 서비스 create/inspect로 실제 Docker `Name=core,Soft=0,Hard=0` 확인했다. 테스트 컨테이너 제거. 운영 PG의 sampled-duration/transaction-sampling 로그 비활성 및 pgaudit preload 없음도 읽기 전용 확인했다.
+- 원본 full dump의 첫 격리 복원 시험(1CPU/5GiB, restore600초)은 인덱스 생성 도중 restore 단계에서 완료되지 않았다. 임시 컨테이너/볼륨/파일은 제거했고 운영 DB·원본 백업은 보존했다. 오류 종류를 분류하도록 검사기를 보완해2CPU/1200초로 재검증한다. **복원 성공은 아직 확인 전**이다.
+- 02:18:38UTC PM 역할2개 생성/커밋 및 두 자격증명으로 실제 접속 검증 완료. runtime의 public schema DDL 거부 및 migration DDL 허용 확인. 기존 앱 자격증명은 변경하지 않았다. 생성 전 roles-only 보호 백업: `/var/backups/oci-vault-migration/pm-roles-before-20260921T021838998Z.sql`. 이전 full dump도 보존한다.
+- 실제 `84f070a` ARM64 이미지로 네트워크 격리 DB에서 Prisma migration7개 적용 및 같은 job 재실행 통과. production builder와 동일한 migration args(읽기 전용 rootfs, cap-drop, no-new-privileges, 파일 Secret)에서 네트워크와 mount source만 격리 fixture로 교체했다. DB는 `project_management_test`, 실제 운영 DB 연결 없음. 소유한 테스트 컨테이너/볼륨/메모리 파일 제거 확인. `check-migration-container.mjs`로 명시적 재검증 가능하다.
+
 - `84f070a` 준비 코드 main push 및 호스트 staging 후, 실제 `--check` 호출에서 `/current` symlink CLI의 main 판별이 실행을 건너뛰는 결함을 확인했다. 따라서 이 호출은 DB 조회/계정 생성 없이 끝났다. 공통 realpath 기반 main 판별과 실제 symlink 회귀 테스트로 수정하며 기존 identity readiness 진입점에도 적용한다. root 경계/방화벽/실제 토큰 및 storage 검증 결과와 CLI 시작 검사 실행 여부는 구분한다.
 
 - host migration/배포 연결 준비: root marker 기반 mode 유지, 별도 migration mount, app secret env 제거, migration 실패 시 기존 앱 stop/up 없음, Vault systemd drop-in 구현. 서버 Compose 실제 파서7검사 통과. 마지막 파일의 개별 `!reset`이 값을 제거하지 않는 동작을 발견해 환경변수 map 전체 `!override`로 검증했다.
@@ -9,7 +17,7 @@
 
 - **최신 운영 릴리스는 `0c28f0d`**. 빌드 오류 수정 `bb56087` Actions35551121405 및 후속 `0c28f0d` Actions35551459218 모두 성공했다. 실제 이미지/실행 상태, broker/file-token, WIF mount 없음, restart=no, systemd active를 재확인했다. 아래 두 실패 기록은 해결된 이력이다.
 - `/opt/project-management-runtime/current`도 `0c28f0d`로 갱신했다. IPv4+IPv6 guard를 적용하고 systemd unit에 AF_INET6을 반영했다. 새 dual-stack Docker bridge에서 IMDSv1/v2 네 요청 전부 차단됐으며 IPv6 DROP packet counter 증가로 규칙 동작을 확인했다. probe 컨테이너/네트워크는 제거했다. 동일 systemd sandbox 설정의 check도 통과했다.
-- PM Secret4개(version1/CURRENT)를 실제 Vault에 등록하고 운영자 SDK로 값 일치를 확인했다: runtime DB URL, migration DB URL, 유지하는 legacy session/bootstrap hash. **DB 계정 생성/비밀번호 변경/VM Vault IAM/앱 Secret mount는 아직 미적용**이다. manifest에는 비밀 아닌 ID/version만 기록했다.
+- PM Secret4개(version1/CURRENT)를 실제 Vault에 등록하고 운영자 SDK로 값 일치를 확인했다: runtime DB URL, migration DB URL, 유지하는 legacy session/bootstrap hash. **새 DB 계정 생성은 위 후속 기록대로 완료했으나 VM Vault IAM/앱 Secret mount/기존 계정 폐기는 아직 미적용**이다. manifest에는 비밀 아닌 ID/version만 기록했다.
 - 별도 합성 canary Secret1개로 실제 OCI 암호화/Node SDK bundle 조회를 확인했다. 새 compartment에는 이 작업의 Secret5개가 있다. 이 canary는 앱 계정 비밀번호가 아니다.
 - PM PostgreSQL 읽기 전용 감사: 현재 계정이 DB 및 public schema 소유 권한 보유, table28개/index56개 전부 해당 계정 소유. migration7개 완료/미완료0, pgvector0.8.1. 데이터/실제 사용자명은 출력하지 않았다.
 - 수정된 SSH 래퍼로 포트15439의 전용 터널을 열어 DB 연결을 확인했고 소유한 터널은 종료했다.

@@ -9,7 +9,7 @@ export function migrationContainerArgs(image, name) {
   if (!/^project-management:[a-f0-9]{40}$/.test(image ?? '') || !/^pm-migration-[a-z0-9-]+$/.test(name ?? '')) throw new Error('PM_MIGRATION_ARGUMENTS');
   return ['run', '--rm', '--name', name, '--pull', 'never', '--network', 'shared-infra',
     '--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges',
-    '--pids-limit', '128', '--memory', '512m', '--cpus', '1', '--log-driver', 'none',
+    '--pids-limit', '128', '--memory', '512m', '--cpus', '1', '--log-driver', 'none', '--ulimit', 'core=0',
     '--tmpfs', '/tmp:rw,nosuid,nodev,size=64m',
     '--mount', `type=bind,src=${secretRoot},dst=/run/project-management-migration,readonly`,
     '--env', 'PM_MIGRATION_SECRET_DIRECTORY=/run/project-management-migration',

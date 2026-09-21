@@ -18,7 +18,7 @@ PM_DEPLOYMENT_MODE=$(sudo -n python3 scripts/prepare-identity-cutover.py --mode)
 if [[ "$PM_DEPLOYMENT_MODE" == vault ]]; then
   export COMPOSE_FILE="$COMPOSE_FILE:docker-compose.vault.yml"
   sudo -n systemctl restart project-management-secrets.service
-  sudo -n /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/vault-readiness.mjs
+  sudo -n /bin/bash -c 'ulimit -c 0; exec "$@"' pm-vault-readiness /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/vault-readiness.mjs
 fi
 sudo -n /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/identity-readiness.mjs "$PM_RUNTIME_GID"
 python3 - <<'PY'
@@ -45,7 +45,7 @@ except Exception:
 PY
 # This is before stopping/replacing the old app. Failure leaves it running.
 if [[ "$PM_DEPLOYMENT_MODE" == vault ]]; then
-  sudo -n /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/migrate-pm.mjs "$APP_IMAGE"
+  sudo -n /bin/bash -c 'ulimit -c 0; exec "$@"' pm-host-migration /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/migrate-pm.mjs "$APP_IMAGE"
 fi
 # All readiness/config checks precede the interruption of the old container.
 sudo -n python3 scripts/prepare-identity-cutover.py
@@ -71,6 +71,7 @@ try:
         assert env.get('PM_SECRET_DIRECTORY')=='/run/oci-service-secrets/project-management'
         assert not any(key in env for key in ['DATABASE_URL','SESSION_SECRET','APP_PASSWORD_HASH','PM_MIGRATION_SECRET_DIRECTORY'])
         assert c['Config']['Cmd']==['node','server.js']
+        assert any(limit=={'Name':'core','Soft':0,'Hard':0} for limit in c['HostConfig'].get('Ulimits',[]))
     assert {m['Destination'] for m in c['Mounts']}==expected
     assert all(not m['RW'] for m in c['Mounts'])
     assert c['State']['Running']

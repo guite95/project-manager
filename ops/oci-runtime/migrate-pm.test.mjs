@@ -11,6 +11,7 @@ test('migration job mounts only its own read-only secret and never receives cred
   assert.ok(args.includes('--read-only')); assert.ok(args.includes('--rm'));
   assert.equal(args[args.indexOf('--cap-drop')+1], 'ALL');
   assert.equal(args[args.indexOf('--log-driver')+1], 'none');
+  assert.equal(args[args.indexOf('--ulimit')+1], 'core=0');
   assert.equal(args[args.indexOf('--network')+1], 'shared-infra');
   assert.equal(args[args.indexOf('--env')+1], 'PM_MIGRATION_SECRET_DIRECTORY=/run/project-management-migration');
   assert.deepEqual(args.slice(-3), [image, 'migrate', 'deploy']);

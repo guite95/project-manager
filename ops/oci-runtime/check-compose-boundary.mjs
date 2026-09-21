@@ -50,7 +50,10 @@ try:
             app.get('restart') == 'no',
             not vault or (values.get('PM_SECRET_DIRECTORY') == '/run/oci-service-secrets/project-management'
                 and not any(key in values for key in ['DATABASE_URL','SESSION_SECRET','APP_PASSWORD_HASH','PM_MIGRATION_SECRET_DIRECTORY'])
-                and app.get('command') == ['node','server.js']),
+                and app.get('command') == ['node','server.js']
+                # Compose JSON omits zero soft/hard fields; actual Docker inspect
+                # has additionally verified Name=core, Soft=0, Hard=0.
+                and app.get('ulimits',{}).get('core') in [{},{'soft':0,'hard':0}]),
         ])
     results = {'base_boundary':check([0,2]) is True, 'base_wif_boundary':check([0,1,2]) is True,
         'missing_gid_rejected':check([0,2],False) is None, 'wrong_order_detected':check([0,2,1]) is False,
