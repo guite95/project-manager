@@ -29,7 +29,6 @@ import {
   sendToToday,
   todayDateString,
   toggleDone,
-  toggleProjectCollapsed,
   type Issue,
   type IssueGroup,
   type TodayBoard,
@@ -271,18 +270,6 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
     );
   }
 
-  const handleToggleCollapsed = (slug: string) => {
-    if (!board) return;
-    const next = toggleProjectCollapsed(board, slug);
-    setBoard(next);
-    void sync(() =>
-      putSettings({
-        projectOrder: next.projectOrder,
-        collapsedProjects: next.collapsedProjects,
-      }),
-    );
-  };
-
   // 드롭은 id 만 넘어온다. 안내 문구를 만들려면 현재 보드에서 항목을 찾아야 하는데,
   // setBoard 업데이터는 순수해야 하므로 여기 밖에서 찾는다.
   const handleDropIssue = (issueId: string) => {
@@ -304,17 +291,14 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
           projectTitles={projectTitles}
         />
         <IssuePool
-          collapsedSlugs={board.collapsedProjects}
           groups={groups}
           personalGroups={personalGroups}
           onAdd={handleAdd}
-          onMoveProject={handleMoveProject}
           onRemove={handleRemove}
           onRemoveProject={handleRemoveProject}
           onRename={handleRename}
           onSendToToday={handleSendToToday}
           onStepProject={handleStepProject}
-          onToggleCollapsed={handleToggleCollapsed}
         />
       </div>
 

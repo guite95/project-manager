@@ -66,6 +66,22 @@ export const PROJECT_DRAG_TYPE = "application/x-today-project";
 export const UNGROUPED_TITLE = "미분류";
 /** 프로젝트에 속하지 않는 개인 이슈의 예약 식별자. 기존 이슈 저장·완료 흐름을 사용한다. */
 export const PERSONAL_ISSUES_SLUG = "__personal_issues__";
+export const UNGROUPED_ISSUE_TAB = "__ungrouped_issues__";
+
+export function issueGroupTabKey(group: Pick<IssueGroup, "slug">): string {
+  return group.slug ?? UNGROUPED_ISSUE_TAB;
+}
+
+export function selectIssueGroup(
+  groups: IssueGroup[],
+  activeKey: string | null,
+): IssueGroup | null {
+  return (
+    groups.find((group) => issueGroupTabKey(group) === activeKey) ??
+    groups[0] ??
+    null
+  );
+}
 
 /** 프로젝트 소속을 보존한 채 이슈 풀의 두 탭으로 나눈다. */
 export function splitIssuePoolGroups(groups: IssueGroup[]): {
