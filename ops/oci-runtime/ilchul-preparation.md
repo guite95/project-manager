@@ -71,3 +71,17 @@ approval configuration has been read back successfully.
 - Actual application boot recovery, user OAuth/upload acceptance and VM reboot are
   NOT VERIFIED; fresh tmpfs, retry/fail-closed code and Docker rebind are tested separately.
 - Readiness attestation is written only after these checks, not by the installer.
+
+## Final preparation result
+
+- Root evidence: `/etc/ilchul/vault-preparation-evidence.json`; readiness attestation
+  written after verification. Real begae `preflight --new-deployment`: PASS.
+- Public `/intro`: 200; unauthenticated `/api/plan/1`: 401. Existing apps/infra healthy;
+  original Ilchul blue start times unchanged. No VM/Docker/shared-service restart.
+- Latest PR head ad4a8ab7865189dcaef0ca593fb432052dee2680, CI run 35573623197:
+  backend/frontend PASS, PR OPEN/unmerged, merge state CLEAN at verification time.
+- Verification-only migration tmpfs and temporary restore/rebind containers removed.
+  Vault Secret versions, protected backups and the user's ignored input file retained.
+- Server preparation is complete. Application cutover, production approval and
+  post-cutover acceptance remain user-coordinated; Redis default and old accounts
+  remain valid until that rollback window is explicitly closed.
