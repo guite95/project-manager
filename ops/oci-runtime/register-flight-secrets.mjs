@@ -88,4 +88,3 @@ async function main() {
 if (isMainModule(import.meta.url)) {
   main().catch(() => { console.log(JSON.stringify({ ok: false, code: 'FLIGHT_SECRET_REGISTRATION_FAILED', partial_creations_may_exist: true })); process.exitCode = 1; });
 }
-

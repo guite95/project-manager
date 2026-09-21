@@ -33,4 +33,3 @@ async function main() {
 if(isMainModule(import.meta.url)) {
   main().catch(()=>{console.log('FLIGHT_ROLE_OPERATOR_FAILED');process.exitCode=1;});
 }
-
