@@ -44,6 +44,7 @@ try:
             values.get('GOOGLE_ACCESS_TOKEN_FILE') == '/run/project-management-google/access-token.json',
             values.get('OCI_STORAGE_BROKER_SOCKET') == '/run/project-management-broker/storage.sock',
             app.get('group_add') == ['23456'],
+            app.get('restart') == 'no',
         ])
     results = {'base_boundary':check([0,2]) is True, 'base_wif_boundary':check([0,1,2]) is True,
         'missing_gid_rejected':check([0,2],False) is None, 'wrong_order_detected':check([0,2,1]) is False}

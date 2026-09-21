@@ -1,0 +1,24 @@
+[Unit]
+Description=Project Management container with host identity readiness gate
+Requires=docker.service project-management-imds-guard.service project-management-object-broker.service project-management-google-token.service
+After=docker.service project-management-imds-guard.service project-management-object-broker.service project-management-google-token.service
+PartOf=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/project-management-runtime.conf
+ExecStartPre=/usr/bin/python3 /opt/project-management-runtime/current/ops/oci-runtime/imds-guard.py --check
+ExecStartPre=/opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/identity-readiness.mjs ${PM_RUNTIME_GID}
+# Do not attach container stdout/stderr: they can contain upstream SDK diagnostics.
+ExecStart=/bin/sh -c '/usr/bin/docker start project-management >/dev/null && exec /usr/bin/docker wait project-management'
+ExecStop=/usr/bin/docker stop --time 30 project-management
+Restart=always
+RestartSec=5
+TimeoutStopSec=45
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target docker.service

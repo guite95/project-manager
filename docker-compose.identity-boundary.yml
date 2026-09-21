@@ -2,6 +2,8 @@
 # Must be LAST, including after docker-compose.wif.yml if that is present.
 services:
   app:
+    # systemd owns restart/boot ordering; Docker must not bypass the readiness gate.
+    restart: "no"
     environment:
       OCI_STORAGE_AUTH: broker
       OCI_STORAGE_BROKER_SOCKET: /run/project-management-broker/storage.sock
