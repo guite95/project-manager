@@ -1,5 +1,6 @@
 import { chmod, lstat } from 'node:fs/promises';
 import { dirname, isAbsolute } from 'node:path';
+import { Readable } from 'node:stream';
 import { isMainModule } from '../../lib/server/cli-entry.mjs';
 import { createObjectBrokerServer } from './object-broker.mjs';
 
@@ -49,6 +50,14 @@ export async function createOciObjectStore({ authenticationDetailsProvider, regi
       retryConfiguration: common.NoRetryConfigurationDetails,
     });
     client.regionId = region;
+    // SDK는 Buffer의 빈 값 검사에서 Object.keys로 바이트마다 키를 만든다.
+    // 검증된 원본 버퍼를 복사하지 않는 스트림으로 전달하고 실패 시에도 닫는다.
+    if (method === 'putObject') {
+      if (!Buffer.isBuffer(request.putObjectBody) || request.contentLength !== request.putObjectBody.length) throw new Error('OBJECT_STORAGE_INVALID_BODY');
+      const body = Readable.from([request.putObjectBody], { objectMode: false });
+      try { return await client.putObject({ ...request, putObjectBody: body }); }
+      finally { body.destroy(); }
+    }
     return client[method](request);
   }]));
 }

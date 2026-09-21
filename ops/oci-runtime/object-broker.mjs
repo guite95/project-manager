@@ -5,14 +5,14 @@ import { parseBrokerRoute, validateBrokerReference } from '../../lib/server/obje
 
 const sha256 = b => createHash('sha256').update(b).digest('hex');
 async function collect(stream, size) {
-  const chunks = []; let count = 0;
+  // 크기는 이미 허용 범위 안에서 검증됐다. chunk 복사+concat의 이중 버퍼를 피한다.
+  const bytes = Buffer.allocUnsafe(size); let count = 0;
   for await (const chunk of stream) {
-    const b = Buffer.from(chunk); count += b.length;
-    if (count > size) { stream.destroy(); throw new Error(); }
-    chunks.push(b);
+    if (count + chunk.length > size) { stream.destroy(); throw new Error(); }
+    bytes.set(chunk, count); count += chunk.length;
   }
   if (count !== size) throw new Error();
-  return Buffer.concat(chunks, count);
+  return bytes;
 }
 
 export function createObjectBrokerServer({ config, store, maxConcurrent = 4, timeoutMs = 60_000 }) {
