@@ -13,6 +13,12 @@
 
 ## Chirp 3
 
+신원 분리 후에는 앱/worker가 `GOOGLE_ACCESS_TOKEN_FILE`로 호스트 발행 단기 토큰을 읽는다.
+파일을 명시하면 잘못된 파일/만료 시 ADC로 돌아가지 않는다. 404/412 상태 처리와
+불명확한 BatchRecognize 자동 재제출 금지를 유지한다. worker는 이 변경으로 자동 활성화되지 않으며,
+아래 기존 WIF 배포 절차 대신 worker 전용 경계 override가 필요하다.
+[설치·전환 조건](../ops/oci-runtime/README.md#녹음-worker)을 먼저 확인한다.
+
 `google-auth-library` ADC로 임베딩과 동일한 `GOOGLE_APPLICATION_CREDENTIALS` 또는 런타임 WIF를 사용한다. 별도 API key나 서비스 계정 키를 만들지 않는다. 임베딩의 `GOOGLE_CLOUD_LOCATION=global`과 전사 리전은 독립적이다.
 
 ```text

@@ -79,6 +79,12 @@ LIMIT·커서 적용 전에 제외하므로 결과 페이지가 빈 항목으로
 
 ## Provider와 Vertex AI
 
+호스트 신원 분리 경로에서는 `GOOGLE_ACCESS_TOKEN_FILE`의 단기 token JSON을
+Google SDK auth client가 매 요청 다시 읽는다. 호스트 WIF 인증서/개인키를 앱에
+mount하지 않는다. 파일을 명시한 뒤 누락·만료·권한/형식 오류가 나면 ADC로 fallback하지 않는다.
+토큰 파일 설정이 없을 때만 기존 ADC 동작을 유지한다. 운영 전환/재배포 게이트는
+[호스트 인증 경계](../ops/oci-runtime/README.md)에 있다. 기존 embedding profile과 검색 데이터는 바꾸지 않는다.
+
 기본값:
 
 ```dotenv

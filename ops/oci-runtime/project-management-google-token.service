@@ -1,0 +1,36 @@
+[Unit]
+Description=Publish short-lived Google token for Project Management
+Wants=network-online.target
+Requires=project-management-wif.service
+After=network-online.target project-management-wif.service
+
+[Service]
+Type=oneshot
+User=root
+Group=pm-runtime
+Environment=NODE_ENV=production
+WorkingDirectory=/opt/project-management-runtime/current
+ExecStart=/opt/node24/bin/node ops/oci-runtime/token-publisher.mjs
+RuntimeDirectory=project-management-google
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+UMask=0077
+TimeoutStartSec=60
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=/run/project-management-wif
+ReadWritePaths=/run/project-management-google
+LimitCORE=0
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target

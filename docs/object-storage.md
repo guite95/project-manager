@@ -20,7 +20,11 @@ AI 세션 본문은 전체 본문 검색을 위해 PostgreSQL에 보관하며 �
 `OCI_STORAGE_REGION`, `OCI_STORAGE_NAMESPACE`, `OCI_STORAGE_BUCKET`은 비밀이 아닌 연결 메타데이터다.
 셋을 모두 비우면 기존 DB 저장 방식을 사용한다. 일부만 설정하면 오류로 중단한다.
 로컬 `OCI_STORAGE_AUTH=config_file`은 기존 개인 `~/.oci/config`를 사용한다.
-운영에서는 `instance_principal`만 허용하며 개인 API 키를 컨테이너에 복사하지 않는다.
+기존 운영 기본값은 `instance_principal`이며 개인 API 키를 컨테이너에 복사하지 않는다.
+신원 분리용 opt-in 경로는 `OCI_STORAGE_AUTH=broker`와 절대 경로
+`OCI_STORAGE_BROKER_SOCKET`을 사용한다. 이 모드에서는 앱이 OCI 인증을 하지 않으며
+중계 실패 시 직접 인증으로 fallback하지 않는다. 설치·운영 전환 게이트는
+[호스트 인증 경계](../ops/oci-runtime/README.md)를 따른다. 코드 추가만으로 운영 전환이 완료되지는 않는다.
 
 운영 준비 시 앱 인스턴스 하나를 대상으로 dynamic group을 지정하고 해당 버킷의 객체만 허용한다.
 정책은 `target.bucket.name='project-management-materials'` 조건과

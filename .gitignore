@@ -19,6 +19,8 @@ next-env.d.ts
 *.pem
 /.initial-login-password
 /.provisioning-before.json
+# 운영 자격증명 입력 (사용자 보관 요청: 자동 삭제 금지, 절대 커밋 금지)
+/.private/
 
 # 로그와 테스트·브라우저 검증 산출물
 *.log

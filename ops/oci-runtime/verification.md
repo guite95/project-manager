@@ -1,0 +1,86 @@
+# 로컬 검증 기록 — 2026-09-21
+
+## 순차 운영 전환 준비 (사용자 승인 후)
+
+- 사용자가 PM/Flight/YouTube Sync main push 및 순차 작업을 승인했다. Ilchul은 마지막에 함께 전환하며 자동 push/전환하지 않는다.
+- origin/main을 fetch해 작업 기준점과 동일함을 확인했다.
+- Grafana 새 계정명도 비충돌 확인: 전체13개 확인, MinIO2개/OCI MySQL2개는 미검증.
+- MinIO 현재 컨테이너 관리자 환경을 사용한 사용자 목록 조회는 `SignatureDoesNotMatch`로 실패. 값 출력/비밀번호 변경 없이 보류했다.
+- PM 운영 문서의 프로젝트/slug64쌍에서 broker 식별자 제약과 충돌하는 항목0개 확인. 본문/업무 데이터는 출력하지 않았다.
+- `/opt/node24`가 없음을 확인하고 공식 Node24.21.0 Linux ARM64 배포본을 설치했다. 배포자 서명과 고정 SHA-256을 모두 검증했다. 기존 앱/컨테이너 Node나 인증 경로는 변경하지 않았다.
+
+## 후속 재개: 입력 검증 및 읽기 전용 서버 검사
+
+- 집중 테스트39/39 통과(기존31 + 입력 검증8), 실패/skip0. 검증기 미구현 시 실패한 뒤 구현·통과를 확인했다.
+- `pnpm typecheck`, `pnpm build`, `git diff --check`를 후속 재개에서도 다시 실행해 모두 exit0 확인.
+- 실제 입력 schema51필드 통과, 새 비밀번호19개/기존 유지 키15개 구분. 파일은 수정·삭제하지 않았다.
+- 서버 Compose5.1.3으로 병합4검사 통과: base+boundary, base+WIF+boundary, GID 누락 거부, boundary 뒤 WIF를 넣은 잘못된 순서 탐지. 원문 env/config 출력·서버 파일 저장·배포 없음.
+- PostgreSQL/local MySQL/Redis/RabbitMQ의 새 계정명12개는 기존 계정과 비충돌. MinIO2/Grafana1/OCI MySQL2는 미검증. grant/관리 접근/백업·복구 검증 완료를 뜻하지 않는다.
+- 서버 `/run`은 tmpfs, swap 비활성. 호스트 native Node와 pm-runtime 그룹 없음. 기존 WIF timer 활성, 새 broker/google-token unit 비활성.
+- PM/Flight/Ilchul/YouTube backend/media는 실행 중. Ilchul/YouTube backend/media Docker health는 healthy, PM/Flight는 healthcheck 미설정. HTTP 및 업무 API 검증을 대체하지 않는다.
+- PM은 여전히 WIF mount 사용, broker/token-file 경계 미적용. VM Vault 조회 권한을 추가하지 않았다.
+- main 통합/커밋/push/배포/재시작/계정 변경/Vault 생성은 하지 않았다. 아래 초기 기록의 미검증 항목 중 Compose와 입력 검증은 이 후속 기록으로 갱신한다.
+
+브랜치: `security/oci-vault-migration-20260920`.
+main/HEAD 기준점: `2ee35e81870ca004370ba331e16e9ac90ba2955b`.
+사용자 지시에 따라 인라인 구현/검토했고 서브에이전트·독립 리뷰·커밋·push는 수행하지 않았다.
+
+## PASS
+
+- 집중 테스트 **31/31**, 실패/skip 0. 실행 명령은 README의 로컬 검증 절과 동일하다.
+- `pnpm typecheck`: exit0.
+- `pnpm build`: exit0, Next production compilation 및 static generation 성공.
+- `git diff --check`: exit0.
+- 입력 경로 `.private/oci-vault-credentials.json`은 `git check-ignore`로 제외됨을 확인했다.
+  `git ls-files .private`는 비어 있다. 파일 내용은 읽지 않았다.
+- `.dockerignore`의 `.private`와 `.superpowers` 제외를 유지한다.
+- main과 HEAD는 기준점 그대로다. 변경은 현재 폴더의 작업 브랜치 미커밋 작업 트리에 남겼다.
+- 새 운영 Secret/장기 API 키/개인키/공개 포트를 만들지 않았다. 합성 fixture token은 테스트 전용이다.
+
+## 검사 범위
+
+- Google 파일 인증: 매 요청 atomic 교체 반영, 만료, 누락, JSON 오류, 파일 크기 제한,
+  symlink/디렉터리/쓰기 권한 거부, 비밀 없는 오류, 실제 Google SDK 헤더 계약.
+- Chirp: 실제 기본 인증 경로의 token 주입, 404/412 처리 유지, 제출 자동 재시도 방지.
+- Unix broker: 실제 socket을 통한 조건부 PUT/GET/DELETE, 한글 식별자, scope/경로/추가 필드 거부,
+  바이트 수·SHA 검증, 변조/잘린 응답 거부, redirect 거부, 지연 요청·동시 요청 제한.
+- Host runtime: 보호된 socket 생성/정리, 기존 파일 보존, 실제 설치 OCI SDK의 요청별 abort signal,
+  redirect 금지, 단일 시도. 외부 fetch만 합성 응답으로 교체했다.
+- Host publisher: 파일 권한0640, atomic 교체 중 유효 JSON 유지, 잘못된 provider 응답/만료 거부,
+  갱신 실패 시 기존 파일 보존, symlink 및 쓰기 가능한 부모 디렉터리 거부.
+- 기존 자료 참조/무결성/보상 삭제와 녹음/임베딩 회귀 테스트 포함.
+
+새 테스트를 먼저 실행해 구현 부재를 확인한 뒤 구현했다. 추가 OCI SDK 경계 검사에서
+upstream 오류가 SDK 내부 경고로 출력되는 문제를 재현하고 실패 테스트를 만든 뒤,
+오류 본문을 SDK 전 단계에서 폐기하는 수정으로 통과시켰다. 인증 SDK 내부 로그는
+host unit의 stdout/stderr 미저장으로 별도 제한한다.
+
+## NOT VERIFIED / NOT APPLIED
+
+- Docker Compose 실제 병합: 이 컴퓨터에 Docker CLI 없음. `!override`는 Compose2.24.4+ 필요.
+- Linux systemd 검증, Node24/그룹 설치, 호스트 tmpfs 권한 및 실제 OCI/Google 갱신.
+- 운영 앱·자료 API·임베딩의 새 경계 동작, IMDS 차단/영속화, 기존 단기 신원 만료.
+- 부팅 순서, Docker 재시작/전체 재부팅, Actions 변경 후 정상 재배포 유지.
+- 전체 DB 연동 테스트/공유 DB 쓰기/브라우저 검증은 실행하지 않았다.
+- 계정 생성·비밀번호 변경·Vault 생성/Secret 등록/IAM 권한 부여를 하지 않았다.
+- Flight/Ilchul/YouTube Sync 파일 인증 전환은 이 PM 로컬 구현 단위에 포함하지 않았다.
+
+## 후속 경계
+
+이 결과는 **PM 인증 분리용 로컬 준비**이지 운영 해킹 위험 해소나 Vault 이전 완료가 아니다.
+운영 경계 적용에는 main 통합/배포, 호스트 설치, IMDS 차단과 정상 기능 검증이 남는다.
+그 전에 Vault 조회 권한을 부여하지 않는다. 자격증명 입력값 검증·소비 및 실계정/Vault
+변경은 아직 시작하지 않았다. 후속 절차는 README와 전체 Vault rollout 계획을 따른다.
+
+## 후속 사용자 요청 — 기존 서명/외부 자격증명 입력
+
+위의 "입력 파일을 읽지 않음"은 로컬 구현 완료 시점 기록이다. 이후 사용자의 명시적
+요청으로 입력 파일 117번째 줄 아래 `application_signing_secrets` 6개와
+`external_reissuance` 9개의 빈 필드에 현재 실행 중인 해당 서비스의 기존 값을 복사했다.
+Flight Google OAuth는 설정 JSON의 `web.client_secret`만 추출했고,
+YouTube backend/media의 공유 키 일치를 확인했다. 앞부분 및 나머지 필드는 변경하지 않았다.
+파일0600·Git 제외 유지 및 저장값 일치를 값 출력 없이 확인했다. 임시 가져오기 스크립트는 제거했다.
+
+필드 이름이 `new_secret`/`new_password`여도 이 15개는 **기존 값 재사용**이며 신규 발급이나
+회전이 아니다. 운영 설정·계정·비밀번호·Vault는 변경하지 않았다. 향후 적용 과정에서
+이를 교체 완료로 취급하거나, 노출 의심 자격증명을 안전해졌다고 판정하면 안 된다.

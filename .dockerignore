@@ -11,3 +11,5 @@ docs
 *.md
 tsconfig.tsbuildinfo
 .playwright-mcp
+.private
+.superpowers

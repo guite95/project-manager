@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Project Management Google token every five minutes
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=5min
+AccuracySec=10s
+Unit=project-management-google-token.service
+
+[Install]
+WantedBy=timers.target

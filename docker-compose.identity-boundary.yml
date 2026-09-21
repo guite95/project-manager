@@ -1,0 +1,24 @@
+# Opt-in only. Requires host setup and Docker Compose >= 2.24.4.
+# Must be LAST, including after docker-compose.wif.yml if that is present.
+services:
+  app:
+    environment:
+      OCI_STORAGE_AUTH: broker
+      OCI_STORAGE_BROKER_SOCKET: /run/project-management-broker/storage.sock
+      GOOGLE_APPLICATION_CREDENTIALS: ""
+      GOOGLE_ACCESS_TOKEN_FILE: /run/project-management-google/access-token.json
+    group_add:
+      - ${PM_RUNTIME_GID:?PM_RUNTIME_GID must match the host pm-runtime group}
+    volumes: !override
+      - type: bind
+        source: /run/project-management-broker
+        target: /run/project-management-broker
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /run/project-management-google
+        target: /run/project-management-google
+        read_only: true
+        bind:
+          create_host_path: false
