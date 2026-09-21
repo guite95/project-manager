@@ -1,5 +1,37 @@
 # 로컬 검증 기록 — 2026-09-21
 
+## 최종 운영 상태 — 실제 PM Vault 전환 완료
+
+- `3638acfda5c576b929460ffc4f6aa054d0d3eb04` main 배포 Actions35558744815 성공(7분19초).
+  실제 `PM_MIGRATION_SUCCEEDED`, 컨테이너 경계 검증, 공개 로그인200/보호 페이지307 확인.
+- 앱/호스트 release 모두3638acf. 실제 앱은 `PM_SECRET_DIRECTORY`를 사용하고 runtime 전용
+  readonly mount만 받는다. Docker env 및 서버 `.env`에서 DATABASE_URL/SESSION_SECRET/
+  APP_PASSWORD_HASH 제거 확인. inline Prisma 없음, migration 파일/lock 정리 확인.
+- 앱 내부 reader/DB 클라이언트로 새 계정 접속·업무 테이블 읽기·비관리자·DDL 금지·migration
+  이력 쓰기 금지를 확인했다. 기존 컨테이너 UID0 실행은 유지되며 non-root 전환은 아니다.
+- 03:57:55UTC 기존 PM 소유자 역할은 NOLOGIN/PASSWORD NULL로 전환했다. 다른 컨테이너 소비0,
+  기존 연결0, 다른 DB 의존0을 확인했고 소유 역할/업무 데이터는 보존했다. 실제 기존 비밀번호
+  로그인 거부 및 새 runtime 로그인 성공. 보호된 roles-only 백업:
+  `/var/backups/oci-vault-migration/pm-roles-before-retire-20260921T035755066Z.sql`.
+- 기존 로그인 폐기 후 동일3638acf 이미지로 전체 host migration을 다시 실행해 성공했다.
+  새 보호 백업→Vault migration Secret→Prisma→일회성 파일/컨테이너 정리 경로를 재검증했다.
+- 최종 OCI 재조회에서 기존 VM 한 대만 매칭, manifest의 Secret4개만 read,
+  서버 `/32`/VCN 우회 없음/services=none 및 모든 IAM 리소스 ACTIVE를 확인했다.
+- 실제 Vault IAM 출발지를 잠시 불일치로 바꿔 Secret reload 실패를 확인했다. 이전 tmpfs 세대,
+  동일 앱 컨테이너 및 publisher/runtime active가 모두 유지됐다. finally에서 원래 서버 `/32`,
+  services=none을 복구했고 실제 Secret reload/readiness 재성공 확인.
+- 로컬 SSH wrapper는15439의 개인 전용 터널로 새 Vault runtime 계정 연결/DDL 금지를 확인했고
+  종료했다. 로컬에 운영 DB 값을 저장하지 않았다.
+- 집중 테스트7개 중6PASS/Linux전용1skip, 타입 검사 및 DB 비밀값 없는 build PASS.
+  사용자 입력 파일은 Git 제외·0600 상태로 보존한다. 다른 프로젝트 전환은 시작하지 않았다.
+- 최종 전체 로컬 테스트371개:365PASS/6skip/실패0. 운영 검사는15개 모두PASS,
+  변경 문서3개에 입력 파일의 비밀값/URL 인코딩 값 일치0개. 최종 결과 커밋은 문서만
+  변경하므로 `[skip ci]`로 중복 배포하지 않는다. 실행 앱/호스트 코드는3638acf다.
+- 전체 VM 재부팅, 브라우저 로그인 조작, 모든 업무 쓰기 흐름은 미검증이다. 이전 OCI token이
+  모두 만료됐다고 주장하지 않으며 외부 출발지 제한과 단일 VM 신뢰 경계를 구분한다.
+
+아래 준비/보류 문구는 이전 시점의 이력이다. 현재 상태는 위 최종 운영 상태가 우선한다.
+
 ## 실제 Vault 전환 재개 — 2026-09-21
 
 - 사용자 완료 범위 재확인으로 PM 실제 전환을 재개했다. 다른 서비스 전환은 진행하지 않는다.

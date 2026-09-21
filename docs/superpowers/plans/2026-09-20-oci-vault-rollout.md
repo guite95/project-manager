@@ -12,6 +12,13 @@
 
 ## 2026-09-21 실행 순서 및 승인 갱신
 
+- 후속 완료 범위 재확인: PM은 실제 Vault 전환과 기존 DB 로그인 폐기까지 수행한 뒤 멈춘다.
+  3638acf main 자동 배포로 Vault 조회/host migration/새 runtime 계정 전환을 완료했다.
+  기존 PM 계정은 소유권만 남기고 NOLOGIN/PASSWORD NULL, 실제 이전 비밀번호 접속 거부 확인.
+  잔여 신원 문제는 만료를 추정하지 않고 VM/Secret별 제한 + 서버 출발지 `/32` 조건으로 보완했다.
+  같은 VM 내부 탈취 신원/root 위험은 남는다. 상세 최신 증거는 `ops/oci-runtime/verification.md` 참조.
+  아래 체크박스/초기 상태 문구는 전체 서비스 계획의 당시 기록이며 PM 최신 상태를 대체하지 않는다.
+
 - 사용자 승인: PM → Flight → YouTube Sync → Ilchul 순서로 진행한다.
 - PM/Flight/YouTube Sync는 검증 후 main 반영·push 및 해당 전환을 진행한다. 자동 배포 전에 호스트 준비를 확인한다.
 - Ilchul은 마지막이며 사용자와 함께 실제 전환한다. Ilchul main push/배포/계정 전환은 이번 자동 진행 범위에서 제외한다.

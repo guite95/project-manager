@@ -1,10 +1,12 @@
 # PM 호스트 인증 경계 및 Vault 전환
 
-## 2026-09-21 실제 전환 재개
+## 2026-09-21 운영 상태: PM Vault 전환 완료
 
-사용자가 PM 완료 범위를 실제 Vault 전환까지로 재확인했다. 아래 이전 준비 기록과 달리
-VM에 PM Secret4개만 읽는 IAM policy를 적용하고 실제 host publisher 시작을 확인했다.
-앱 전환/기존 계정 폐기는 각각 별도 실검증 결과를 `verification.md`에 기록한다.
+`3638acf` main 자동 배포에서 실제 Vault → tmpfs → 호스트 migration → 앱 전환을 완료했다.
+앱은 새 runtime DB 계정을 사용하며 DB/session/bootstrap 비밀 환경변수 및 서버 `.env` 값은
+제거됐다. 기존 PM DB 계정은 소유권만 보존하고 NOLOGIN/PASSWORD NULL로 폐기했다.
+실제 이전 비밀번호 로그인 거부와 새 앱/로컬 SSH wrapper의 DB 접속 성공을 확인했다.
+사용자 입력 파일 및 보호된 사고/복구 백업은 보존한다. 다른 앱/관리자 계정은 변경하지 않았다.
 
 - `vault-access.json`은 비밀 없는 실제 IAM 리소스와 출발지 제한이다. 기존 VM 한 대만
   매칭하는 dynamic group + Secret별 OCID + `request.networkSource.name`을 모두 요구한다.
@@ -19,22 +21,26 @@ VM에 PM Secret4개만 읽는 IAM policy를 적용하고 실제 host publisher �
 - 서버 public IP/egress가 바뀌면 새 Secret 조회는 실패한다. 임의 wildcard로 완화하지 말고
   운영자가 실제 경로를 확인한 뒤 Network Source와 이 파일을 함께 갱신한다.
 - 전체 VM 재부팅은 여전히 별도 승인 작업이다.
+- 실제 Vault 조회가 거부될 때 reload 실패·기존 세대 보존·앱 컨테이너 및 의존 서비스 active
+  유지를 확인했다. 출발지 조건 복구 뒤 실제 reload/readiness도 성공했다.
+- 앱의 기존 컨테이너 UID0 실행은 이번 전환에서 바꾸지 않았다. 일반 앱에 migration 파일이나
+  호스트 전체 경로/Docker socket을 전달하지 않지만, 이 작업을 non-root 전환으로 보고하지 않는다.
 
 PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용했다.
-운영 검증은 `verification.md`의 최신 기록을 따른다. **Vault IAM·DB 계정·비밀번호 전환은 아직 별도다.**
-사용자 입력 파일은 보존한다. 일반 Vault/SOFTWARE key와 PM Secret4개 및 새 PM DB 역할2개를 생성했다. 앱 DB 계정 전환 및 VM 조회 권한은 아직 적용하지 않았다.
+운영 검증은 `verification.md`의 최신 기록을 따른다. 일반 Vault/SOFTWARE key와 PM Secret4개,
+새 PM DB 역할2개 및 제한된 VM 조회 권한을 사용 중이다. 사용자 입력 파일은 보존한다.
 
 ## Vault 전달기 준비 상태
 
 - `vault-resources.json`은 실제 생성한 리소스의 비밀 아닌 ID만 가진다. `vault-manifest.example.json`은 예제이지 실제 설치 manifest가 아니다.
 - 운영자만 `/etc/oci-service-secrets/project-management.json`을 root:root0600, 부모 root:root0700으로 설치한다. 서비스/파일명/Secret ID/버전을 고정하며 앱의 임의 경로나 요청을 받지 않는다.
-- runtime/migration manifest2개와 `project-management-secrets.service`는 호스트에 보호된 권한으로 준비했으나 서비스는 inactive/disabled이며 전환 marker도 없다. 활성화 전 VM 잔여 신원 안전 게이트와 Secret별 최소 조회 IAM을 확인한다. 2026-09-21 사용자 승인으로 host 전용 migration 작업에는 migration Secret 조회를 허용하되, 일반 앱 mount 및 infra admin Secret은 제외한다.
+- runtime/migration manifest2개는 호스트에 보호된 권한으로 설치했고 Secret 서비스는 active/enabled다. root0600 전환 marker가 존재한다. host 전용 migration 작업만 migration Secret을 파일로 받으며, 일반 앱 mount 및 infra admin Secret은 제외한다. OCI IAM 자체는 VM 단위라는 한계가 있다.
 - host CLI는 `/run/oci-service-secrets/project-management`에 완전한 세대를 만든다. `/run` tmpfs와 swap 비활성을 강제하고 파일0640/디렉터리0750을 사용한다. 부분 실패 시 기존 세대는 그대로 두고 실패한다.
 - 앱에는 서비스 디렉터리만 읽기 전용으로 mount하고 `PM_SECRET_DIRECTORY` 경로만 전달한다. 앱은 한 세대를 고정하므로 값 교체에는 명시적인 프로세스 재시작이 필요하다. 변수 존재 시 파일 실패를 env fallback으로 숨기지 않는다.
-- 아직 운영 Compose에 Secret mount를 켜지 않았다. `docker-compose.vault.yml`은 앱 command를 `node server.js`로 바꿔 inline migration을 없애며, 비밀 환경변수 전체를 제거한다. 호스트 root0600 `/etc/project-management-vault.enabled`의 정확한 `enabled` 한 줄로 전환한 뒤에만 배포 스크립트가 이 override와 host migration을 선택한다. 잘못된 marker는 legacy fallback 없이 배포를 중단한다.
-- Vault 배포는 Secret 동기화/시작 검사 → 보호된 DB 백업 → 별도 migration 성공 → 기존 앱 교체 순서다. `prepare-cutover.py`는 Vault mode를 재배포 때 보존하고 서버 `.env`의 DB/session/bootstrap 값을 제거한다(보호된 최초 백업 보존). systemd drop-in이 Secret 서비스 및 tmpfs 준비 검사를 요구한다. **marker 생성/서비스 활성화/실제 host migration 성공 검증은 별도 전환 게이트다.**
+- 운영 Compose는 Secret mount를 사용한다. `docker-compose.vault.yml`은 앱 command를 `node server.js`로 바꿔 inline migration을 없애며, 비밀 환경변수 전체를 제거한다. 호스트 root0600 `/etc/project-management-vault.enabled`의 정확한 `enabled` 한 줄로 배포 스크립트가 이 override와 host migration을 선택한다. 잘못된 marker는 legacy fallback 없이 배포를 중단한다.
+- Vault 배포는 Secret 동기화/시작 검사 → 보호된 DB 백업 → 별도 migration 성공 → 기존 앱 교체 순서다. `prepare-cutover.py`는 Vault mode를 재배포 때 보존하고 서버 `.env`의 DB/session/bootstrap 값을 제거한다(보호된 최초 백업 보존). systemd drop-in이 Secret 서비스 및 tmpfs 준비 검사를 요구한다. 이 전체 경로는 실제 main 자동 배포에서 성공했다.
 - 배포 전 Secret 갱신은 `start` 후 `reload`로 한다. `restart`는 Requires 의존 앱까지 미리 멈출 수 있어 사용하지 않는다. 갱신 실패 시 기존 서비스/세대를 유지하고 배포만 실패한다. 단, migration 자체의 DB 변경을 자동 rollback한다는 의미는 아니다.
-- Secret 조회 성공/재부팅 시 시작 순서는 아직 실검증하지 않았다. 일반 배포는 현재 DB env 방식을 유지한다. 이전 세대 폐기는 모든 소비자의 전환을 확인한 뒤 별도로 한다.
+- 실제 Secret 조회와 main 자동 배포를 검증했다. 전체 VM 재부팅은 미실시다. 이전 tmpfs 세대는 이미 시작한 앱의 고정 참조가 있으므로 실행 중 무조건 지우지 않는다.
 
 ### 운영자 PM Secret 등록
 
@@ -55,7 +61,7 @@ PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용�
 - `check-pg-role-permissions.mjs project-management:<SHA>`는 별도 격리 DB에서 계정 분리의 실제 SQL/SCRAM/권한 경계를 검증한다. 계정 생성 세션은 오류 문맥·샘플링 로그도 제한하며 pgaudit 설치 또는 preload가 있으면 비밀값을 DB에 보내기 전에 중단한다. 이 설정은 해당 연결에만 적용하고 서버 전역 로그 정책은 바꾸지 않는다.
 - 값은 PG bind parameter로 전달한다. utility DDL의 식별자/값은 서버 format의 `%I`/`%L`로 처리하고 작업 세션의 statement/parameter 로그를 끈다. pgaudit가 설치된 경우 임의 우회하지 않고 중단한다. 결과/예외에서 SQL·비밀번호를 출력하지 않는다.
 - core grant 로직은 네트워크/포트/데이터가 운영 DB와 분리된 일회성 PostgreSQL에서 `localhost:5432/project_management_test` guard를 통과시켜 검증했다. 실제 SCRAM 로그인/틀린 비밀번호 거부, runtime CRUD, DDL/타 schema/role 전환/migration 이력 쓰기/sequence setval 거부, migration ALTER 및 future default grant를 확인했다. 이후 실제 PM 역할2개도 보호 백업 후 생성하고 각 로그인/권한을 읽기 전용 검증했다. 기존 앱 계정은 유지한다.
-- `migrate-pm.mjs`는 호스트의 고정 작업이다. migration profile만 별도로 읽고 read-only/cap-drop/no-new-privileges/비밀값 로그 미보관의 일회성 컨테이너로 Prisma를 실행한다. 종료 확인 뒤 migration tmpfs를 정리한다. 배포 경로 연결과 격리 이미지 실행은 검증했으나, 실제 VM Vault 조회/전체 host job 실행 및 실패 복구 검증 전에는 운영에 활성화하지 않는다.
+- `migrate-pm.mjs`는 호스트의 고정 작업이다. migration profile만 별도로 읽고 read-only/cap-drop/no-new-privileges/비밀값 로그 미보관의 일회성 컨테이너로 Prisma를 실행한다. 실제 자동 배포에서 성공했고 종료 후 migration tmpfs/lock 제거를 확인했다. migration 실패 시 DB를 자동 rollback하지는 않는다.
 
 ## 재실행 가능한 사전 검사
 
@@ -154,4 +160,5 @@ git diff --check
 
 집중 테스트는 합성 토큰·임시 Unix socket·가짜 외부 SDK 응답만 사용한다. 실제 입력 파일/공유 DB/OCI/Google 호출은 없다.
 별도 사전 검사에서는 실제 입력 파일과 운영 사용자 목록을 읽었다. Compose 병합7개는 서버 Compose5.1.3으로 검증했다.
-호스트 인증 경계와 정상 재배포는 검증했다. Vault 실제 전환·전체 host migration·재부팅 검증은 별도이며 최신 운영 증거는 `verification.md`를 따른다.
+호스트 인증 경계, 실제 Vault 전환 및 main 자동 배포의 전체 host migration을 검증했다.
+전체 VM 재부팅은 미실시이며 최신 운영 증거는 `verification.md`를 따른다.
