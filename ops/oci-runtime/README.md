@@ -14,6 +14,14 @@ PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용�
 - 아직 운영 Compose에 Secret mount를 켜지 않았다. Prisma migration은 별도 자격증명/일회성 실행으로 옮기고, runtime unit의 Requires/시작 검사에 Vault 준비를 통합한 후 전환해야 한다. 현재 Dockerfile의 자동 migration을 둔 채 runtime 전용 계정으로 바꾸면 안 된다.
 - Secret 조회 성공/재부팅 시 시작 순서는 아직 실검증하지 않았다. 일반 배포는 현재 DB env 방식을 유지한다. 이전 세대 폐기는 모든 소비자의 전환을 확인한 뒤 별도로 한다.
 
+### 운영자 PM Secret 등록
+
+`node ops/oci-runtime/register-pm-secrets.mjs --check`는 보호된 입력 파일과 SSH로 읽은 현재 PM 설정을 메모리에서 대조한다.
+`--apply`는 기존 개인 OCI CLI identity로 runtime/migration DB URL과 유지할 legacy session/bootstrap hash를 Vault에 등록한다.
+값은 stdin/SDK 메모리 경로만 사용하며 출력/인수/추가 영구 파일에는 남기지 않는다. 기존 Secret이 있으면 version1/CURRENT/값 일치를 검사하고 다르면 중단한다. 자동 덮어쓰기/버전 변경은 없다.
+이 작업은 DB 계정을 생성하거나 VM IAM을 부여하지 않는다. 부분 실패 후에는 기존 Secret 목록을 확인하고 같은 명령으로 일치 여부를 검증한다.
+별도의 `migration-delivery-canary`에는 합성 fixture만 저장했다. 실제 운영자 인증으로 새 key/Vault/Node SDK bundle 조회가 성공했으며 앱 자격증명이나 VM 권한 검증을 대신하지 않는다.
+
 ## 재실행 가능한 사전 검사
 
 ```sh
