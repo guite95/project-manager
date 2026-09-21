@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+test('migration job mounts only its own read-only secret and never receives credentials as env values', async () => {
+  const { migrationContainerArgs } = await import('./migrate-pm.mjs').catch(error => { if(error.code==='ERR_MODULE_NOT_FOUND') return {}; throw error; });
+  assert.equal(typeof migrationContainerArgs, 'function');
+  const image = `project-management:${'a'.repeat(40)}`;
+  const args = migrationContainerArgs(image, 'pm-migration-fixture');
+  assert.equal(args[0], 'run');
+  assert.equal(args.filter(x => x==='--mount').length, 1);
+  assert.equal(args[args.indexOf('--mount')+1], 'type=bind,src=/run/oci-service-secrets/project-management-migration,dst=/run/project-management-migration,readonly');
+  assert.ok(args.includes('--read-only')); assert.ok(args.includes('--rm'));
+  assert.equal(args[args.indexOf('--cap-drop')+1], 'ALL');
+  assert.equal(args[args.indexOf('--log-driver')+1], 'none');
+  assert.equal(args[args.indexOf('--network')+1], 'shared-infra');
+  assert.equal(args[args.indexOf('--env')+1], 'PM_MIGRATION_SECRET_DIRECTORY=/run/project-management-migration');
+  assert.deepEqual(args.slice(-3), [image, 'migrate', 'deploy']);
+  assert.equal(args.some(x => x.startsWith('DATABASE_URL=') || x.includes('docker.sock') || x.includes('/run/oci-service-secrets,')), false);
+  for(const bad of ['project-management:latest', 'other:'+'a'.repeat(40), '', '--privileged']) assert.throws(()=>migrationContainerArgs(bad,'pm-migration-fixture'));
+});

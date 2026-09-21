@@ -63,5 +63,22 @@ class PreparationTest(unittest.TestCase):
         self.assertEqual(list(self.backup.iterdir()), [])
         self.assertFalse(self.path('/etc/project-management-runtime.conf').exists())
 
+    def test_vault_mode_survives_redeploy_without_reintroducing_env_credentials(self):
+        marker = self.path('/etc/project-management-vault.enabled')
+        marker.write_text('enabled\n'); marker.chmod(0o600)
+        for name in ['project-management-secrets.service', 'project-management-vault.conf']:
+            (self.release / 'ops/oci-runtime' / name).write_text('verified fixture unit')
+        self.prepare(); self.prepare()
+        self.assertEqual(self.env.read_text(), 'COMPOSE_FILE=docker-compose.yml:docker-compose.identity-boundary.yml:docker-compose.vault.yml\nPM_RUNTIME_GID=987\n')
+        self.assertEqual((self.backup / 'pm-before-vault.env').read_text(), self.original)
+        self.assertTrue(self.path('/etc/systemd/system/project-management-secrets.service').is_file())
+        self.assertTrue(self.path('/etc/systemd/system/project-management-runtime.service.d/vault.conf').is_file())
+
+    def test_invalid_marker_never_falls_back_to_legacy(self):
+        marker = self.path('/etc/project-management-vault.enabled')
+        marker.write_text('enabled\n'); marker.chmod(0o644)
+        with self.assertRaises(RuntimeError): self.prepare()
+        self.assertEqual(self.env.read_text(), self.original)
+
 
 if __name__ == '__main__': unittest.main()

@@ -2,16 +2,17 @@
 
 PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용했다.
 운영 검증은 `verification.md`의 최신 기록을 따른다. **Vault IAM·DB 계정·비밀번호 전환은 아직 별도다.**
-사용자 입력 파일은 보존한다. 일반 Vault/SOFTWARE key만 생성했고 Secret 값 및 VM 조회 권한은 등록하지 않았다.
+사용자 입력 파일은 보존한다. 일반 Vault/SOFTWARE key와 PM Secret4개를 등록했다. 실제 DB 계정 전환 및 VM 조회 권한은 아직 적용하지 않았다.
 
 ## Vault 전달기 준비 상태
 
 - `vault-resources.json`은 실제 생성한 리소스의 비밀 아닌 ID만 가진다. `vault-manifest.example.json`은 예제이지 실제 설치 manifest가 아니다.
 - 운영자만 `/etc/oci-service-secrets/project-management.json`을 root:root0600, 부모 root:root0700으로 설치한다. 서비스/파일명/Secret ID/버전을 고정하며 앱의 임의 경로나 요청을 받지 않는다.
-- `project-management-secrets.service`는 아직 설치/enable하지 않았다. 설치 전 VM 잔여 신원 안전 게이트, Secret별 최소 조회 IAM, migration/admin Secret 제외를 확인한다.
+- `project-management-secrets.service`는 아직 설치/enable하지 않았다. 설치 전 VM 잔여 신원 안전 게이트와 Secret별 최소 조회 IAM을 확인한다. 2026-09-21 사용자 승인으로 host 전용 migration 작업에는 migration Secret 조회를 허용하되, 일반 앱 mount 및 infra admin Secret은 제외한다.
 - host CLI는 `/run/oci-service-secrets/project-management`에 완전한 세대를 만든다. `/run` tmpfs와 swap 비활성을 강제하고 파일0640/디렉터리0750을 사용한다. 부분 실패 시 기존 세대는 그대로 두고 실패한다.
 - 앱에는 서비스 디렉터리만 읽기 전용으로 mount하고 `PM_SECRET_DIRECTORY` 경로만 전달한다. 앱은 한 세대를 고정하므로 값 교체에는 명시적인 프로세스 재시작이 필요하다. 변수 존재 시 파일 실패를 env fallback으로 숨기지 않는다.
-- 아직 운영 Compose에 Secret mount를 켜지 않았다. Prisma migration은 별도 자격증명/일회성 실행으로 옮기고, runtime unit의 Requires/시작 검사에 Vault 준비를 통합한 후 전환해야 한다. 현재 Dockerfile의 자동 migration을 둔 채 runtime 전용 계정으로 바꾸면 안 된다.
+- 아직 운영 Compose에 Secret mount를 켜지 않았다. `docker-compose.vault.yml`은 앱 command를 `node server.js`로 바꿔 inline migration을 없애며, 비밀 환경변수 전체를 제거한다. 호스트 root0600 `/etc/project-management-vault.enabled`의 정확한 `enabled` 한 줄로 전환한 뒤에만 배포 스크립트가 이 override와 host migration을 선택한다. 잘못된 marker는 legacy fallback 없이 배포를 중단한다.
+- Vault 배포는 Secret 동기화/시작 검사 → 보호된 DB 백업 → 별도 migration 성공 → 기존 앱 교체 순서다. `prepare-cutover.py`는 Vault mode를 재배포 때 보존하고 서버 `.env`의 DB/session/bootstrap 값을 제거한다(보호된 최초 백업 보존). systemd drop-in이 Secret 서비스 및 tmpfs 준비 검사를 요구한다. **marker 생성/서비스 활성화/실제 host migration 성공 검증은 별도 전환 게이트다.**
 - Secret 조회 성공/재부팅 시 시작 순서는 아직 실검증하지 않았다. 일반 배포는 현재 DB env 방식을 유지한다. 이전 세대 폐기는 모든 소비자의 전환을 확인한 뒤 별도로 한다.
 
 ### 운영자 PM Secret 등록
@@ -19,8 +20,18 @@ PM broker/token publisher 및 IMDS 차단 경계는 `0997df5`로 운영 적용�
 `node ops/oci-runtime/register-pm-secrets.mjs --check`는 보호된 입력 파일과 SSH로 읽은 현재 PM 설정을 메모리에서 대조한다.
 `--apply`는 기존 개인 OCI CLI identity로 runtime/migration DB URL과 유지할 legacy session/bootstrap hash를 Vault에 등록한다.
 값은 stdin/SDK 메모리 경로만 사용하며 출력/인수/추가 영구 파일에는 남기지 않는다. 기존 Secret이 있으면 version1/CURRENT/값 일치를 검사하고 다르면 중단한다. 자동 덮어쓰기/버전 변경은 없다.
-이 작업은 DB 계정을 생성하거나 VM IAM을 부여하지 않는다. 부분 실패 후에는 기존 Secret 목록을 확인하고 같은 명령으로 일치 여부를 검증한다.
+이 작업은 DB 계정을 생성하거나 VM IAM을 부여하지 않는다. 부분 실패 후에는 기존 Secret 목록을 확인하고 같은 명령으로 일치 여부를 검증한다. 실제 등록된 ID/version은 `vault-manifest.project-management*.json`에 기록했다(값 없음).
 별도의 `migration-delivery-canary`에는 합성 fixture만 저장했다. 실제 운영자 인증으로 새 key/Vault/Node SDK bundle 조회가 성공했으며 앱 자격증명이나 VM 권한 검증을 대신하지 않는다.
+
+### PM PostgreSQL 및 host migration 준비
+
+- `apply-pm-roles.mjs --check`는 개인 SSH 설정/strict known-host로 새 값 두 세트만 stdin에 전달한다. 호스트 `provision-pm-roles.mjs`가 현재 DB·admin·소유자·계정 충돌을 읽기 전용 검사한다.
+- `--apply`는 보호된 roles-only 백업 후 하나의 PostgreSQL transaction에서 새 runtime/migration 계정을 생성한다. 기존 계정의 값은 덮어쓰지 않는다. runtime은 public CRUD와 sequence USAGE/SELECT, migration 이력은 SELECT만 가능하다. public CREATE를 제거하고, migration 계정은 기존 PM 소유자 역할을 상속한다. cluster superuser/CREATEDB/CREATEROLE/replication/BYPASSRLS는 두 계정 모두 없다.
+- 신규/기존 소유자의 future table/sequence default grants도 설정한다. 기존 PM 소유 역할은 나중에 NOLOGIN 전환하며 DB/테이블 소유권 보존용으로 유지할 수 있다. 일반 앱에서 이 역할을 상속하지 않는다.
+- host migration마다 현재 PM DB의 custom-format 백업과 archive 목록 검증을 선행한다. 디스크 여유4GiB 미만이면 중단하며 백업을 자동 삭제하지 않는다. 이 백업은 실제 restore rehearsal을 대신하지 않는다. 스키마 변경은 기존 앱과 호환되는 expand/contract 방식이어야 하며 실패했다고 DB를 자동 downgrade하지 않는다.
+- 값은 PG bind parameter로 전달한다. utility DDL의 식별자/값은 서버 format의 `%I`/`%L`로 처리하고 작업 세션의 statement/parameter 로그를 끈다. pgaudit가 설치된 경우 임의 우회하지 않고 중단한다. 결과/예외에서 SQL·비밀번호를 출력하지 않는다.
+- 실제 계정 생성은 아직 하지 않았다. core grant 로직은 네트워크/포트/데이터가 운영 DB와 분리된 일회성 PostgreSQL에서 `localhost:5432/project_management_test` guard를 통과시켜 검증했다. 실제 SCRAM 로그인/틀린 비밀번호 거부, runtime CRUD, DDL/타 schema/role 전환/migration 이력 쓰기/sequence setval 거부, migration ALTER 및 future default grant를 확인했다. 테스트 컨테이너·tmpfs 데이터는 제거했다.
+- `migrate-pm.mjs`는 호스트의 고정 작업으로 준비 중이다. migration profile만 별도로 읽고 read-only/cap-drop/no-new-privileges/비밀값 로그 미보관의 일회성 컨테이너로 Prisma를 실행한다. 종료 확인 뒤 migration tmpfs를 정리한다. 실제 실행/CI 통합/실패 복구 검증 전에는 운영에 활성화하지 않는다.
 
 ## 재실행 가능한 사전 검사
 

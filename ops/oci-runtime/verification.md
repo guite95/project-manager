@@ -2,6 +2,18 @@
 
 ## 최신 상태: PM 신원 경계 운영 적용 / Vault 전환 준비
 
+- host migration/배포 연결 준비: root marker 기반 mode 유지, 별도 migration mount, app secret env 제거, migration 실패 시 기존 앱 stop/up 없음, Vault systemd drop-in 구현. 서버 Compose 실제 파서7검사 통과. 마지막 파일의 개별 `!reset`이 값을 제거하지 않는 동작을 발견해 환경변수 map 전체 `!override`로 검증했다.
+- 이번 집중 Node44개(43통과/Linux전용1skip), Python 준비4개/IMDS3개, 타입 검사 및 비밀값 없는 production build 통과. 실제 Vault mode 운영 배포/Prisma one-off 실행은 아직 미실시다. 신규 root manifest/marker를 설치하지 않았고 VM Vault IAM도 추가하지 않았다.
+
+- **최신 운영 릴리스는 `0c28f0d`**. 빌드 오류 수정 `bb56087` Actions35551121405 및 후속 `0c28f0d` Actions35551459218 모두 성공했다. 실제 이미지/실행 상태, broker/file-token, WIF mount 없음, restart=no, systemd active를 재확인했다. 아래 두 실패 기록은 해결된 이력이다.
+- `/opt/project-management-runtime/current`도 `0c28f0d`로 갱신했다. IPv4+IPv6 guard를 적용하고 systemd unit에 AF_INET6을 반영했다. 새 dual-stack Docker bridge에서 IMDSv1/v2 네 요청 전부 차단됐으며 IPv6 DROP packet counter 증가로 규칙 동작을 확인했다. probe 컨테이너/네트워크는 제거했다. 동일 systemd sandbox 설정의 check도 통과했다.
+- PM Secret4개(version1/CURRENT)를 실제 Vault에 등록하고 운영자 SDK로 값 일치를 확인했다: runtime DB URL, migration DB URL, 유지하는 legacy session/bootstrap hash. **DB 계정 생성/비밀번호 변경/VM Vault IAM/앱 Secret mount는 아직 미적용**이다. manifest에는 비밀 아닌 ID/version만 기록했다.
+- 별도 합성 canary Secret1개로 실제 OCI 암호화/Node SDK bundle 조회를 확인했다. 새 compartment에는 이 작업의 Secret5개가 있다. 이 canary는 앱 계정 비밀번호가 아니다.
+- PM PostgreSQL 읽기 전용 감사: 현재 계정이 DB 및 public schema 소유 권한 보유, table28개/index56개 전부 해당 계정 소유. migration7개 완료/미완료0, pgvector0.8.1. 데이터/실제 사용자명은 출력하지 않았다.
+- 수정된 SSH 래퍼로 포트15439의 전용 터널을 열어 DB 연결을 확인했고 소유한 터널은 종료했다.
+- 사용자 추가 승인: host 전용 migration 작업으로 main 자동 배포 유지. migration Secret 읽기는 호스트의 고정 작업에만 추가하고 앱에는 주입하지 않는다. 관련 전환 코드/분리 테스트 구현 중이며 운영 적용 전이다.
+- PostgreSQL grant core를 운영과 네트워크/데이터가 분리된 일회성 DB에서 검증했다. DB guard 대상은 localhost:5432/project_management_test. SCRAM 인증/오류 비밀번호, runtime CRUD 성공·DDL/다른 schema/role 전환/migration 이력 쓰기/sequence setval 거부, migration ALTER/future default grant, 기존 앱 계정 유지 및 중복 생성 거부 통과. 일회성 DB 컨테이너/볼륨과 코드 디렉터리는 제거했다. 운영 DB 통합 테스트는 실행하지 않았다.
+
 - 준비 코드 `eae1ffa` 및 IPv6 unit 보정 `ae7d570`는 main에 push했으나 Actions35550798324/35550858154는 이미지 빌드에서 실패했다. 운영 앱 교체 전 실패이며 운영 이미지는 이전 성공 릴리스로 유지했다.
 - 원인: AI HTTP 모듈의 eager createPool이 빌드 중 DATABASE_URL을 요구했다. 로컬 `.env`가 앞선 로컬 빌드에서 이를 가렸다. HTTP pool만 실제 DB 접근까지 지연 초기화하고 CLI의 엄격한 설정 검사는 유지했다. 누락된 설정으로 pg 기본 계정을 선택하지 않는다.
 - 회귀 테스트 RED→GREEN 및 `DATABASE_URL='' PM_SECRET_DIRECTORY=/nonexistent-build-secret-mount pnpm build` 통과. 후속 집중 테스트62개(61통과/Linux전용1skip), 타입 검사 통과. 수정 후 Actions 성공 여부는 별도 확인해야 한다.

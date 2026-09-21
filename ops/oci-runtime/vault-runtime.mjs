@@ -59,8 +59,10 @@ export async function prepareRuntimeDirectory({ rootDirectory, manifest }) {
 }
 
 async function main() {
-  if (process.argv.length !== 2 || process.getuid() !== 0) throw new Error();
-  const manifest = await readRuntimeManifest('/etc/oci-service-secrets/project-management.json');
+  if (process.getuid() !== 0 || process.argv.length > 3 || (process.argv[2] !== undefined && process.argv[2] !== '--migration')) throw new Error();
+  const service = process.argv[2] === '--migration' ? 'project-management-migration' : 'project-management';
+  const manifest = await readRuntimeManifest(`/etc/oci-service-secrets/${service}.json`);
+  if (manifest.service !== service) throw new Error();
   const rootDirectory = '/run/oci-service-secrets';
   await prepareRuntimeDirectory({ rootDirectory, manifest });
   const common = await import('oci-common');

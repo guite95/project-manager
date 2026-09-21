@@ -1,0 +1,42 @@
+# Host-only opt-in. Always last, after identity-boundary. No migration identity here.
+services:
+  app:
+    command: ["node", "server.js"]
+    # Replace the whole map: per-key !reset in the last file was not reliably
+    # removed by the installed Compose parser. Never carry secret-valued env keys.
+    environment: !override
+      TZ: Asia/Seoul
+      OCI_STORAGE_REGION: ${OCI_STORAGE_REGION:-}
+      OCI_STORAGE_NAMESPACE: ${OCI_STORAGE_NAMESPACE:-}
+      OCI_STORAGE_BUCKET: ${OCI_STORAGE_BUCKET:-}
+      OCI_STORAGE_AUTH: broker
+      OCI_STORAGE_BROKER_SOCKET: /run/project-management-broker/storage.sock
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-google}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-gemini-embedding-2}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
+      EMBEDDING_VERSION: ${EMBEDDING_VERSION:-1}
+      AI_SEARCH_MIN_COSINE: ${AI_SEARCH_MIN_COSINE:-0.68}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-us}
+      GOOGLE_APPLICATION_CREDENTIALS: ""
+      GOOGLE_ACCESS_TOKEN_FILE: /run/project-management-google/access-token.json
+      PM_SECRET_DIRECTORY: /run/oci-service-secrets/project-management
+    volumes: !override
+      - type: bind
+        source: /run/project-management-broker
+        target: /run/project-management-broker
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /run/project-management-google
+        target: /run/project-management-google
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /run/oci-service-secrets/project-management
+        target: /run/oci-service-secrets/project-management
+        read_only: true
+        bind:
+          create_host_path: false

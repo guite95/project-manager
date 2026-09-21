@@ -1,15 +1,14 @@
 # Host-only backup before the PM cutover. No data or credentials on stdout.
 sudo python3 - <<'PY'
-import os, json, subprocess, urllib.parse, datetime, stat
+import os, json, subprocess, datetime, stat, shutil
 root = '/var/backups/oci-vault-migration'
 try:
     if not os.path.exists(root): os.mkdir(root, 0o700)
     s = os.lstat(root)
     if not stat.S_ISDIR(s.st_mode) or s.st_uid != 0 or stat.S_IMODE(s.st_mode) != 0o700: raise RuntimeError()
-    container = json.loads(subprocess.run(['docker','inspect','project-management'], capture_output=True, text=True, check=True).stdout)[0]
-    env = dict(item.split('=',1) for item in container['Config']['Env'] if '=' in item)
-    database = urllib.parse.urlparse(env['DATABASE_URL']).path.lstrip('/')
-    if not database: raise RuntimeError()
+    # Fixed target works after application credentials disappear from Docker env.
+    database = 'project_management'
+    if shutil.disk_usage(root).free < 4 * 1024**3: raise RuntimeError()
     name = 'pm-' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ') + '.dump'
     path = root + '/' + name
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)

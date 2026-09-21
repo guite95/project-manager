@@ -19,6 +19,10 @@ const files = [
   'ops/oci-runtime/vault-secrets.mjs', 'ops/oci-runtime/vault-client.mjs',
   'ops/oci-runtime/vault-runtime.mjs', 'ops/oci-runtime/project-management-secrets.service',
   'lib/server/runtime-secrets.mjs',
+  'ops/oci-runtime/migrate-pm.mjs', 'ops/oci-runtime/pg-roles.mjs',
+  'ops/oci-runtime/provision-pm-roles.mjs',
+  'ops/oci-runtime/vault-readiness.mjs', 'ops/oci-runtime/project-management-vault.conf',
+  'ops/oci-runtime/prepare-cutover.py', 'ops/oci-runtime/backup-pm-db.sh',
 ];
 const payload = Buffer.from(JSON.stringify({ revision,
   packageHash: createHash('sha256').update(execFileSync('git', ['show', `${revision}:package.json`])).digest('hex'),

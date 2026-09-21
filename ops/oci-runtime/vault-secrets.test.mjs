@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, chown, chmod, readFile, readlink, readdir, stat, symlink, rm } from 'node:fs/promises';
-import { syncSecrets } from './vault-secrets.mjs';
+import { syncSecrets, validateManifest } from './vault-secrets.mjs';
 
 const secret = suffix => `ocid1.vaultsecret.oc1.ap-chuncheon-1.${suffix}`;
 async function fixture(t) {
@@ -91,4 +91,11 @@ test('concurrent sync cannot take another publisher lock or expose partial files
   release(); await first;
   assert.equal(await readFile(`${f.dir}/current/SESSION_SECRET`, 'utf8'), 'fixture-2');
   assert.ok(!(await readdir(f.dir)).includes('.sync-lock'));
+});
+
+test('migration manifest is a separate root-group profile and cannot request session or app files', () => {
+  const manifest = { service: 'project-management-migration', gid: 0, files: [{ name: 'DATABASE_URL', secretId: secret('migrationfixture'), versionNumber: 1 }] };
+  assert.doesNotThrow(() => validateManifest(manifest));
+  assert.throws(() => validateManifest({...manifest, gid: 987}));
+  assert.throws(() => validateManifest({...manifest, files: [...manifest.files, {name:'SESSION_SECRET',secretId:secret('sessionfixture'),versionNumber:1}]}));
 });

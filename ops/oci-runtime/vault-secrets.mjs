@@ -3,9 +3,10 @@ import { isAbsolute, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 // PM pilot only. Other service profiles are added after their actual consumers are verified.
-const profiles = Object.freeze({ 'project-management': {
-  required: ['DATABASE_URL', 'SESSION_SECRET'], optional: ['APP_PASSWORD_HASH'],
-} });
+const profiles = Object.freeze({
+  'project-management': { required: ['DATABASE_URL', 'SESSION_SECRET'], optional: ['APP_PASSWORD_HASH'] },
+  'project-management-migration': { required: ['DATABASE_URL'], optional: [], gid: 0 },
+});
 function exactKeys(value, keys) {
   return value && typeof value === 'object' && !Array.isArray(value)
     && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
@@ -14,6 +15,7 @@ export function validateManifest(manifest) {
   if (!exactKeys(manifest, ['service', 'gid', 'files'])) throw new Error();
   const profile = Object.hasOwn(profiles, manifest.service) && profiles[manifest.service];
   if (!profile || !Number.isSafeInteger(manifest.gid) || manifest.gid < 0 || !Array.isArray(manifest.files)) throw new Error();
+  if (profile.gid !== undefined && manifest.gid !== profile.gid) throw new Error();
   const allowed = [...profile.required, ...profile.optional];
   if (manifest.files.length > allowed.length) throw new Error();
   const names = new Set();

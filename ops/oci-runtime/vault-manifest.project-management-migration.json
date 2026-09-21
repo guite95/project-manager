@@ -1,0 +1,7 @@
+{
+  "service": "project-management-migration",
+  "gid": 0,
+  "files": [
+    { "name": "DATABASE_URL", "secretId": "ocid1.vaultsecret.oc1.ap-chuncheon-1.amaaaaaatzbcbmyagp3xn45qoi7cgyvjtkf2ybsr4jyp5u3x6rso4n6b4nqq", "versionNumber": 1 }
+  ]
+}
