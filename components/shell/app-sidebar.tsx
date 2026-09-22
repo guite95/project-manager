@@ -222,7 +222,7 @@ export function AppSidebar({
             {showRecordings ? <Link href={recordingsHref(project.slug)} aria-label={`${project.title} 녹음·전사`}
               aria-current={projectActive && active?.view === "recordings" ? "page" : undefined}
               className={linkCls(projectActive && active?.view === "recordings")}>녹음·전사</Link> : null}
-            {showNotes ? (
+            {showNotes && !isPersonalProject(project) ? (
               <Link
                 aria-label={`${project.title} ${isPersonalProject(project) ? "기록" : "명심할 점"}`}
                 aria-current={
@@ -271,6 +271,24 @@ export function AppSidebar({
                 </div>
               );
             })}
+            {showNotes && isPersonalProject(project) ? (
+              <Link
+                aria-label={`${project.title} ${isPersonalProject(project) ? "기록" : "명심할 점"}`}
+                aria-current={
+                  projectActive && active?.view === "notes"
+                    ? "page"
+                    : undefined
+                }
+                className={linkCls(projectActive && active?.view === "notes")}
+                href={projectNotesHref(project.slug)}
+              >
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--bi-warning)]"
+                />
+                <span className="truncate">{isPersonalProject(project) ? "기록" : "명심할 점"}</span>
+              </Link>
+            ) : null}
           </>
         ) : null}
       </SidebarProject>
@@ -330,7 +348,7 @@ export function AppSidebar({
         </label>
       </div>
       <div className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
-        {!searching && showOverview ? <Link href={overviewHref} aria-current={pathname === overviewHref && searchParams.get("view") !== "components" ? "page" : undefined}
+        {!personal && !searching && showOverview ? <Link href={overviewHref} aria-current={pathname === overviewHref && searchParams.get("view") !== "components" ? "page" : undefined}
           className={linkCls(pathname === overviewHref && searchParams.get("view") !== "components")}>전체 프로젝트</Link> : null}
       {searching &&
       visibleProjects.length === 0 &&
