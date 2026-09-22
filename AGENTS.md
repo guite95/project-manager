@@ -28,6 +28,8 @@
 
 ## Verification and documentation
 
+- Recruitment experiences and cover letters are OWNER-only documents in shared `app_setting` keys `recruitment:document:<id>`. Lists exclude bodies; detail reads one document; writes validate expected revision and preserve edits on conflict. GET never seeds. Drive originals are references, not automatically synchronized. See `docs/recruitment.md`.
+
 - Run meaningful focused tests, `pnpm typecheck`, and `pnpm build` for runtime changes. `pnpm test` uses only the local test DB.
 - Report code checks, live DB verification, browser checks and deployed-app status separately.
 - Close owned browser sessions and servers/tunnels. Remove temporary screenshots/snapshots; preserve user-owned processes.
