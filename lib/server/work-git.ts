@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readdir, realpath, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import {
   WorkSummaryError,
   validWorkDate,
@@ -9,6 +9,7 @@ import {
   type WorkRepository,
   type WorkSource,
 } from "../work-summary.ts";
+import { projectForRepository } from "../project-repositories.ts";
 const exec = promisify(execFile);
 const ignored = new Set([
   "node_modules",
@@ -116,11 +117,13 @@ export async function collectGit(
         repo.split("/").includes(p.key.replace(/^app:/, "")),
       );
       const explicitSlug = mappingByCommon.get(common);
+      // 공통 Git 디렉터리로 연결해 외부 경로의 추가 워크트리도 같은 프로젝트를 따른다.
+      const defaultProjectKey = projectForRepository(path, appProjects) ?? projectForRepository(dirname(common), appProjects);
       const projectKey = explicitSlug
         ? `app:${explicitSlug}`
-        : matches.length === 1
+        : defaultProjectKey ?? (matches.length === 1
           ? matches[0].key
-          : `repo:${repo}`;
+          : `repo:${repo}`);
       if (!projectMap.has(projectKey))
         projectMap.set(projectKey, {
           key: projectKey,

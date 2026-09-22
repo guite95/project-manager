@@ -1,12 +1,11 @@
-import { isPersonalProject } from '../personal-projects.ts';
-export type Actor = { id: string; username?: string; name?: string; role: string; bootstrap?: boolean; memberships: { projectSlug: string; role: string }[] };
+export type Actor = { id: string; username?: string; name?: string; role: string; bootstrap?: boolean; projectScopes?: Record<string, string>; memberships: { projectSlug: string; role: string }[] };
 export type Action = 'read' | 'write' | 'delete';
 export type Requirement = { kind: 'owner' | 'admin' | 'authenticated' | 'deny' } | { kind: 'project'; project: string; action: Action } | { kind: 'note'; id: string; action: Action };
 export const isAdmin = (actor: Actor | null) => actor?.role === 'OWNER' || actor?.role === 'ADMIN';
 export function canProject(actor: Actor | null, slug: string, action: Action): boolean {
   if (!actor) return false;
   if (actor.role === 'OWNER') return true;
-  if (actor.role === 'ADMIN' && !isPersonalProject(slug)) return true;
+  if (actor.role === 'ADMIN' && actor.projectScopes?.[slug] === 'COMPANY') return true;
   const membership = actor.memberships.find(item => item.projectSlug === slug);
   return membership?.role === 'EDITOR' ? action !== 'delete' : membership?.role === 'VIEWER' && action === 'read';
 }
@@ -20,6 +19,7 @@ export function routeRequirement(path: string, method: string): Requirement {
   } catch { return {kind:'deny'}; }
   if (read(method) && ['/', '/flows', '/account', '/api/flows', '/api/flows/navigation'].includes(path)) return {kind:'authenticated'};
   if (path === '/api/logout' && method === 'POST' || path === '/api/account/password' && method === 'POST') return {kind:'authenticated'};
+  if (path === '/api/project-registry' && ['GET','POST','PATCH'].includes(method)) return {kind:'admin'};
   if (path === '/settings' && read(method) || path === '/api/access' && ['GET','POST'].includes(method)) return {kind:'admin'};
   let match = path.match(/^\/flows\/([^/]+)(?:\/(notes|materials|meetings|recordings)(?:\/([^/]+))?)?$/);
   if (match && read(method)) return {kind:'project',project:match[1],action:'read'};

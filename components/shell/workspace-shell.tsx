@@ -64,7 +64,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const portfolioActive = pathname === "/portfolio" || pathname.startsWith("/portfolio/");
-  const personalActive = isPersonalProject(pathname.match(/^\/flows\/([^/]+)/)?.[1] ?? "");
+  const personalActive = isPersonalProject(navigationProjects.find(project => project.slug === pathname.match(/^\/flows\/([^/]+)/)?.[1]));
   const allowedSectionIds = workspaceSectionIds(account.role, navigationProjects);
   const availableSections = allSections.filter(item => allowedSectionIds.includes(item.id));
   const primarySections = availableSections.filter(item => item.id !== "guide");
@@ -146,7 +146,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const togglePanel = () => prefs.update({ panelCollapsed: !collapsed });
   const renderSectionMenu = (id: Section, inline = false) => {
     if (id === "projects" || id === "personal") return (
-      <AppSidebar key={id} personal={id === "personal"} flowProjects={navigationProjects.filter(project => isPersonalProject(project.slug) === (id === "personal"))} projectOrder={projectOrder}
+      <AppSidebar key={id} personal={id === "personal"} flowProjects={navigationProjects.filter(project => isPersonalProject(project) === (id === "personal"))} projectOrder={projectOrder}
         onProjectOrderChange={setProjectOrder} inline={inline} canReorder={canCustomizeNavigation}
         canEditPersonalGroups={canCustomizeNavigation} includeExternalProjects={canCustomizeNavigation}
         showOverview={id === "projects" || account.role === "OWNER"} />

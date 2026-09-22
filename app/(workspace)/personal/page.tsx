@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default async function PersonalPage() {
-  const personalProjects = (await getFlowCatalog()).filter(project => isPersonalProject(project.slug));
+  const personalProjects = (await getFlowCatalog()).filter(project => isPersonalProject(project));
   return <PersonalProjectList personalProjects={personalProjects.map(({ slug, title }) => ({ slug, title }))} />;
 }

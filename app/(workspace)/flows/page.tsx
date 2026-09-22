@@ -1,3 +1,4 @@
+import { ProjectEditor } from "@/components/projects/project-editor";
 import { isPersonalProject } from "@/lib/personal-projects";
 import { accessibleCatalog } from '@/lib/access/catalog';
 import { flowCategories } from "@/lib/server/flow-catalog-store";
@@ -51,11 +52,13 @@ function ViewTabs({ view }: { view: FlowsView }) {
 }
 
 async function ProjectsOverview() {
-  const flowProjects = (await accessibleCatalog()).filter(project => !isPersonalProject(project.slug));
+  const flowProjects = (await accessibleCatalog()).filter(project => !isPersonalProject(project));
   return (
     <>
+      <div className="flex justify-end"><ProjectEditor scope="COMPANY" /></div>
       {flowProjects.map((project) => (
         <section key={project.slug} className="mt-8">
+          <div className="flex justify-end"><ProjectEditor scope="COMPANY" slug={project.slug} /></div>
           <h2 className="mt-0 mb-1 border-t border-[var(--bi-border)] pt-6 text-[16px] font-semibold tracking-[-0.005em] text-[var(--bi-fg)]">
             {project.title}
           </h2>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ProjectGroupSelect, usePersonalProjectGroups } from "@/components/personal/project-groups";
+import { usePersonalProjectGroups } from "@/components/personal/project-groups";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -10,7 +10,7 @@ import {
 } from "react-icons/hi";
 import { putSidebarOrder } from "@/lib/api-client";
 import { defaultSidebarOrder, normalizeSidebarOrder, moveSidebarProject, mergeSidebarGroupOrder } from "@/lib/navigation/sidebar-order";
-import { SidebarProject } from "./sidebar-project";
+import { SIDEBAR_DRAG_TYPE, SidebarProject } from "./sidebar-project";
 import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { chartHref, resolveChart } from "@/lib/flows/registry";
 import {
@@ -27,7 +27,7 @@ import { meetingsHref } from "@/lib/meetings";
 import { materialsHref } from "@/lib/materials";
 import { recordingsHref } from "@/lib/recordings";
 
-import { isPersonalProject, personalProjectGroup, personalProjectGroups } from "@/lib/personal-projects";
+import { isPersonalProject, personalProjectGroup, personalProjectGroups, type PersonalProjectGroup } from "@/lib/personal-projects";
 
 const ROW = "mx-2 flex min-h-10 md:min-h-9 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
 const linkCls = (active: boolean) => `${ROW} ${active
@@ -75,7 +75,8 @@ export function AppSidebar({
   );
 
   const saveOrder = async (next: string[]) => {
-    if (!canReorder || savingOrderRef.current || next === order) return;
+    if (!canReorder || savingOrderRef.current) return false;
+    if (next === order) return true;
     savingOrderRef.current = true;
     const previous = projectOrder;
     const merged = mergeSidebarGroupOrder(projectOrder, next);
@@ -86,25 +87,55 @@ export function AppSidebar({
     try {
       setProjectOrder(await putSidebarOrder(merged));
       setAnnouncement("프로젝트 순서를 저장했습니다.");
+      return true;
     } catch {
       setProjectOrder(previous);
       setOrderError("순서를 저장하지 못해 이전 순서로 되돌렸습니다. 다시 시도해 주세요.");
       setAnnouncement("");
+      return false;
     } finally {
       savingOrderRef.current = false;
       setSavingOrder(false);
     }
   };
 
+  const movable = canReorder && !query.trim() && !savingOrder &&
+    (!personal || (groupPreferences.ready && !groupPreferences.saving));
+  const moveTo = async (slug: string, next: string[], group?: PersonalProjectGroup) => {
+    if (!movable || savingOrderRef.current || !order.includes(slug)) return;
+    const changesGroup = personal && group && groupFor(slug) !== group;
+    if (changesGroup && !canEditPersonalGroups) return;
+    if (await saveOrder(next) && changesGroup) {
+      groupPreferences.update({ [slug]: group });
+    }
+  };
   const moveProject = (slug: string, target: string, edge: "before" | "after") => {
-    if (query.trim()) return;
-    if (personal && groupFor(slug) !== groupFor(target)) return;
-    void saveOrder(moveSidebarProject(order, slug, target, edge));
+    if (!order.includes(target) || slug === target) return;
+    void moveTo(slug, moveSidebarProject(order, slug, target, edge), groupFor(target));
+  };
+  const moveToGroup = (slug: string, group: PersonalProjectGroup) => {
+    const target = order.filter(item => item !== slug && groupFor(item) === group).at(-1);
+    void moveTo(slug, target ? moveSidebarProject(order, slug, target, "after") : order, group);
   };
   const stepProject = (slug: string, step: -1 | 1) => {
-    const groupOrder = personal ? order.filter(item => groupFor(item) === groupFor(slug)) : order;
+    if (!personal) {
+      const target = order[order.indexOf(slug) + step];
+      if (target) moveProject(slug, target, step < 0 ? "before" : "after");
+      return;
+    }
+    const group = groupFor(slug);
+    const groupOrder = order.filter(item => groupFor(item) === group);
     const target = groupOrder[groupOrder.indexOf(slug) + step];
-    if (target) moveProject(slug, target, step < 0 ? "before" : "after");
+    if (target) {
+      moveProject(slug, target, step < 0 ? "before" : "after");
+      return;
+    }
+    const adjacent = personalProjectGroups[personalProjectGroups.findIndex(item => item.id === group) + step];
+    if (!adjacent) return;
+    const adjacentOrder = order.filter(item => groupFor(item) === adjacent.id);
+    const boundary = step < 0 ? adjacentOrder.at(-1) : adjacentOrder[0];
+    if (boundary) moveProject(slug, boundary, step < 0 ? "after" : "before");
+    else moveToGroup(slug, adjacent.id);
   };
   const toggle = (slug: string) => setExpandedProject(current => current === slug ? null : slug);
 
@@ -173,7 +204,7 @@ export function AppSidebar({
         count={categories.reduce((n, c) => n + c.charts.length, 0)}
         collapsed={pCollapsed}
         onToggle={() => toggle(project.slug)}
-        movable={canReorder && !searching && !savingOrder}
+        movable={movable}
         showMoveHandle={canReorder}
         dragging={dragging}
         onDragChange={setDragging}
@@ -182,7 +213,6 @@ export function AppSidebar({
       >
         {!pCollapsed ? (
           <>
-            {personal && canEditPersonalGroups ? <div className="mx-2 my-2"><ProjectGroupSelect slug={project.slug} title={project.title} /></div> : null}
             {showMaterials ? <Link href={materialsHref(project.slug)} aria-label={`${project.title} 자료`}
               aria-current={projectActive && active?.view === "materials" ? "page" : undefined}
               className={linkCls(projectActive && active?.view === "materials")}>자료</Link> : null}
@@ -194,7 +224,7 @@ export function AppSidebar({
               className={linkCls(projectActive && active?.view === "recordings")}>녹음·전사</Link> : null}
             {showNotes ? (
               <Link
-                aria-label={`${project.title} ${isPersonalProject(project.slug) ? "기록" : "명심할 점"}`}
+                aria-label={`${project.title} ${isPersonalProject(project) ? "기록" : "명심할 점"}`}
                 aria-current={
                   projectActive && active?.view === "notes"
                     ? "page"
@@ -207,7 +237,7 @@ export function AppSidebar({
                   aria-hidden
                   className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--bi-warning)]"
                 />
-                <span className="truncate">{isPersonalProject(project.slug) ? "기록" : "명심할 점"}</span>
+                <span className="truncate">{isPersonalProject(project) ? "기록" : "명심할 점"}</span>
               </Link>
             ) : null}
             {categories.map((category) => {
@@ -258,7 +288,7 @@ export function AppSidebar({
         count={project.links.length}
         collapsed={pCollapsed}
         onToggle={() => toggle(project.slug)}
-        movable={canReorder && !searching && !savingOrder}
+        movable={movable}
         showMoveHandle={canReorder}
         dragging={dragging}
         onDragChange={setDragging}
@@ -313,6 +343,7 @@ export function AppSidebar({
       {canReorder ? <>
         <span id="sidebar-order-help" className="sr-only">
           손잡이를 드래그하거나 위·아래 방향키로 프로젝트 순서를 바꿀 수 있습니다. 검색 중에는 순서를 변경할 수 없습니다.
+          {personal && canEditPersonalGroups ? "다른 분류로 이동하면 프로젝트 분류도 변경됩니다. 빈 분류의 제목에도 놓을 수 있습니다." : ""}
         </span>
         <span role="status" className="sr-only">{announcement}</span>
         {orderError ? <p role="alert" className="mx-4 text-[11px] text-[var(--bi-error)]">{orderError}</p> : null}
@@ -325,8 +356,24 @@ export function AppSidebar({
         if (searching && entries.length === 0) return null;
         return (
           <section key={group.id} aria-label={group.title} className="mt-3">
-            <h3 className="mx-4 mb-1 text-[11px] font-semibold text-[var(--bi-muted)]">{group.title}</h3>
-            {entries.length ? entries.map(renderProject) : <p className="mx-4 text-[11px] text-[var(--bi-muted)]">등록된 프로젝트가 없습니다.</p>}
+            <div
+              className={`mx-2 rounded-[3px] px-2 py-2 ${dragging && movable && canEditPersonalGroups ? "bg-[var(--bi-sidebar-active)] outline outline-1 outline-dashed outline-[var(--bi-accent)]" : ""}`}
+              onDragOver={event => {
+                if (!movable || !canEditPersonalGroups || !dragging || !event.dataTransfer.types.includes(SIDEBAR_DRAG_TYPE)) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={event => {
+                if (!movable || !canEditPersonalGroups || !dragging || event.dataTransfer.getData(SIDEBAR_DRAG_TYPE) !== dragging) return;
+                event.preventDefault();
+                moveToGroup(dragging, group.id);
+                setDragging(null);
+              }}
+            >
+              <h3 className="text-[11px] font-semibold text-[var(--bi-muted)]">{group.title}</h3>
+              {!entries.length ? <p className="mt-1 text-[11px] text-[var(--bi-muted)]">{canReorder && canEditPersonalGroups ? "프로젝트를 여기로 끌어 놓으세요." : "등록된 프로젝트가 없습니다."}</p> : null}
+            </div>
+            {entries.map(renderProject)}
           </section>
         );
       }) : order.map((slug) => {

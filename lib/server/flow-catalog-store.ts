@@ -8,11 +8,11 @@ import type { FlowNavigationChart, FlowNavigationProject } from "../navigation/f
 
 export type FlowChartSummary = FlowNavigationChart & { erdDomain?: string; contentKind?: ProjectContent["kind"]; nodeCount: number; edgeCount: number };
 export type FlowProjectSummary = {
-  slug: string; title: string; intro?: string;
+  slug: string; title: string; scope: string; personalGroup: string | null; intro?: string;
   categories: { slug: string; title: string; charts: FlowChartSummary[] }[];
 };
 type CatalogRow = {
-  projectSlug: string; projectTitle: string; intro: string | null;
+  projectSlug: string; projectTitle: string; scope: string; personalGroup: string | null; intro: string | null;
   categorySlug: string | null; categoryTitle: string | null;
   chartSlug: string | null; chartTitle: string | null; description: string | null;
   erdDomain: string | null; contentKind: ProjectContent["kind"] | null; nodeCount: number; edgeCount: number;
@@ -21,7 +21,7 @@ type CatalogRow = {
 /** JSONB에서 필요한 필드만 조회한다. 그래프 전체를 Node.js로 가져오지 않는다. */
 export async function readFlowCatalog(projectSlug?: string): Promise<FlowProjectSummary[]> {
   const rows = await prisma.$queryRaw<CatalogRow[]>(Prisma.sql`
-    SELECT p.slug AS "projectSlug", p.title AS "projectTitle", p.intro,
+    SELECT p.slug AS "projectSlug", p.title AS "projectTitle", p.scope, p.personal_group AS "personalGroup", p.intro,
       c.slug AS "categorySlug", c.title AS "categoryTitle",
       d.slug AS "chartSlug", d.document->>'title' AS "chartTitle",
       d.document->>'description' AS description, d.document->>'erdDomain' AS "erdDomain", d.document->'content'->>'kind' AS "contentKind",
@@ -37,7 +37,7 @@ export async function readFlowCatalog(projectSlug?: string): Promise<FlowProject
   for (const row of rows) {
     let project = projects.get(row.projectSlug);
     if (!project) {
-      project = { slug: row.projectSlug, title: row.projectTitle, ...(row.intro === null ? {} : { intro: row.intro }), categories: [] };
+      project = { slug: row.projectSlug, title: row.projectTitle, scope: row.scope, personalGroup: row.personalGroup, ...(row.intro === null ? {} : { intro: row.intro }), categories: [] };
       projects.set(row.projectSlug, project);
     }
     if (row.categorySlug === null) continue;
@@ -58,7 +58,7 @@ export async function readFlowCatalog(projectSlug?: string): Promise<FlowProject
 }
 
 export function toFlowNavigation(projects: FlowProjectSummary[]): FlowNavigationProject[] {
-  return projects.map(({ slug, title, categories }) => ({ slug, title, categories: flowCategories(categories).map(({ slug, title, charts }) => ({
+  return projects.map(({ slug, title, scope, personalGroup, categories }) => ({ slug, title, scope, personalGroup, categories: flowCategories(categories).map(({ slug, title, charts }) => ({
     slug, title, charts: charts.map(({ slug, title, description }) => ({ slug, title, ...(description === undefined ? {} : { description }) })),
   })) }));
 }
@@ -86,5 +86,5 @@ export async function readChartPage(projectSlug: string, categorySlug?: string, 
 export const getFlowCatalog = cache(readFlowCatalog);
 export const getChartPage = cache(readChartPage);
 export const getFlowProjectIdentity = cache((slug: string) => prisma.flowProject.findUnique({
-  where: { slug }, select: { slug: true, title: true },
+  where: { slug }, select: { slug: true, title: true, scope: true },
 }));

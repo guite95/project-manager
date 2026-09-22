@@ -35,7 +35,7 @@ import {
   type TodayItem,
 } from "@/lib/today-board";
 
-export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;title:string}[] }) {
+export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;title:string;scope?:string}[] }) {
   // null 은 "아직 서버에서 안 받아옴". 서버 렌더와 어긋나지 않도록 첫 렌더에서는
   // 안내만 보여준다.
   const [board, setBoard] = useState<TodayBoard | null>(null);
@@ -124,7 +124,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
   );
 
   const projects = useMemo(
-    () => flowProjects.map(({ slug, title }) => ({ slug, title })),
+    () => flowProjects.map(({ slug, title, scope }) => ({ slug, title, scope })),
     [flowProjects],
   );
 

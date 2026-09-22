@@ -1,12 +1,11 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db.ts';
-import { isPersonalProject } from '../personal-projects.ts';
 import { recordingInput, recordingFileType, type RecordingSummary } from '../recordings.ts';
 import { putObject } from './object-storage.mjs';
 
 export async function recordingProject(projectSlug: string) {
-  if (projectSlug === 'common' || isPersonalProject(projectSlug)) return null;
-  return prisma.flowProject.findUnique({ where: { slug: projectSlug }, select: { slug: true, title: true } });
+  if (projectSlug === 'common') return null;
+  return prisma.flowProject.findFirst({ where: { slug: projectSlug, scope: 'COMPANY' }, select: { slug: true, title: true } });
 }
 export async function listRecordings(projectSlug: string): Promise<RecordingSummary[]> {
   const rows = await prisma.projectRecording.findMany({ where: { projectSlug }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],

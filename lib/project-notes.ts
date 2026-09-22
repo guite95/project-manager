@@ -27,8 +27,8 @@ export const PROJECT_NOTE_DRAG_TYPE = "application/x-project-note";
 /** 공통 기준과 개인 프로젝트별 기록은 같은 편집기를 사용하되 프로젝트별로 저장한다. */
 export const NOTES_PROJECT_SLUG = "common";
 
-export function hasProjectNotes(projectSlug: string): boolean {
-  return projectSlug === NOTES_PROJECT_SLUG || isPersonalProject(projectSlug);
+export function hasProjectNotes(project: { slug: string; scope?: string } | null | undefined): boolean {
+  return project?.slug === NOTES_PROJECT_SLUG || isPersonalProject(project);
 }
 
 export function projectNotesStorageKey(projectSlug: string): string {

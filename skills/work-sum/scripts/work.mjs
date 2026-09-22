@@ -114,7 +114,7 @@ try {
       } else {
         const [flow, custom] = await Promise.all([
           db.flowProject.findMany({
-            select: { slug: true, title: true },
+            select: { slug: true, title: true, repositories: {select:{workspace:true,path:true}} },
             orderBy: { position: "asc" },
           }),
           db.customProject.findMany({ select: { slug: true, title: true } }),
@@ -155,7 +155,7 @@ try {
             collectGit(
               root,
               date,
-              projects.map((p) => ({ key: `app:${p.slug}`, title: p.title })),
+              projects.map((p) => ({ key: `app:${p.slug}`, title: p.title, repositories: p.repositories ?? [] })),
               mapping,
               authors,
             ),

@@ -12,6 +12,10 @@ function snapshot(value: Prisma.JsonValue | undefined): UiPreferences {
 }
 
 export async function loadUiPreferences(scope: string): Promise<UiPreferences> {
+  if (scope === 'personal-project-groups') {
+    const rows = await prisma.flowProject.findMany({where:{scope:'PERSONAL'},select:{slug:true,personalGroup:true}});
+    return {exists:true,values:Object.fromEntries(rows.map(row => [row.slug, row.personalGroup!.toLowerCase()]))};
+  }
   const row = await prisma.appSetting.findUnique({ where: { key: settingKey(scope) } });
   return snapshot(row?.value);
 }
@@ -19,6 +23,16 @@ export async function loadUiPreferences(scope: string): Promise<UiPreferences> {
 export async function saveUiPreferences(scope: string, input: unknown, onlyIfMissing = false): Promise<UiPreferences> {
   const key = settingKey(scope);
   const changes = parseUiPreferenceChanges(scope, input);
+  if (scope === 'personal-project-groups') {
+    if (onlyIfMissing) return loadUiPreferences(scope);
+    await prisma.$transaction(async tx => {
+      for (const [slug, group] of Object.entries(changes)) {
+        const updated = await tx.flowProject.updateMany({where:{slug,scope:'PERSONAL'},data:{personalGroup:String(group).toUpperCase(),revision:{increment:1}}});
+        if (!updated.count) throw new UiPreferenceError('등록된 개인 프로젝트만 분류를 변경할 수 있습니다.');
+      }
+    });
+    return loadUiPreferences(scope);
+  }
   // Compare-and-swap: 다른 브라우저가 갱신하면 최신 값에 이 요청의 변경분만 다시 병합한다.
   for (let attempt = 0; attempt < 5; attempt++) {
     const current = await prisma.appSetting.findUnique({ where: { key } });

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ProjectEditor } from "@/components/projects/project-editor";
 import { PageHeader } from "@/components/erp/page-header";
 import { personalProjectGroup, personalProjectGroups } from "@/lib/personal-projects";
 import { materialsHref } from "@/lib/materials";
@@ -12,7 +13,7 @@ export function PersonalProjectList({ personalProjects }: { personalProjects: { 
   const preferences = usePersonalProjectGroups();
   return (
     <div className="mx-auto max-w-[1200px]">
-      <PageHeader title="개인 프로젝트" description="개인 프로젝트 목록입니다." />
+      <PageHeader title="개인 프로젝트" description="개인 프로젝트 목록입니다." actions={<ProjectEditor scope="PERSONAL" />} />
       <section aria-label="개인 프로젝트 목록" className="px-6 py-5">
         <p className="mb-3 text-[12px] text-[var(--bi-muted)]">전체 {personalProjects.length}개</p>
         {personalProjectGroups.map(group => {
@@ -25,7 +26,7 @@ export function PersonalProjectList({ personalProjects }: { personalProjects: { 
                   <li key={project.slug} className="px-4 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <h3 className="m-0 break-words text-[13px] font-semibold">{project.title}</h3>
-                      <div className="w-44"><ProjectGroupSelect slug={project.slug} title={project.title} /></div>
+                      <ProjectEditor scope="PERSONAL" slug={project.slug} /><div className="w-44"><ProjectGroupSelect slug={project.slug} title={project.title} /></div>
                     </div>
                     <nav aria-label={`${project.title} 메뉴`} className="mt-2 flex gap-4 text-[12px] text-[var(--bi-accent)]">
                       <Link href={materialsHref(project.slug)} className="hover:underline">자료</Link>

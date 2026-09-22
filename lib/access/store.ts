@@ -22,7 +22,14 @@ export async function resolveActor(token: string): Promise<Actor | null> {
     const raw = token.slice(3);
     if (!tokenValid(raw)) return null;
     const row = await prisma.accessSession.findUnique({where:{tokenHash:tokenHash(raw)},include:{user:{select:userSelect}}});
-    return row && row.expiresAt > new Date() && row.user.active ? row.user : null;
+    if (!row || row.expiresAt <= new Date() || !row.user.active) return null;
+    const projects = await prisma.flowProject.findMany({
+      where: row.user.role === 'OWNER' ? undefined : { OR: [
+        ...(row.user.role === 'ADMIN' ? [{ scope: 'COMPANY' }] : []),
+        { slug: { in: row.user.memberships.map(m => m.projectSlug) } },
+      ] }, select: { slug: true, scope: true },
+    });
+    return { ...row.user, projectScopes: Object.fromEntries(projects.map(p => [p.slug, p.scope])) };
   }
   const secret = getRuntimeSecret('SESSION_SECRET');
   if (!secret || !token || !await isSessionTokenValid(token,secret,Date.now())) return null;
@@ -102,9 +109,10 @@ export async function accessOverview(actor: Actor) {
     readFlowCatalog(),
     prisma.accessShare.findMany({where:{expiresAt:{gt:new Date()}},select:{id:true,projectSlug:true,chartSlug:true,expiresAt:true}}),
   ]);
-  return {actor,users:actor.role==='OWNER'?users:users.map(user=>({...user,memberships:user.memberships.filter(m=>!isPersonalProject(m.projectSlug))})),projects:projects.filter(p=>actor.role==='OWNER'||!isPersonalProject(p.slug)).map(p=>({slug:p.slug,title:p.title,charts:p.categories.flatMap(c=>c.charts.flatMap(d=>{
+  const personalSlugs = new Set(projects.filter(isPersonalProject).map(p => p.slug));
+  return {actor,users:actor.role==='OWNER'?users:users.map(user=>({...user,memberships:user.memberships.filter(m=>!personalSlugs.has(m.projectSlug))})),projects:projects.filter(p=>actor.role==='OWNER'||!isPersonalProject(p)).map(p=>({slug:p.slug,title:p.title,scope:p.scope,charts:p.categories.flatMap(c=>c.charts.flatMap(d=>{
     return d.erdDomain ? [] : [{slug:d.slug,title:d.title}];
-  }))})),shares:shares.filter(s=>!isPersonalProject(s.projectSlug))};
+  }))})),shares:shares.filter(s=>!personalSlugs.has(s.projectSlug))};
 }
 export async function manageAccess(actor: Actor, body: Record<string,unknown>): Promise<{path:string}|null> {
   if (!isAdmin(actor) || actor.bootstrap) throw new AccessError('계정 등록 후 관리자 권한으로 이용하세요.',403);
@@ -122,10 +130,11 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
     return null;
   }
   if (body.action === 'updateUser') {
+    const personalSlugs = new Set((await prisma.flowProject.findMany({where:{scope:'PERSONAL'},select:{slug:true}})).map(p=>p.slug));
     const id=String(body.id??'');
     if (typeof body.active!=='boolean' || !['ADMIN','MEMBER'].includes(String(body.role)) || !Array.isArray(body.memberships) || body.memberships.length>500) throw new AccessError('계정 권한 형식을 확인하세요.');
     const memberships=body.memberships.map((m:unknown)=>{
-      if (!m || typeof m!=='object' || !('projectSlug' in m) || !('role' in m) || typeof m.projectSlug!=='string' || !['VIEWER','EDITOR'].includes(String(m.role)) || actor.role!=='OWNER' && isPersonalProject(m.projectSlug)) throw new AccessError('허용할 수 없는 프로젝트 권한입니다.');
+      if (!m || typeof m!=='object' || !('projectSlug' in m) || !('role' in m) || typeof m.projectSlug!=='string' || !['VIEWER','EDITOR'].includes(String(m.role)) || actor.role!=='OWNER' && personalSlugs.has(m.projectSlug)) throw new AccessError('허용할 수 없는 프로젝트 권한입니다.');
       return {userId:id,projectSlug:m.projectSlug,role:String(m.role)};
     });
     await prisma.$transaction(async tx=>{
@@ -135,7 +144,7 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
       await tx.accessUser.update({where:{id},data:{role:String(body.role),active:body.active as boolean}});
       // 개인 프로젝트 권한은 소유자만 변경한다. 관리자 수정 시 기존 부여를 보존한다.
       const existing = actor.role==='OWNER' ? [] : await tx.accessMembership.findMany({where:{userId:id},select:{projectSlug:true}});
-      const privateSlugs = existing.filter(m=>isPersonalProject(m.projectSlug)).map(m=>m.projectSlug);
+      const privateSlugs = existing.filter(m=>personalSlugs.has(m.projectSlug)).map(m=>m.projectSlug);
       await tx.accessMembership.deleteMany({where:{userId:id,...(privateSlugs.length?{projectSlug:{notIn:privateSlugs}}:{})}});
       await tx.accessMembership.createMany({data:memberships});
       // 권한은 요청마다 DB에서 읽는다. 비활성화할 때만 기존 세션을 폐기한다.
@@ -147,11 +156,12 @@ export async function manageAccess(actor: Actor, body: Record<string,unknown>): 
   if(body.action==='share') {
     const projectSlug=String(body.projectSlug??''),chartSlug=String(body.chartSlug??'');
     const days=body.days??7;
-    if(!Number.isInteger(days) || Number(days)<1 || Number(days)>90 || isPersonalProject(projectSlug)) throw new AccessError('공유 프로젝트와 기간(1~90일)을 확인하세요.');
+    if(!Number.isInteger(days) || Number(days)<1 || Number(days)>90) throw new AccessError('공유 프로젝트와 기간(1~90일)을 확인하세요.');
     const token=newToken();
     await prisma.$transaction(async tx=>{
       const doc=await tx.flowDocument.findUnique({where:{projectSlug_slug:{projectSlug,slug:chartSlug}}});
-      if(!doc || (doc.document as {erdDomain?:string}).erdDomain) throw new AccessError('공유할 수 없는 문서입니다.');
+      const project = await tx.flowProject.findUnique({where:{slug:projectSlug},select:{scope:true}});
+      if(project?.scope !== 'COMPANY' || !doc || (doc.document as {erdDomain?:string}).erdDomain) throw new AccessError('공유할 수 없는 문서입니다.');
       const share=await tx.accessShare.create({data:{id:randomUUID(),projectSlug,chartSlug,tokenHash:tokenHash(token),expiresAt:new Date(Date.now()+Number(days)*86400_000)}});
       await audit(tx,actor,'SHARE_CREATED',JSON.stringify({id:share.id,projectSlug,chartSlug}));
     });
@@ -182,6 +192,8 @@ export async function changePassword(actor: Actor, current: unknown, password: u
 export async function resolveShare(token: string) {
   if(!tokenValid(token)) return null;
   const share=await prisma.accessShare.findUnique({where:{tokenHash:tokenHash(token)}});
-  if(!share || share.expiresAt<=new Date() || isPersonalProject(share.projectSlug)) return null;
+  if(!share || share.expiresAt<=new Date()) return null;
+  const project = await prisma.flowProject.findUnique({where:{slug:share.projectSlug},select:{scope:true}});
+  if(project?.scope !== 'COMPANY') return null;
   return share;
 }

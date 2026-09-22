@@ -1,7 +1,7 @@
 import { PERSONAL_ISSUES_SLUG } from "./today-board.ts";
 
 /** 작업 정리는 완료 기록, Git, AI 대화 근거를 참조하는 날짜별 스냅샷이다. */
-export type WorkProject = { key: string; title: string };
+export type WorkProject = { key: string; title: string; repositories?: import("./project-registry.ts").RepositoryLink[] };
 export type WorkSource = {
   id: string;
   kind: "git" | "completion" | "ai";

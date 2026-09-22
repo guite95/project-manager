@@ -1,4 +1,3 @@
-import { isPersonalProject } from "./personal-projects.ts";
 
 export type UiPreferenceScope = "navigation" | "reference-columns" | "personal-project-groups";
 export type UiPreferenceValues = Record<string, boolean | number | string | string[]>;
@@ -19,7 +18,7 @@ export function parseUiPreferenceChanges(scope: string, input: unknown): UiPrefe
   const identifier = /^[a-zA-Z0-9_-]{1,100}$/;
   for (const [key, value] of entries) {
     const valid = scope === "personal-project-groups"
-      ? isPersonalProject(key) && (value === "portfolio" || value === "toy")
+      ? identifier.test(key) && (value === "portfolio" || value === "toy")
       : scope === "navigation"
       ? (key === "panelCollapsed" || (key.startsWith("project:") && identifier.test(key.slice(8)))) && typeof value === "boolean"
       : ((key === "order" || key === "hidden") && Array.isArray(value) && value.length <= 100 &&

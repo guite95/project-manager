@@ -26,8 +26,8 @@ const ownerSections: WorkspaceSectionId[] = [
 
 export function workspaceSectionIds(role: string, projects: FlowNavigationProject[]): WorkspaceSectionId[] {
   if (role === "OWNER") return ownerSections;
-  const hasCompanyProjects = projects.some(project => !isPersonalProject(project.slug));
-  const hasPersonalProjects = projects.some(project => isPersonalProject(project.slug));
+  const hasCompanyProjects = projects.some(project => !isPersonalProject(project));
+  const hasPersonalProjects = projects.some(project => isPersonalProject(project));
   return [
     ...(hasCompanyProjects ? ["projects" as const] : []),
     ...(hasPersonalProjects ? ["personal" as const] : []),
@@ -37,7 +37,7 @@ export function workspaceSectionIds(role: string, projects: FlowNavigationProjec
 
 export function workspaceSectionHref(id: WorkspaceSectionId, role: string, projects: FlowNavigationProject[]): string {
   if (id === "personal" && role !== "OWNER") {
-    const project = projects.find(item => isPersonalProject(item.slug));
+    const project = projects.find(item => isPersonalProject(item));
     if (project) return projectNotesHref(project.slug);
   }
   return {
@@ -57,7 +57,7 @@ export function workspaceRoleLabel(role: string): string {
 }
 
 export function scopePersonalProjectGroups(preferences: UiPreferences, projects: FlowNavigationProject[]): UiPreferences {
-  const allowed = new Set(projects.filter(project => isPersonalProject(project.slug)).map(project => project.slug));
+  const allowed = new Set(projects.filter(project => isPersonalProject(project)).map(project => project.slug));
   return {
     exists: preferences.exists,
     values: Object.fromEntries(Object.entries(preferences.values).filter(([slug]) => allowed.has(slug))),

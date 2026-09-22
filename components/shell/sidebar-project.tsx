@@ -3,7 +3,7 @@
 import { useState, type DragEvent, type ReactNode } from "react";
 import { HiChevronRight, HiOutlineSelector } from "react-icons/hi";
 
-const DRAG_TYPE = "application/x-project-management-sidebar";
+export const SIDEBAR_DRAG_TYPE = "application/x-project-management-sidebar";
 
 export function SidebarProject({
   slug, title, count, collapsed, onToggle, children,
@@ -25,7 +25,7 @@ export function SidebarProject({
 }) {
   const [edge, setEdge] = useState<"before" | "after" | null>(null);
   const accepts = (event: DragEvent) => movable && dragging !== null && dragging !== slug &&
-    event.dataTransfer.types.includes(DRAG_TYPE);
+    event.dataTransfer.types.includes(SIDEBAR_DRAG_TYPE);
   const edgeAt = (event: DragEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
@@ -48,7 +48,7 @@ export function SidebarProject({
       onDrop={(event) => {
         if (!accepts(event)) return;
         event.preventDefault();
-        const source = event.dataTransfer.getData(DRAG_TYPE);
+        const source = event.dataTransfer.getData(SIDEBAR_DRAG_TYPE);
         if (source === dragging) onMove(source, slug, edgeAt(event));
         onDragChange(null);
         setEdge(null);
@@ -79,7 +79,7 @@ export function SidebarProject({
           className={`mr-1 flex h-6 w-5 shrink-0 items-center justify-center rounded-[3px] text-[var(--bi-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${movable ? "cursor-grab opacity-50 hover:opacity-100 focus:opacity-100 active:cursor-grabbing" : "cursor-not-allowed opacity-25"}`}
           onDragStart={(event) => {
             if (!movable) {event.preventDefault(); return;}
-            event.dataTransfer.setData(DRAG_TYPE, slug);
+            event.dataTransfer.setData(SIDEBAR_DRAG_TYPE, slug);
             event.dataTransfer.effectAllowed = "move";
             if (event.currentTarget.parentElement) event.dataTransfer.setDragImage(event.currentTarget.parentElement, 16, 16);
             onDragChange(slug);

@@ -45,6 +45,7 @@ export type TodayBoard = {
 };
 
 export type IssueGroup = {
+  scope?: string;
   /** 어느 프로젝트에도 속하지 않는 이슈를 모은 그룹은 null. */
   slug: string | null;
   title: string;
@@ -92,8 +93,8 @@ export function splitIssuePoolGroups(groups: IssueGroup[]): {
     slug: PERSONAL_ISSUES_SLUG, title: "개인", canAdd: true, removable: false, issues: [],
   };
   return {
-    projectGroups: groups.filter(group => group.slug !== PERSONAL_ISSUES_SLUG && !isPersonalProject(group.slug ?? "")),
-    personalGroups: [personal, ...groups.filter(group => isPersonalProject(group.slug ?? ""))],
+    projectGroups: groups.filter(group => group.slug !== PERSONAL_ISSUES_SLUG && !isPersonalProject(group)),
+    personalGroups: [personal, ...groups.filter(group => isPersonalProject(group))],
   };
 }
 
@@ -364,7 +365,7 @@ export function toggleProjectCollapsed(
 export function isProjectTitleTaken(
   board: TodayBoard,
   title: string,
-  registryProjects: { slug: string; title: string }[],
+  registryProjects: { slug: string; title: string; scope?: string }[],
 ): boolean {
   const trimmed = title.trim();
   if (!trimmed) return false;
@@ -407,16 +408,17 @@ export function moveProject(
  */
 export function groupIssuesByProject(
   issues: Issue[],
-  registryProjects: { slug: string; title: string }[],
+  registryProjects: { slug: string; title: string; scope?: string }[],
   customProjects: CustomProject[] = [],
   projectOrder: string[] = [],
 ): IssueGroup[] {
   const groupFor = (
-    project: { slug: string; title: string },
+    project: { slug: string; title: string; scope?: string },
     removable: boolean,
   ): IssueGroup => ({
     slug: project.slug,
     title: project.title,
+    ...(project.scope ? {scope: project.scope} : {}),
     canAdd: true,
     removable,
     issues: issues.filter((issue) => issue.projectSlug === project.slug),

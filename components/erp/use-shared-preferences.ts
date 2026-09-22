@@ -96,6 +96,14 @@ export function useSharedPreferences(
     };
   }, [scope, legacy, flush, readOnly]);
 
+  useEffect(() => {
+    if (!initial || inFlight.current || Object.keys(pending.current).length) return;
+    revision.current++;
+    confirmed.current = initial.values;
+    setValues(initial.values);
+    setReady(true);
+  }, [initial]);
+
   const update = useCallback((changes: UiPreferenceValues) => {
     if (readOnly || !ready || !Object.keys(changes).length) return;
     revision.current++;

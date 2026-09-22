@@ -11,7 +11,7 @@ import { Feedback, Field, postAccess } from "./form";
 type Role = "OWNER" | "ADMIN" | "MEMBER";
 type Membership = { projectSlug: string; role: "VIEWER" | "EDITOR" };
 type User = { id: string; username: string; name: string; role: Role; active: boolean; memberships: Membership[] };
-type Project = { slug: string; title: string; charts: { slug: string; title: string }[] };
+type Project = { scope: string; slug: string; title: string; charts: { slug: string; title: string }[] };
 type AccessData = {
   actor: { id: string; username: string; name: string; role: Role; bootstrap: boolean };
   users: User[]; projects: Project[];
@@ -53,7 +53,7 @@ function UserEditor({ user, data, pending, save }: { user: User; data: AccessDat
         <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={active} disabled={pending} onChange={event => setActive(event.target.checked)} />활성 계정</label>
       </div>
       <p className="text-[12px] text-[var(--bi-muted)]">{role === "ADMIN" ? "관리자는 회사 프로젝트 전체를 관리하며, 개인 프로젝트는 별도로 권한을 지정합니다." : "프로젝트별로 접근 불가, 열람, 편집 권한을 지정하세요."} 권한 변경은 재로그인 없이 다음 요청부터 적용됩니다. 화면의 메뉴와 버튼은 새로고침하면 갱신됩니다. 계정을 비활성화하면 기존 세션이 종료됩니다.</p>
-      <div className="grid gap-3 sm:grid-cols-2">{data.projects.filter(project => role === "MEMBER" || isPersonalProject(project.slug)).map(project => <div key={project.slug} className="space-y-1"><span className="text-[12px]">{isPersonalProject(project.slug) ? "[개인] " : "[회사] "}{project.title}</span><Dropdown ariaLabel={`${user.username} ${project.title} 권한`} value={memberships.find(item => item.projectSlug === project.slug)?.role ?? ""} options={permissionOptions} disabled={pending} onChange={value => setMemberships(current => [...current.filter(item => item.projectSlug !== project.slug), ...(value ? [{ projectSlug: project.slug, role: value as Membership["role"] }] : [])])} /></div>)}</div>
+      <div className="grid gap-3 sm:grid-cols-2">{data.projects.filter(project => role === "MEMBER" || isPersonalProject(project)).map(project => <div key={project.slug} className="space-y-1"><span className="text-[12px]">{isPersonalProject(project) ? "[개인] " : "[회사] "}{project.title}</span><Dropdown ariaLabel={`${user.username} ${project.title} 권한`} value={memberships.find(item => item.projectSlug === project.slug)?.role ?? ""} options={permissionOptions} disabled={pending} onChange={value => setMemberships(current => [...current.filter(item => item.projectSlug !== project.slug), ...(value ? [{ projectSlug: project.slug, role: value as Membership["role"] }] : [])])} /></div>)}</div>
       <div className="flex gap-2"><Button type="submit" loading={pending}>권한 저장</Button><Button variant="secondary" disabled={pending} onClick={() => setEditing(false)}>취소</Button></div>
     </form>}</div>}
     {!editable && <p className="mt-3 text-[12px] text-[var(--bi-muted)]">{user.role === "OWNER" ? "소유자는 항상 전체 권한을 유지합니다." : user.id === data.actor.id ? "자신의 권한은 변경할 수 없습니다." : "관리자 계정의 권한은 소유자만 변경할 수 있습니다."}</p>}
@@ -133,7 +133,7 @@ export function AccessManager() {
       <Section title="계정 및 프로젝트 권한"><p className="text-[12px] text-[var(--bi-muted)]">계정별 권한 편집 버튼으로 역할, 활성 상태와 프로젝트 권한을 언제든지 변경할 수 있습니다.</p>{data.users.length ? data.users.map(user => <UserEditor key={`${user.id}:${JSON.stringify(user)}`} user={user} data={data} pending={pending} save={save} />) : <p className="text-[12px] text-[var(--bi-muted)]">등록된 계정이 없습니다.</p>}</Section>
       <Section title="문서 읽기 전용 공유"><p className="text-[12px] text-[var(--bi-muted)]">링크를 가진 사람은 로그인 없이 선택한 회사 문서를 열람할 수 있습니다. 개인 프로젝트와 TNS ERD는 공유할 수 없습니다.</p>
         <form className="grid items-end gap-4 sm:grid-cols-2" onSubmit={event => { event.preventDefault(); void save({ action: "share", projectSlug, chartSlug, days: Number(days) }); }}>
-          <Dropdown ariaLabel="공유 프로젝트" value={projectSlug} options={data.projects.filter(project => !isPersonalProject(project.slug)).map(project => ({ value: project.slug, label: project.title }))} onChange={value => { setProjectSlug(value); setChartSlug(""); }} disabled={pending} />
+          <Dropdown ariaLabel="공유 프로젝트" value={projectSlug} options={data.projects.filter(project => !isPersonalProject(project)).map(project => ({ value: project.slug, label: project.title }))} onChange={value => { setProjectSlug(value); setChartSlug(""); }} disabled={pending} />
           <Dropdown ariaLabel="공유 문서" value={chartSlug} options={(selectedProject?.charts ?? []).map(chart => ({ value: chart.slug, label: chart.title }))} onChange={setChartSlug} disabled={pending || !projectSlug} />
           <Field label="공유 기간 (1~90일)" type="number" required min={1} max={90} step={1} value={days} onChange={event => setDays(event.target.value)} disabled={pending} />
           <Button type="submit" disabled={pending || !projectSlug || !chartSlug}>공유 링크 생성</Button>

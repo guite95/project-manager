@@ -76,7 +76,22 @@ model AppSetting {
   @@map("app_setting")
 }
 
+model ProjectRepository {
+  workspace   String
+  path        String
+  projectSlug String @map("project_slug")
+  project     FlowProject @relation(fields: [projectSlug], references: [slug], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([workspace, path])
+  @@index([projectSlug])
+  @@map("project_repository")
+}
+
 model FlowProject {
+  scope         String @default("COMPANY")
+  personalGroup String? @map("personal_group")
+  revision      Int @default(0)
+  repositories  ProjectRepository[]
   slug       String @id
   title      String
   intro      String?
