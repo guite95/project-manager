@@ -28,7 +28,7 @@ export async function getFlowProject(slug: string): Promise<FlowProject | undefi
 }
 
 export async function listFlowProjectNames() {
-  return prisma.flowProject.findMany({select:{slug:true,title:true,scope:true},orderBy:[{position:'asc'},{slug:'asc'}]});
+  return prisma.flowProject.findMany({select:{slug:true,title:true,scope:true,showInTasks:true},orderBy:[{position:'asc'},{slug:'asc'}]});
 }
 
 export async function getFlowDocument(projectSlug: string, slug: string) {

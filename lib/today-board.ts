@@ -408,7 +408,7 @@ export function moveProject(
  */
 export function groupIssuesByProject(
   issues: Issue[],
-  registryProjects: { slug: string; title: string; scope?: string }[],
+  registryProjects: { slug: string; title: string; scope?: string; showInTasks?: boolean }[],
   customProjects: CustomProject[] = [],
   projectOrder: string[] = [],
 ): IssueGroup[] {
@@ -425,7 +425,7 @@ export function groupIssuesByProject(
   });
 
   const byDefault: IssueGroup[] = [
-    ...registryProjects.map((project) => groupFor(project, false)),
+    ...registryProjects.filter(project => project.showInTasks !== false).map((project) => groupFor(project, false)),
     ...customProjects.map((project) => groupFor(project, true)),
   ];
 

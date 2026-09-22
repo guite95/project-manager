@@ -119,8 +119,8 @@ export async function loadBoard(today: string): Promise<TodayBoard> {
 }
 
 /** 목록 맨 뒤 자리를 준다. 목록이 비어 있으면 0. */
-async function nextPosition(placement: Placement): Promise<number> {
-  const last = await prisma.issue.findFirst({
+async function nextPosition(placement: Placement, client: Pick<typeof prisma, 'issue'> = prisma): Promise<number> {
+  const last = await client.issue.findFirst({
     where: { placement },
     orderBy: { position: "desc" },
     select: { position: true },
@@ -134,19 +134,29 @@ export async function createIssue(input: {
   title: string;
   now: string;
 }): Promise<Issue> {
-  const row = await prisma.issue.create({
-    data: {
-      id: input.id,
-      projectSlug: input.projectSlug,
-      title: input.title,
-      createdAt: new Date(input.now),
-      placement: "pool",
-      todayDate: null,
-      done: false,
-      position: await nextPosition("pool"),
-    },
+  return prisma.$transaction(async tx => {
+    // 프로젝트 표시 변경과 이슈 추가가 교차할 때도 잠금 순서대로 판정한다.
+    const projects = await tx.$queryRaw<{ showInTasks: boolean }[]>`SELECT show_in_tasks AS "showInTasks" FROM flow_project WHERE slug = ${input.projectSlug} FOR SHARE`;
+    if (projects[0]?.showInTasks === false) throw new IssueProjectHiddenError();
+    const row = await tx.issue.create({
+      data: {
+        id: input.id,
+        projectSlug: input.projectSlug,
+        title: input.title,
+        createdAt: new Date(input.now),
+        placement: "pool",
+        todayDate: null,
+        done: false,
+        position: await nextPosition("pool", tx),
+      },
+    });
+    return toIssue(row);
   });
-  return toIssue(row);
+}
+
+export class IssueProjectHiddenError extends Error {
+  status = 409;
+  constructor() { super('할 일 표시가 해제된 프로젝트입니다. 설정에서 표시를 켠 뒤 추가하세요.'); }
 }
 
 /**

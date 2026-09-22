@@ -88,6 +88,7 @@ model ProjectRepository {
 }
 
 model FlowProject {
+  showInTasks   Boolean @default(true) @map("show_in_tasks")
   scope         String @default("COMPANY")
   personalGroup String? @map("personal_group")
   revision      Int @default(0)

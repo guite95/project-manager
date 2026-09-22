@@ -3,13 +3,14 @@ export type ProjectScope = 'COMPANY' | 'PERSONAL';
 export type RepositoryLink = { workspace: 'UK' | 'PROJECTS'; path: string };
 export type ManagedProject = {
   slug: string; title: string; scope: ProjectScope; personalGroup: string | null;
-  revision: number; repositories: RepositoryLink[];
+  revision: number; showInTasks: boolean; repositories: RepositoryLink[];
 };
 export class ProjectRegistryError extends Error {
   status: number;
   constructor(message: string, status = 400) { super(message); this.status = status; }
 }
 export function projectInput(input: Record<string, unknown>) {
+  if (input.showInTasks !== undefined && typeof input.showInTasks !== 'boolean') throw new ProjectRegistryError('할 일 표시 여부를 확인하세요.');
   const title = typeof input.title === 'string' ? input.title.trim() : '';
   if (!title || title.length > 100) throw new ProjectRegistryError('프로젝트 이름은 1~100자로 입력하세요.');
   if (!Array.isArray(input.repositories) || input.repositories.length > 50) throw new ProjectRegistryError('연결 저장소는 50개까지 등록할 수 있습니다.');

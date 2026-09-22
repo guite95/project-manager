@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireActor, jsonBody, accessResponse } from '@/lib/access/http';
-import { listManagedProjects, saveManagedProject } from '@/lib/server/project-registry-store';
+import { listManagedProjects, saveManagedProject, setProjectTaskVisibility } from '@/lib/server/project-registry-store';
 import { ProjectRegistryError } from '@/lib/project-registry';
 
 async function response(action: () => Promise<unknown>) {
@@ -28,6 +28,9 @@ export async function PATCH(request: Request) {
     const actor = await requireActor();
     const body = await jsonBody(request);
     if (typeof body.slug !== 'string' || !body.slug) throw new ProjectRegistryError('프로젝트를 선택하세요.');
+    if (Object.keys(body).every(key => ['slug', 'revision', 'showInTasks'].includes(key))) {
+      return setProjectTaskVisibility(actor, body.slug, body.showInTasks, body.revision);
+    }
     return saveManagedProject(actor, body, body.slug);
   });
 }

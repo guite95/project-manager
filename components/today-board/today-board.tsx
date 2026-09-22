@@ -35,7 +35,30 @@ import {
   type TodayItem,
 } from "@/lib/today-board";
 
-export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;title:string;scope?:string}[] }) {
+type TaskProject = { slug: string; title: string; scope?: string; showInTasks?: boolean };
+export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }) {
+  const [projects, setProjects] = useState(flowProjects);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  useEffect(() => { setProjects(flowProjects); }, [flowProjects]);
+  useEffect(() => {
+    const abort = new AbortController();
+    let pending = false;
+    const refresh = async () => {
+      if (pending || document.hidden) return;
+      pending = true;
+      try {
+        const response = await fetch('/api/task-projects', { cache: 'no-store', signal: abort.signal });
+        if (!response.ok) throw new Error();
+        const next = await response.json() as TaskProject[];
+        if (!abort.signal.aborted) { setProjects(next); setProjectError(null); }
+      } catch { if (!abort.signal.aborted) setProjectError('프로젝트 표시 설정을 갱신하지 못했습니다. 잠시 후 다시 시도합니다.'); }
+      finally { pending = false; }
+    };
+    void refresh();
+    const timer = setInterval(refresh, 15_000);
+    window.addEventListener('focus', refresh); document.addEventListener('visibilitychange', refresh);
+    return () => { abort.abort(); clearInterval(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, []);
   // null 은 "아직 서버에서 안 받아옴". 서버 렌더와 어긋나지 않도록 첫 렌더에서는
   // 안내만 보여준다.
   const [board, setBoard] = useState<TodayBoard | null>(null);
@@ -123,11 +146,6 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
     [reload],
   );
 
-  const projects = useMemo(
-    () => flowProjects.map(({ slug, title, scope }) => ({ slug, title, scope })),
-    [flowProjects],
-  );
-
   const customProjects = board?.customProjects ?? [];
 
   const projectTitles = useMemo(() => {
@@ -156,10 +174,10 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
   // 두 탭의 프로젝트 순서를 함께 보존한다. 미분류와 개인 공용 목록은 고정한다.
   const orderedSlugs = useMemo(
     () =>
-      allGroups
+      groupIssuesByProject([], projects.map(project => ({ ...project, showInTasks: true })), customProjects, board?.projectOrder ?? [])
         .map((group) => group.slug)
         .filter((slug): slug is string => slug !== null && slug !== PERSONAL_ISSUES_SLUG),
-    [allGroups],
+    [projects, customProjects, board?.projectOrder],
   );
 
   // 서버가 id 를 만드므로 응답을 받은 뒤 상태에 넣는다.
@@ -305,12 +323,12 @@ export function TodayBoardView({ flowProjects }: { flowProjects: {slug:string;ti
       <p aria-live="polite" className="sr-only">
         {announcement}
       </p>
-      {storageError ? (
+      {storageError || projectError ? (
         <p
           aria-live="polite"
           className="mt-3 text-[11px] text-[var(--bi-error)]"
         >
-          {storageError}
+          {storageError || projectError}
         </p>
       ) : null}
     </div>

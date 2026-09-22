@@ -8,7 +8,7 @@ import { useAccess } from '@/components/access/context';
 import type { ManagedProject, ProjectScope, RepositoryLink } from '@/lib/project-registry';
 
 const field = 'mt-1 w-full rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 py-2 text-[12px]';
-export function ProjectEditor({ scope, slug }: { scope: ProjectScope; slug?: string }) {
+export function ProjectEditor({ scope, slug, onSaved, addLabel = '프로젝트 추가' }: { scope: ProjectScope; slug?: string; onSaved?: () => void; addLabel?: string }) {
   const { role } = useAccess();
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -19,6 +19,7 @@ export function ProjectEditor({ scope, slug }: { scope: ProjectScope; slug?: str
   const [title, setTitle] = useState('');
   const [revision, setRevision] = useState(0);
   const [group, setGroup] = useState('PORTFOLIO');
+  const [showInTasks, setShowInTasks] = useState(true);
   const [repositories, setRepositories] = useState<RepositoryLink[]>([]);
   const allowed = role === 'OWNER' || role === 'ADMIN' && scope === 'COMPANY';
 
@@ -38,7 +39,8 @@ export function ProjectEditor({ scope, slug }: { scope: ProjectScope; slug?: str
         const project = (data as ManagedProject[]).find(item => item.slug === slug);
         if (!project) throw new Error('프로젝트를 찾을 수 없습니다.');
         setTitle(project.title); setRevision(project.revision); setRepositories(project.repositories); setGroup(project.personalGroup ?? 'PORTFOLIO');
-      } else { setTitle(''); setRepositories([]); setGroup('PORTFOLIO'); }
+        setShowInTasks(project.showInTasks);
+      } else { setTitle(''); setRepositories([]); setGroup('PORTFOLIO'); setShowInTasks(true); }
       setOpen(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : '프로젝트를 불러오지 못했습니다.'); }
     finally { setLoading(false); }
@@ -48,16 +50,16 @@ export function ProjectEditor({ scope, slug }: { scope: ProjectScope; slug?: str
     try {
       const response = await fetch('/api/project-registry', {
         method: slug ? 'PATCH' : 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({slug,revision,title,scope,personalGroup:scope === 'PERSONAL' ? group : null,repositories}),
+        body: JSON.stringify({slug,revision,title,scope,personalGroup:scope === 'PERSONAL' ? group : null,repositories,showInTasks}),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message ?? '프로젝트를 저장하지 못했습니다.');
-      setOpen(false); router.refresh();
+      setOpen(false); onSaved?.(); router.refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : '프로젝트를 저장하지 못했습니다.'); }
     finally { setSaving(false); }
   };
   return <>
-    <Button variant={slug ? 'secondary' : 'primary'} size="sm" loading={loading} onClick={() => void edit()}>{slug ? '프로젝트 수정' : '프로젝트 추가'}</Button>
+    <Button variant={slug ? 'secondary' : 'primary'} size="sm" loading={loading} onClick={() => void edit()}>{slug ? '프로젝트 수정' : addLabel}</Button>
     {!open && error ? <p role="alert" className="text-[12px] text-[var(--bi-error)]">{error}</p> : null}
     <dialog ref={dialog} aria-label={slug ? '프로젝트 수정' : '프로젝트 추가'} onCancel={event => {event.preventDefault();close();}}
       className="fixed inset-0 m-auto max-h-[85vh] w-[min(600px,calc(100vw-32px))] overflow-y-auto rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-5 text-[var(--bi-fg)] backdrop:bg-black/40">
@@ -65,6 +67,7 @@ export function ProjectEditor({ scope, slug }: { scope: ProjectScope; slug?: str
         <h2 className="text-[16px] font-semibold">{scope === 'PERSONAL' ? '개인' : '풀링'} 프로젝트 {slug ? '수정' : '추가'}</h2>
         <fieldset disabled={saving} className="space-y-4">
           <label className="block text-[12px]">프로젝트 이름<input autoFocus required maxLength={100} className={field} value={title} onChange={event => setTitle(event.target.value)} /></label>
+          <div><label className="flex items-center gap-2 text-[12px]"><input type="checkbox" className="h-4 w-4 accent-[var(--bi-accent)]" checked={showInTasks} onChange={event => setShowInTasks(event.target.checked)} />할 일에 표시</label><p className="mt-1 text-[11px] text-[var(--bi-muted)]">해제해도 기존 이슈·오늘의 할 일·완료 기록은 보존됩니다.</p></div>
           {scope === 'PERSONAL' && !slug ? <div className="space-y-1 text-[12px]"><span>분류</span><Dropdown ariaLabel="프로젝트 분류" value={group} options={[{value:'PORTFOLIO',label:'포폴용 프로젝트'},{value:'TOY',label:'토이 프로젝트'}]} onChange={setGroup} /></div> : null}
           <div className="space-y-2">
             <div className="flex items-center justify-between"><h3 className="text-[12px] font-semibold">연결 저장소</h3><Button variant="secondary" size="sm" disabled={repositories.length >= 50} onClick={() => setRepositories(rows => [...rows,{workspace:scope === 'PERSONAL' ? 'UK' : 'PROJECTS',path:''}])}>저장소 추가</Button></div>
