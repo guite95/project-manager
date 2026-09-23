@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Background, Controls, PanOnScrollMode, ReactFlow, ReactFlowProvider } from '@xyflow/react';
+import { Background, Controls, PanOnScrollMode, ReactFlow, ReactFlowProvider, useNodesState, type Edge, type Node } from '@xyflow/react';
 import { Button } from '../erp/button';
 import { Dropdown } from '../erp/dropdown';
 import { FlowNode } from './flow-node';
@@ -14,6 +14,23 @@ import type { FlowChart, FlowLayout, FlowPort } from './types';
 const nodeTypes = { flow: FlowNode, flowGroup: GroupNode };
 const edgeTypes = { flowRoute: RouteEdge };
 const ports = [{ value: '', label: '자동' }, { value: 'left', label: '왼쪽' }, { value: 'right', label: '오른쪽' }, { value: 'top', label: '위' }, { value: 'bottom', label: '아래' }];
+
+function EditorCanvas({ initialNodes, edges, onNodeDragStop, onEdgeClick, onPaneClick }: {
+  initialNodes: Node[]; edges: Edge[]; onNodeDragStop: (node: Node) => void;
+  onEdgeClick: (id: string) => void; onPaneClick: () => void;
+}) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  // 저장 배치나 연결점이 바뀔 때만 전체 노드를 교체한다. 드래그 중에는
+  // React Flow의 position 변경만 적용해 Dagre 재계산을 피한다.
+  useEffect(() => setNodes(initialNodes), [initialNodes, setNodes]);
+  return <ReactFlowProvider><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+    onNodesChange={onNodesChange} onNodeDragStop={(_, node) => onNodeDragStop(node)}
+    onEdgeClick={(_, edge) => onEdgeClick(edge.id)} onPaneClick={onPaneClick}
+    panOnScroll panOnScrollMode={PanOnScrollMode.Free} zoomOnScroll={false} zoomOnPinch
+    nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} fitView minZoom={0.02} maxZoom={2} zoomOnDoubleClick={false}>
+    <Background /><Controls showInteractive={false} />
+  </ReactFlow></ReactFlowProvider>;
+}
 
 export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
   chart: FlowChart; projectSlug: string; onClose: () => void; onSaved: (chart: FlowChart) => void;
@@ -45,7 +62,7 @@ export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
   function route(patch: FlowLayout['edges'][string]) {
     change({ ...layout, edges: { ...layout.edges, [selected]: { ...layout.edges[selected], ...patch } } });
   }
-  const nodes = rendered.nodes.map(n => ({ ...n, draggable: n.type === 'flow' && !saving, selectable: n.type === 'flow' }));
+  const nodes = useMemo(() => rendered.nodes.map(n => ({ ...n, draggable: n.type === 'flow' && !saving, selectable: n.type === 'flow' })), [rendered.nodes, saving]);
   const edges = rendered.edges.map(e => ({ ...e, type: 'flowRoute', selected: e.id === selected,
     data: { ...e.data, waypoints: layout.edges[e.id]?.waypoints, movePoint: (id: string, index: number, point: { x: number; y: number }) => {
       if (saving) return;
@@ -91,12 +108,8 @@ export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
       </>}
     </div>
     {error && <p role="alert" className="px-3 py-2 text-red-600">{error} 변경한 배치는 JSON으로 내려받을 수 있습니다.</p>}
-    {!base ? <p className="p-4">{error ? '불러오기 실패' : '최신 차트를 불러오는 중…'}</p> : <div className="min-h-0 flex-1"><ReactFlowProvider><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes}
-      onNodeDrag={(_, node) => { setLayout(current => ({ ...current, nodes: { ...current.nodes, [node.id]: node.position } })); setDirty(true); }}
-      onEdgeClick={(_, edge) => setSelected(edge.id)} onPaneClick={() => setSelected('')}
-      panOnScroll panOnScrollMode={PanOnScrollMode.Free} zoomOnScroll={false} zoomOnPinch
-      nodesConnectable={false} edgesReconnectable={false} deleteKeyCode={null} fitView minZoom={0.02} maxZoom={2} zoomOnDoubleClick={false}>
-      <Background /><Controls showInteractive={false} />
-    </ReactFlow></ReactFlowProvider></div>}
+    {!base ? <p className="p-4">{error ? '불러오기 실패' : '최신 차트를 불러오는 중…'}</p> : <div className="min-h-0 flex-1"><EditorCanvas initialNodes={nodes} edges={edges}
+      onNodeDragStop={node => { setLayout(current => ({ ...current, nodes: { ...current.nodes, [node.id]: node.position } })); setDirty(true); }}
+      onEdgeClick={setSelected} onPaneClick={() => setSelected('')} /></div>}
   </div>, document.body);
 }
