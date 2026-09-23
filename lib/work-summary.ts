@@ -272,9 +272,9 @@ export function groupWorkSummary(report: WorkSummary) {
   }
   return [...groups.values()];
 }
-export function formatWorkSummary(report: WorkSummary): string {
+export function formatWorkSummary(report: WorkSummary, companyProjectKeys: ReadonlySet<string>): string {
   const groups = groupWorkSummary(report).filter(
-    (group) => group.key !== `app:${PERSONAL_ISSUES_SLUG}`,
+    (group) => group.key !== `app:${PERSONAL_ISSUES_SLUG}` && companyProjectKeys.has(group.key),
   );
   if (!groups.length) return "";
   const [, month, day] = report.evidence.date.split("-");

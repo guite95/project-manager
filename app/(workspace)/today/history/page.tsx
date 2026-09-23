@@ -29,6 +29,7 @@ export default async function TodayHistoryPage({
     ? query.date
     : (dates[0] ?? todayInSeoul());
   const report = summaryView ? await loadWorkSummary(date) : null;
+  const flowProjects = await listFlowProjectNames();
   return (
     <div className="mx-auto max-w-[1200px]">
       <PageHeader
@@ -78,9 +79,10 @@ export default async function TodayHistoryPage({
             report={report}
             date={date}
             dates={dates}
+            companyProjectKeys={flowProjects.filter(project => project.scope === "COMPANY").map(project => `app:${project.slug}`)}
           />
         ) : (
-          <CompletionHistory flowProjects={await listFlowProjectNames()} />
+          <CompletionHistory flowProjects={flowProjects} />
         )}
       </div>
     </div>

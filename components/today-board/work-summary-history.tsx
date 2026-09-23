@@ -34,10 +34,12 @@ export function WorkSummaryHistory({
   report,
   date,
   dates,
+  companyProjectKeys,
 }: {
   report: WorkSummary | null;
   date: string;
   dates: string[];
+  companyProjectKeys: string[];
 }) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
@@ -46,10 +48,11 @@ export function WorkSummaryHistory({
   const sources = new Map(report?.evidence.sources.map((s) => [s.id, s]) ?? []);
   const warnings =
     report?.evidence.repositories.filter((r) => r.status !== "ok") ?? [];
+  const copyText = report ? formatWorkSummary(report, new Set(companyProjectKeys)) : "";
   const copy = async () => {
-    if (!report) return;
+    if (!copyText) return;
     try {
-      await navigator.clipboard.writeText(formatWorkSummary(report));
+      await navigator.clipboard.writeText(copyText);
       setCopyState("copied");
     } catch {
       setCopyState("failed");
@@ -92,7 +95,7 @@ export function WorkSummaryHistory({
           <Button
             variant="secondary"
             size="sm"
-            disabled={!report?.summary.items.length}
+            disabled={!copyText}
             onClick={copy}
           >
             <HiOutlineClipboardCopy aria-hidden size={14} />
