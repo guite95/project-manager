@@ -8,6 +8,7 @@ import { EditButton, InlineEdit } from "@/components/inline-edit";
 import {
   ISSUE_DRAG_TYPE,
   UNGROUPED_TITLE,
+  parseIssueDragIds,
   type TodayItem,
 } from "@/lib/today-board";
 
@@ -18,7 +19,7 @@ type TodayListProps = {
   onToggle: (item: TodayItem) => void;
   onRename: (item: TodayItem, title: string) => void;
   onReturn: (item: TodayItem) => void;
-  onDropIssue: (issueId: string) => void;
+  onDropIssues: (issueIds: string[]) => void;
 };
 
 /** "2026-09-09" → "9월 9일 (수)". 클라이언트에서만 렌더하므로 하이드레이션 걱정이 없다. */
@@ -39,7 +40,7 @@ export function TodayList({
   onToggle,
   onRename,
   onReturn,
-  onDropIssue,
+  onDropIssues,
 }: TodayListProps) {
   const [dragOver, setDragOver] = useState(false);
   // 한 번에 한 항목만 편집한다.
@@ -86,8 +87,8 @@ export function TodayList({
           if (!event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) return;
           event.preventDefault();
           setDragOver(false);
-          const issueId = event.dataTransfer.getData(ISSUE_DRAG_TYPE);
-          if (issueId) onDropIssue(issueId);
+          const issueIds = parseIssueDragIds(event.dataTransfer.getData(ISSUE_DRAG_TYPE));
+          if (issueIds.length) onDropIssues(issueIds);
         }}
       >
         {items.length === 0 ? (

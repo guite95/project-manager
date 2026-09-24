@@ -8,6 +8,7 @@ import {
   deleteProjectRequest,
   fetchBoard,
   patchIssue,
+  postIssueBatch,
   postImport,
   postIssue,
   putSettings,
@@ -22,11 +23,13 @@ import {
   splitIssuePoolGroups,
   PERSONAL_ISSUES_SLUG,
   moveProject,
+  moveIssuesToProject,
   removeIssue,
   removeProject,
   renameIssue,
   returnToPool,
   sendToToday,
+  sendIssuesToToday,
   todayDateString,
   toggleDone,
   type Issue,
@@ -201,30 +204,17 @@ export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }
   ) => {
     if (!board) return;
     const tabGroups = personalGroups.some(group => group.slug === slug) ? personalGroups : groups;
-    if (!tabGroups.some(group => group.slug === targetSlug)) return;
+    if (!tabGroups.some(group => group.slug === slug && group.slug !== PERSONAL_ISSUES_SLUG) ||
+        !tabGroups.some(group => group.slug === targetSlug && group.slug !== PERSONAL_ISSUES_SLUG)) return;
     const next = moveProject(board, orderedSlugs, slug, targetSlug, position);
+    if (next === board) return;
     setBoard(next);
+    setAnnouncement(`${projectTitles[slug] ?? slug} 프로젝트 순서를 변경했습니다.`);
     void sync(() =>
       putSettings({
         projectOrder: next.projectOrder,
         collapsedProjects: next.collapsedProjects,
       }),
-    );
-  };
-
-  /** 위/아래 버튼 — 한 칸 옮기기를 이웃 기준 이동으로 옮겨 적는다. */
-  const handleStepProject = (slug: string, delta: -1 | 1) => {
-    const tabGroups = personalGroups.some(group => group.slug === slug) ? personalGroups : groups;
-    const tabSlugs = tabGroups.map(group => group.slug)
-      .filter((entry): entry is string => entry !== null && entry !== PERSONAL_ISSUES_SLUG);
-    const from = tabSlugs.indexOf(slug);
-    const neighbour = tabSlugs[from + delta];
-    if (from === -1 || !neighbour) return;
-    handleMoveProject(slug, neighbour, delta === -1 ? "before" : "after");
-    setAnnouncement(
-      `${projectTitles[slug] ?? slug} 프로젝트를 ${
-        delta === -1 ? "위로" : "아래로"
-      } 옮겼습니다.`,
     );
   };
 
@@ -288,12 +278,22 @@ export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }
     );
   }
 
-  // 드롭은 id 만 넘어온다. 안내 문구를 만들려면 현재 보드에서 항목을 찾아야 하는데,
-  // setBoard 업데이터는 순수해야 하므로 여기 밖에서 찾는다.
-  const handleDropIssue = (issueId: string) => {
-    const issue = board.issues.find((item) => item.id === issueId);
-    if (!issue) return;
-    handleSendToToday(issue);
+  const handleDropIssues = (ids: string[]) => {
+    const available = new Set(board.issues.map((item) => item.id));
+    if (!ids.length || ids.some((id) => !available.has(id))) return;
+    setBoard((current) => current ? sendIssuesToToday(current, ids) : current);
+    setAnnouncement(`${ids.length}개 할 일을 오늘의 할 일로 옮겼습니다.`);
+    void sync(() => postIssueBatch(ids, { action: "today" }));
+  };
+
+  const handleDropIssuesToProject = (ids: string[], projectSlug: string) => {
+    const target = [...groups, ...personalGroups].find((group) => group.slug === projectSlug);
+    if (!target?.canAdd || !ids.length) return;
+    const selected = ids.map((id) => board.issues.find((item) => item.id === id));
+    if (selected.some((item) => !item) || selected.every((item) => item?.projectSlug === projectSlug)) return;
+    setBoard((current) => current ? moveIssuesToProject(current, ids, projectSlug) : current);
+    setAnnouncement(`${ids.length}개 할 일을 ${target.title} 프로젝트로 옮겼습니다.`);
+    void sync(() => postIssueBatch(ids, { action: "project", projectSlug }));
   };
 
   return (
@@ -302,7 +302,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }
         <TodayList
           date={today}
           items={board.today}
-          onDropIssue={handleDropIssue}
+          onDropIssues={handleDropIssues}
           onRename={handleRename}
           onReturn={handleReturn}
           onToggle={handleToggle}
@@ -316,7 +316,8 @@ export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }
           onRemoveProject={handleRemoveProject}
           onRename={handleRename}
           onSendToToday={handleSendToToday}
-          onStepProject={handleStepProject}
+          onMoveProject={handleMoveProject}
+          onDropIssuesToProject={handleDropIssuesToProject}
         />
       </div>
 

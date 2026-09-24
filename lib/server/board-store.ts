@@ -9,6 +9,7 @@
 import { prisma } from "../db.ts";
 import type { ProjectNote } from "../project-notes.ts";
 import { planRollover } from "../rollover.ts";
+import { PERSONAL_ISSUES_SLUG } from "../today-board.ts";
 import type {
   CustomProject,
   Issue,
@@ -157,6 +158,73 @@ export async function createIssue(input: {
 export class IssueProjectHiddenError extends Error {
   status = 409;
   constructor() { super('할 일 표시가 해제된 프로젝트입니다. 설정에서 표시를 켠 뒤 추가하세요.'); }
+}
+
+export class IssueBatchError extends Error {
+  readonly status: 400 | 409;
+  constructor(message: string, status: 400 | 409 = 409) {
+    super(message);
+    this.status = status;
+  }
+}
+
+export async function movePoolIssues(input:
+  | { ids: string[]; action: "today"; today: string }
+  | { ids: string[]; action: "project"; projectSlug: string },
+): Promise<number> {
+  const { ids } = input;
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 5000 ||
+      ids.some((id) => typeof id !== "string" || !id || id.length > 128) ||
+      new Set(ids).size !== ids.length) {
+    throw new IssueBatchError("옮길 할 일 ID 목록이 올바르지 않습니다.", 400);
+  }
+  if (input.action === "project" && (!input.projectSlug || input.projectSlug.length > 128)) {
+    throw new IssueBatchError("대상 프로젝트가 올바르지 않습니다.", 400);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    if (input.action === "project" && input.projectSlug !== PERSONAL_ISSUES_SLUG) {
+      const flow = await tx.$queryRaw<{ showInTasks: boolean }[]>`SELECT show_in_tasks AS "showInTasks" FROM flow_project WHERE slug = ${input.projectSlug} FOR SHARE`;
+      if (flow[0]?.showInTasks === false) throw new IssueBatchError("할 일 표시가 해제된 프로젝트입니다.");
+      if (!flow.length) {
+        const custom = await tx.$queryRaw<{ slug: string }[]>`SELECT slug FROM custom_project WHERE slug = ${input.projectSlug} FOR SHARE`;
+        if (!custom.length) throw new IssueBatchError("대상 프로젝트를 찾을 수 없습니다.");
+      }
+    }
+
+    // 위치 부여와 대상 행 검증을 다른 이슈 변경과 직렬화한다.
+    await tx.$executeRaw`LOCK TABLE issue IN SHARE ROW EXCLUSIVE MODE`;
+    const rows = await tx.issue.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, placement: true, projectSlug: true },
+    });
+    if (rows.length !== ids.length || rows.some((row) => row.placement !== "pool")) {
+      throw new IssueBatchError("할 일 목록이 변경되었습니다. 새로고침 후 다시 선택하세요.");
+    }
+
+    if (input.action === "project") {
+      const changed = rows.filter((row) => row.projectSlug !== input.projectSlug).map((row) => row.id);
+      if (!changed.length) return 0;
+      const result = await tx.issue.updateMany({
+        where: { id: { in: changed }, placement: "pool" },
+        data: { projectSlug: input.projectSlug },
+      });
+      if (result.count !== changed.length) throw new IssueBatchError("할 일 이동 중 충돌이 발생했습니다.");
+      return result.count;
+    }
+
+    const firstPosition = await nextPosition("today", tx);
+    const payload = JSON.stringify(ids);
+    const updated = await tx.$executeRaw`
+      UPDATE issue AS i
+      SET placement = 'today', today_date = ${input.today}, done = false,
+          position = ${firstPosition} + picked.ordinality::int - 1
+      FROM jsonb_array_elements_text(${payload}::jsonb) WITH ORDINALITY AS picked(id, ordinality)
+      WHERE i.id = picked.id AND i.placement = 'pool'
+    `;
+    if (updated !== ids.length) throw new IssueBatchError("할 일 이동 중 충돌이 발생했습니다.");
+    return updated;
+  }, { isolationLevel: "Serializable", timeout: 15000 });
 }
 
 /**

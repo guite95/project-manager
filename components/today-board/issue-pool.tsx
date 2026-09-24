@@ -1,10 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import {
   HiOutlineArrowLeft,
-  HiOutlineChevronDown,
-  HiOutlineChevronUp,
   HiOutlinePlus,
   HiOutlineTrash,
 } from "react-icons/hi";
@@ -13,7 +11,9 @@ import { Button } from "@/components/erp/button";
 import {
   ISSUE_DRAG_TYPE,
   PERSONAL_ISSUES_SLUG,
+  PROJECT_DRAG_TYPE,
   issueGroupTabKey,
+  parseIssueDragIds,
   selectIssueGroup,
   type Issue,
   type IssueGroup,
@@ -27,7 +27,8 @@ type IssuePoolProps = {
   onRename: (issue: Issue, title: string) => void;
   onSendToToday: (issue: Issue) => void;
   onRemoveProject: (group: IssueGroup) => void;
-  onStepProject: (slug: string, delta: -1 | 1) => void;
+  onMoveProject: (slug: string, targetSlug: string, position: "before" | "after") => void;
+  onDropIssuesToProject: (issueIds: string[], projectSlug: string) => void;
 };
 
 const CATEGORY_TABS = [
@@ -45,7 +46,8 @@ export function IssuePool({
   onRename,
   onSendToToday,
   onRemoveProject,
-  onStepProject,
+  onMoveProject,
+  onDropIssuesToProject,
 }: IssuePoolProps) {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("project");
   const tabId = useId();
@@ -93,6 +95,14 @@ export function IssuePool({
             id={`${tabId}-${tab.id}-tab`}
             key={tab.id}
             onClick={() => setActiveCategory(tab.id)}
+            onDragOver={(event) => {
+              if (!event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) return;
+              event.preventDefault();
+              if (activeCategory !== tab.id) setActiveCategory(tab.id);
+            }}
+            onDrop={(event) => {
+              if (event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) event.preventDefault();
+            }}
             role="tab"
             tabIndex={activeCategory === tab.id ? 0 : -1}
             type="button"
@@ -116,7 +126,8 @@ export function IssuePool({
           onRemoveProject={onRemoveProject}
           onRename={onRename}
           onSendToToday={onSendToToday}
-          onStepProject={onStepProject}
+          onMoveProject={onMoveProject}
+          onDropIssuesToProject={onDropIssuesToProject}
         />
       </div>
       <div
@@ -133,7 +144,8 @@ export function IssuePool({
           onRemoveProject={onRemoveProject}
           onRename={onRename}
           onSendToToday={onSendToToday}
-          onStepProject={onStepProject}
+          onMoveProject={onMoveProject}
+          onDropIssuesToProject={onDropIssuesToProject}
         />
       </div>
     </section>
@@ -148,21 +160,37 @@ function IssueGroupTabs({
   onRemoveProject,
   onRename,
   onSendToToday,
-  onStepProject,
+  onMoveProject,
+  onDropIssuesToProject,
 }: { groups: IssueGroup[]; label: string } & Omit<
   IssuePoolProps,
   "groups" | "personalGroups"
 >) {
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [draggedSlug, setDraggedSlug] = useState<string | null>(null);
+  const [issueDropSlug, setIssueDropSlug] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    slug: string;
+    position: "before" | "after";
+  } | null>(null);
   const tabId = useId();
   const selectedGroup = selectIssueGroup(groups, activeKey);
   const selectedKey = selectedGroup ? issueGroupTabKey(selectedGroup) : null;
   const movable = groups.filter(
     (group) => group.slug !== null && group.slug !== PERSONAL_ISSUES_SLUG,
   );
-  const selectedIndex = selectedGroup
-    ? movable.findIndex((group) => group.slug === selectedGroup.slug)
-    : -1;
+
+  useEffect(() => {
+    const clearDropState = () => {
+      setDraggedSlug(null);
+      setDropTarget(null);
+      setIssueDropSlug(null);
+    };
+    window.addEventListener("dragend", clearDropState);
+    return () => {
+      window.removeEventListener("dragend", clearDropState);
+    };
+  }, []);
 
   if (!selectedGroup || !selectedKey) {
     return (
@@ -181,11 +209,21 @@ function IssueGroupTabs({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-      <div className="-mx-1 shrink-0 overflow-x-auto px-1 pb-1">
+      <div
+        className="-mx-1 shrink-0 overflow-x-auto px-1 pb-1"
+        onDragOver={(event) => {
+          if (!draggedSlug && !event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) return;
+          const bounds = event.currentTarget.getBoundingClientRect();
+          if (event.clientX < bounds.left + 32) event.currentTarget.scrollLeft -= 16;
+          else if (event.clientX > bounds.right - 32) event.currentTarget.scrollLeft += 16;
+        }}
+      >
         <div aria-label={label} className="flex min-w-max items-stretch gap-5" role="tablist">
           {groups.map((group, index) => {
             const key = issueGroupTabKey(group);
             const selected = key === selectedKey;
+            const canMove = group.slug !== null && group.slug !== PERSONAL_ISSUES_SLUG;
+            const canReceiveIssues = group.slug !== null && group.canAdd;
             return (
               <button
                 aria-controls={`${tabId}-panel`}
@@ -194,11 +232,82 @@ function IssueGroupTabs({
                   selected
                     ? "border-[var(--bi-accent)] font-semibold text-[var(--bi-accent)]"
                     : "border-transparent font-medium text-[var(--bi-muted)] hover:text-[var(--bi-fg)]"
+                } ${canMove ? "cursor-grab active:cursor-grabbing" : ""} ${
+                  draggedSlug !== null && draggedSlug === group.slug ? "opacity-50" : ""
+                } ${issueDropSlug !== null && issueDropSlug === group.slug ? "bg-blue-100" : ""
                 }`}
+                draggable={canMove}
                 id={`${tabId}-${index}-tab`}
                 key={key}
                 onClick={() => setActiveKey(key)}
+                onDragEnd={() => {
+                  setDraggedSlug(null);
+                  setDropTarget(null);
+                  setIssueDropSlug(null);
+                }}
+                onDragLeave={(event) => {
+                  if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+                  if (issueDropSlug === group.slug) setIssueDropSlug(null);
+                }}
+                onDragOver={(event) => {
+                  if (canReceiveIssues && event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setIssueDropSlug(group.slug);
+                    return;
+                  }
+                  if (!canMove || !draggedSlug || draggedSlug === group.slug ||
+                      !event.dataTransfer.types.includes(PROJECT_DRAG_TYPE)) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  const position = event.clientX < bounds.left + bounds.width / 2 ? "before" : "after";
+                  setDropTarget((current) =>
+                    current?.slug === group.slug && current.position === position
+                      ? current
+                      : { slug: group.slug as string, position },
+                  );
+                }}
+                onDragStart={(event) => {
+                  if (!canMove || !group.slug) return;
+                  event.dataTransfer.setData(PROJECT_DRAG_TYPE, group.slug);
+                  event.dataTransfer.effectAllowed = "move";
+                  setDraggedSlug(group.slug);
+                  setIssueDropSlug(null);
+                }}
+                onDrop={(event) => {
+                  if (canReceiveIssues && group.slug && event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) {
+                    event.preventDefault();
+                    setIssueDropSlug(null);
+                    const ids = parseIssueDragIds(event.dataTransfer.getData(ISSUE_DRAG_TYPE));
+                    if (ids.length) {
+                      onDropIssuesToProject(ids, group.slug);
+                      setActiveKey(key);
+                    }
+                    return;
+                  }
+                  if (!canMove || !group.slug || !draggedSlug || draggedSlug === group.slug) return;
+                  event.preventDefault();
+                  if (event.dataTransfer.getData(PROJECT_DRAG_TYPE) !== draggedSlug) return;
+                  const bounds = event.currentTarget.getBoundingClientRect();
+                  onMoveProject(
+                    draggedSlug,
+                    group.slug,
+                    event.clientX < bounds.left + bounds.width / 2 ? "before" : "after",
+                  );
+                  setDraggedSlug(null);
+                  setDropTarget(null);
+                }}
                 onKeyDown={(event) => {
+                  if (canMove && event.altKey && ["ArrowLeft", "ArrowRight"].includes(event.key)) {
+                    event.preventDefault();
+                    const from = movable.findIndex((entry) => entry.slug === group.slug);
+                    const neighbour = movable[from + (event.key === "ArrowLeft" ? -1 : 1)];
+                    if (neighbour?.slug && group.slug) {
+                      onMoveProject(group.slug, neighbour.slug, event.key === "ArrowLeft" ? "before" : "after");
+                    }
+                    return;
+                  }
                   if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
                     return;
                   }
@@ -212,7 +321,15 @@ function IssueGroupTabs({
                     [next]?.focus();
                 }}
                 role="tab"
+                style={
+                  dropTarget?.slug === group.slug
+                    ? { boxShadow: dropTarget.position === "before"
+                      ? "inset 3px 0 var(--bi-accent)"
+                      : "inset -3px 0 var(--bi-accent)" }
+                    : undefined
+                }
                 tabIndex={selected ? 0 : -1}
+                title={canMove ? `${group.title} 드래그 또는 Alt+방향키로 순서 변경` : group.title}
                 type="button"
               >
                 {group.title}
@@ -233,15 +350,12 @@ function IssueGroupTabs({
       >
         <ProjectIssues
           group={selectedGroup}
-          isFirst={selectedIndex <= 0}
-          isLast={selectedIndex === -1 || selectedIndex === movable.length - 1}
           key={selectedKey}
           onAdd={onAdd}
           onRemove={onRemove}
           onRemoveProject={onRemoveProject}
           onRename={onRename}
           onSendToToday={onSendToToday}
-          onStepProject={onStepProject}
         />
       </div>
     </div>
@@ -250,18 +364,13 @@ function IssueGroupTabs({
 
 function ProjectIssues({
   group,
-  isFirst,
-  isLast,
   onAdd,
   onRemove,
   onRemoveProject,
   onRename,
   onSendToToday,
-  onStepProject,
 }: {
   group: IssueGroup;
-  isFirst: boolean;
-  isLast: boolean;
 } & Pick<
   IssuePoolProps,
   | "onAdd"
@@ -269,11 +378,29 @@ function ProjectIssues({
   | "onRemoveProject"
   | "onRename"
   | "onSendToToday"
-  | "onStepProject"
 >) {
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const movable = group.slug !== null && group.slug !== PERSONAL_ISSUES_SLUG;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const allSelected =
+    group.issues.length > 0 && group.issues.every((issue) => selectedIds.has(issue.id));
+
+  useEffect(() => {
+    const currentIds = new Set(group.issues.map((issue) => issue.id));
+    setSelectedIds((previous) => {
+      const remaining = [...previous].filter((id) => currentIds.has(id));
+      return remaining.length === previous.size ? previous : new Set(remaining);
+    });
+  }, [group.issues]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const submit = () => {
     if (!group.slug || !draft.trim()) return;
@@ -282,42 +409,23 @@ function ProjectIssues({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
-      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--bi-border)] bg-[var(--bi-table-header)] px-3 py-2">
-        <span className="min-w-0 truncate text-[12px] font-semibold text-[var(--bi-fg)]">
-          {group.title}
-        </span>
-        <span className="shrink-0 text-[11px] text-[var(--bi-muted)]">
-          {group.issues.length}건
-        </span>
-        {movable && group.slug ? (
-          <span className="ml-auto flex shrink-0 items-center gap-0.5">
-            <Button
-              aria-label={`${group.title} 위로 옮기기`}
-              disabled={isFirst}
-              onClick={() => onStepProject(group.slug as string, -1)}
-              size="icon-sm"
-              title="위로 옮기기"
-              variant="ghost"
-            >
-              <HiOutlineChevronUp aria-hidden size={13} />
-            </Button>
-            <Button
-              aria-label={`${group.title} 아래로 옮기기`}
-              disabled={isLast}
-              onClick={() => onStepProject(group.slug as string, 1)}
-              size="icon-sm"
-              title="아래로 옮기기"
-              variant="ghost"
-            >
-              <HiOutlineChevronDown aria-hidden size={13} />
-            </Button>
-          </span>
-        ) : null}
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="flex shrink-0 items-center justify-between px-1">
+        <button
+          aria-label={`${group.title} 할 일 ${allSelected ? "전체선택 해제" : "전체선택"}`}
+          aria-pressed={allSelected}
+          className="rounded-[3px] text-[11px] font-medium text-[var(--bi-accent)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)] disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={group.issues.length === 0}
+          onClick={() =>
+            setSelectedIds(allSelected ? new Set() : new Set(group.issues.map((issue) => issue.id)))
+          }
+          type="button"
+        >
+          {allSelected ? "전체해제" : "전체선택"}
+        </button>
         {group.removable ? (
           <Button
             aria-label={`${group.title} 프로젝트 삭제`}
-            className={movable ? "" : "ml-auto"}
             onClick={() => onRemoveProject(group)}
             size="icon-sm"
             title="프로젝트 삭제"
@@ -328,6 +436,7 @@ function ProjectIssues({
         ) : null}
       </div>
 
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
       <ul className="m-0 min-h-0 flex-1 list-none overflow-y-auto p-0">
         {group.issues.length === 0 ? (
           <li className="px-3 py-8 text-center text-[11px] text-[var(--bi-muted)]">
@@ -336,14 +445,25 @@ function ProjectIssues({
         ) : (
           group.issues.map((issue) => (
             <li
-              className="flex items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0 data-[grabbable=true]:cursor-grab data-[grabbable=true]:active:cursor-grabbing"
+              className={`flex items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0 data-[grabbable=true]:cursor-grab data-[grabbable=true]:active:cursor-grabbing ${
+                selectedIds.has(issue.id)
+                  ? "bg-blue-100 hover:bg-blue-200"
+                  : "hover:bg-blue-50"
+              }`}
               data-grabbable={editingId !== issue.id}
               draggable={editingId !== issue.id}
               key={issue.id}
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest("button, input")) return;
+                toggleSelected(issue.id);
+              }}
               onDragStart={(event) => {
                 event.stopPropagation();
-                event.dataTransfer.setData(ISSUE_DRAG_TYPE, issue.id);
-                event.dataTransfer.setData("text/plain", issue.title);
+                const ids = selectedIds.has(issue.id)
+                  ? group.issues.filter((item) => selectedIds.has(item.id)).map((item) => item.id)
+                  : [issue.id];
+                event.dataTransfer.setData(ISSUE_DRAG_TYPE, JSON.stringify(ids));
+                event.dataTransfer.setData("text/plain", ids.length === 1 ? issue.title : `${ids.length}개 할 일`);
                 event.dataTransfer.effectAllowed = "move";
               }}
             >
@@ -358,9 +478,16 @@ function ProjectIssues({
                 }}
                 value={issue.title}
               >
-                <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--bi-fg)]">
+                <button
+                  aria-label={`${issue.title} 선택`}
+                  aria-pressed={selectedIds.has(issue.id)}
+                  className="min-w-0 flex-1 cursor-pointer truncate rounded-[3px] text-left text-[12px] text-[var(--bi-fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)]"
+                  onClick={() => toggleSelected(issue.id)}
+                  title={issue.title}
+                  type="button"
+                >
                   {issue.title}
-                </span>
+                </button>
               </InlineEdit>
               <Button
                 aria-label={`${issue.title} 오늘의 할 일로 보내기`}
@@ -411,6 +538,7 @@ function ProjectIssues({
           </Button>
         </form>
       ) : null}
+      </div>
     </div>
   );
 }

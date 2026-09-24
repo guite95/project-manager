@@ -42,6 +42,16 @@ export async function postIssue(
   return response.json();
 }
 
+export async function postIssueBatch(
+  ids: string[],
+  target: { action: "today" } | { action: "project"; projectSlug: string },
+): Promise<void> {
+  await request("/api/issues/batch", {
+    method: "POST",
+    body: JSON.stringify({ ids, ...target }),
+  });
+}
+
 export async function patchIssue(
   id: string,
   patch: { placement?: "pool" | "today"; done?: boolean; title?: string },

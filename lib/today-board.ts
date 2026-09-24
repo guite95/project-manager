@@ -61,6 +61,21 @@ export const TODAY_BOARD_STORAGE_KEY = "project-management.today-board.v1";
 /** dataTransfer 종류. 이슈 카드가 아닌 것을 끌어와도 드롭 영역이 반응하지 않게 한다. */
 export const ISSUE_DRAG_TYPE = "application/x-today-issue";
 
+/** 드래그 payload는 선택된 이슈 ID 배열이다. 이전 단일 ID 형식도 읽는다. */
+export function parseIssueDragIds(value: string): string[] {
+  if (!value) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    parsed = value;
+  }
+  const ids = Array.isArray(parsed) ? parsed : [parsed];
+  if (ids.length === 0 || ids.length > 5000 ||
+      ids.some((id) => typeof id !== "string" || !id || id.length > 128)) return [];
+  return [...new Set(ids as string[])];
+}
+
 /** 프로젝트 그룹 드래그. 이슈 드래그와 섞이지 않도록 종류를 나눈다. */
 export const PROJECT_DRAG_TYPE = "application/x-today-project";
 
@@ -282,12 +297,32 @@ export function removeIssue(board: TodayBoard, issueId: string): TodayBoard {
 }
 
 export function sendToToday(board: TodayBoard, issueId: string): TodayBoard {
-  const issue = board.issues.find((item) => item.id === issueId);
-  if (!issue) return board;
+  return sendIssuesToToday(board, [issueId]);
+}
+
+export function sendIssuesToToday(board: TodayBoard, issueIds: string[]): TodayBoard {
+  const ids = new Set(issueIds);
+  const moving = board.issues.filter((item) => ids.has(item.id));
+  if (moving.length === 0) return board;
   return {
     ...board,
-    issues: board.issues.filter((item) => item.id !== issueId),
-    today: [...board.today, { ...toIssue(issue), done: false }],
+    issues: board.issues.filter((item) => !ids.has(item.id)),
+    today: [...board.today, ...moving.map((item) => ({ ...toIssue(item), done: false }))],
+  };
+}
+
+export function moveIssuesToProject(
+  board: TodayBoard,
+  issueIds: string[],
+  projectSlug: string,
+): TodayBoard {
+  const ids = new Set(issueIds);
+  if (!board.issues.some((item) => ids.has(item.id) && item.projectSlug !== projectSlug)) return board;
+  return {
+    ...board,
+    issues: board.issues.map((item) =>
+      ids.has(item.id) ? { ...item, projectSlug } : item,
+    ),
   };
 }
 
