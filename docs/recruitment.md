@@ -22,3 +22,22 @@ pnpm db:shared -- node --experimental-strip-types scripts/import-recruitment.mjs
 inspect는 조회 전용이다. apply는 해시 일치, 기존 내용 대조, 대상 키·행 백업 및 해시 검증 후 SERIALIZABLE 트랜잭션으로 신규 행만 생성한다. 이미 동일한 문서는 건너뛰며, 기존 내용이 다르면 실패한다. 저장 후 전체 문서 내용을 재조회해 대조한다. 백업 경로는 새 파일이어야 한다. 공유 DB에서는 테스트를 실행하지 않는다.
 
 검증: `lib/recruitment.test.mjs`, `lib/server/recruitment-store.test.mjs`, `lib/server/recruitment-import.test.mjs`, `lib/access/policy.test.mjs`. DB 테스트는 `lib/server/test-db.mjs`가 허용하는 로컬 테스트 DB만 사용한다. 브라우저 검증은 사용자 요청 시에만 수행한다.
+
+## 지원용 정보 · 나만 보기
+
+`/portfolio`의 별도 접이식 영역에서 자격증·수상·어학 정보를 관리한다. 명칭, 발급·주관 기관, 취득·수상일, 자격증·등록 번호, 등급·점수·훈격, 만료일, 메모를 입력하고 각 값 또는 항목 전체를 복사할 수 있다. 날짜는 원문 정밀도를 유지하도록 `YYYY`, `YYYY-MM`, `YYYY-MM-DD`를 허용하고 번호는 앞자리 0을 보존하는 문자열로 저장한다. 모르는 값은 빈칸으로 둔다.
+
+내용은 공유 `app_setting`의 `recruitment:credentials`에 저장하며 코드·localStorage에 넣지 않는다. 포트폴리오 본문과 별도 저장하므로 채용 문서 목록·상세·내용 복사에 자동 포함되지 않는다. 현재 포트폴리오 자체도 OWNER 전용이며 공개 포트폴리오 기능을 추가하는 변경은 아니다. `/api/portfolio/credentials`의 GET/PUT은 기존 세션 기반 OWNER 검증을 직접 수행하고 PUT은 같은 출처와 JSON 입력을 확인한다. GET은 읽기 전용이고 응답은 `private, no-store`다.
+
+상세 영역을 열었을 때만 조회하며 편집 중에는 자동 갱신하지 않는다. 저장은 수정 버전과 기존 JSON 비교 조건을 모두 사용한다. 충돌 시 409를 반환하고 입력을 유지한다. 초기 이력서 자료에 있던 취득·수상일은 지원용 정보로 옮기고 일반 본문에서는 제거한다. 이후 본문에 수동으로 적은 정보는 자동으로 분류하거나 제거하지 않는다.
+
+기존 포트폴리오에서 정보를 분리할 때 `scripts/import-recruitment-credentials.mjs`를 사용한다. 입력 JSON에는 `documentId`, `expectedRevision`, `items` 및 정확한 문자열 변경 목록 `replacements`(sectionTitle/from/to/count)를 넣는다. 실제 개인정보가 들어 있는 입력 파일은 저장소 밖에 두고 작업 후 삭제한다.
+
+```sh
+pnpm db:shared -- node --experimental-strip-types scripts/import-recruitment-credentials.mjs inspect /absolute/path/input.json
+pnpm db:shared -- node --experimental-strip-types scripts/import-recruitment-credentials.mjs apply /absolute/path/input.json <inspect-sha256> /absolute/path/backup.json
+```
+
+등록 도구는 기존 지원용 정보가 있으면 덮어쓰지 않는다. 원본 문서 버전과 치환 횟수를 검증하고, 두 키의 이전 상태를 백업·해시 검증한 뒤 SERIALIZABLE 트랜잭션으로 분리한다. 저장 후 문서와 지원용 정보를 재조회해 모두 대조한다. 백업에는 기존 개인정보가 포함될 수 있으므로 Git 제외 경로에 권한 0600으로 보존한다.
+
+검증: `lib/recruitment-credentials.test.mjs`, `lib/server/recruitment-credentials-store.test.mjs`, `lib/server/recruitment-credentials-import.test.mjs`, `lib/access/policy.test.mjs`.
