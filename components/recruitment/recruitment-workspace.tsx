@@ -15,6 +15,8 @@ async function responseJson<T>(response: Response): Promise<T> {
 
 export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
   const experience = kind === 'EXPERIENCE';
+  const portfolio = kind === 'PORTFOLIO';
+  const projectLabel = portfolio ? '대상·용도' : experience ? '프로젝트' : '지원 회사';
   const [rows, setRows] = useState<RecruitmentSummary[]>([]);
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState('');
@@ -47,6 +49,10 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
     window.document.addEventListener('visibilitychange', refresh);
     return () => { abort.abort(); clearInterval(timer); window.removeEventListener('focus', refresh); window.document.removeEventListener('visibilitychange', refresh); };
   }, [kind, refreshVersion]);
+
+  useEffect(() => {
+    if (portfolio && !selectedId && !editing && rows.length) setSelectedId(rows[0].id);
+  }, [portfolio, selectedId, editing, rows]);
 
   useEffect(() => {
     if (!selectedId || editing) return;
@@ -86,7 +92,7 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
   const current = editing ? draft : document;
   function open(id: string) { setDocument(null); setSelectedId(id); setError(''); setNotice(''); }
   function create() {
-    const titles = experience ? ['상황·문제', '본인 작업', '산출물·결과', '확인된 근거', '미확인 사항', '추가할 내용'] : ['지원 회사·직무', '문항·글자 수', '활용할 경험 ID와 근거', '자기소개서 초안'];
+    const titles = portfolio ? ['프로필', '기술 역량', '프로젝트 경험', '협업과 커뮤니케이션', '학력·교육·자격·수상', '앞으로의 방향', '링크와 첨부 자료'] : experience ? ['상황·문제', '본인 작업', '산출물·결과', '확인된 근거', '미확인 사항', '추가할 내용'] : ['지원 회사·직무', '문항·글자 수', '활용할 경험 ID와 근거', '자기소개서 초안'];
     const newDocument: RecruitmentDocument = { id: crypto.randomUUID(), kind, title: '', project: '', scope: 'GENERAL', summary: '', tags: [], sections: titles.map(title => ({ title, body: '' })), sourceUrls: [], revision: 0, updatedAt: new Date().toISOString() };
     setSelectedId(newDocument.id); setDocument(null); setDraft(newDocument); setEditing(true); setError(''); setNotice('');
   }
@@ -112,20 +118,20 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
 
   return <div className="p-4 md:p-6">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="text-xs text-[var(--bi-muted)]">{experience ? '프로젝트별 경험과 근거를 정리하고, 필요한 내용을 복사해 자기소개서에 활용하세요.' : '지원 회사와 문항별로 초안을 작성하세요. 경험정리의 ID를 함께 남기면 근거를 다시 찾기 쉽습니다.'}</p>
-      <div className="flex gap-2"><Button variant="secondary" disabled={editing} onClick={() => { setError(''); setRefreshVersion(value => value + 1); }}>다시 불러오기</Button><Button disabled={editing} onClick={create}>{experience ? '경험 추가' : '자기소개서 작성'}</Button></div>
+      <p className="text-xs text-[var(--bi-muted)]">{portfolio ? '소개와 프로젝트 경험을 정리하세요. 편집한 내용은 저장 후 다른 기기에서도 확인할 수 있습니다.' : experience ? '프로젝트별 경험과 근거를 정리하고, 필요한 내용을 복사해 자기소개서에 활용하세요.' : '지원 회사와 문항별로 초안을 작성하세요. 경험정리의 ID를 함께 남기면 근거를 다시 찾기 쉽습니다.'}</p>
+      <div className="flex gap-2"><Button variant="secondary" disabled={editing} onClick={() => { setError(''); setRefreshVersion(value => value + 1); }}>다시 불러오기</Button><Button disabled={editing} onClick={create}>{portfolio ? '포트폴리오 추가' : experience ? '경험 추가' : '자기소개서 작성'}</Button></div>
     </div>
     {error && <p role="alert" className="mb-4 rounded border border-[var(--bi-error)] p-3 text-sm text-[var(--bi-error)]">{error}</p>}
     <p role="status" className="mb-2 text-xs text-[var(--bi-muted)]">{notice}</p>
     <div className="grid items-start gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="min-w-0 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)]" aria-label={experience ? '경험 목록' : '자기소개서 목록'}>
+      <aside className="min-w-0 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)]" aria-label={portfolio ? '포트폴리오 목록' : experience ? '경험 목록' : '자기소개서 목록'}>
         <div className="space-y-2 border-b border-[var(--bi-border)] p-3">
           <input aria-label="제목·요약·태그 검색" placeholder="제목·요약·태그 검색" className={field} value={query} onChange={event => setQuery(event.target.value)} />
-          <select aria-label={experience ? '프로젝트 필터' : '지원 회사 필터'} className={field} value={project} onChange={event => setProject(event.target.value)}><option value="">{experience ? '전체 프로젝트' : '전체 지원 회사'}</option>{projects.map(value => <option key={value} value={value}>{value}</option>)}</select>
+          <select aria-label={`${projectLabel} 필터`} className={field} value={project} onChange={event => setProject(event.target.value)}><option value="">{`전체 ${projectLabel}`}</option>{projects.map(value => <option key={value} value={value}>{value}</option>)}</select>
           <p className="text-xs text-[var(--bi-muted)]">{filtered.length}개{editing ? ' · 편집을 마치면 다른 문서를 열 수 있습니다.' : ''}</p>
         </div>
         <div className="max-h-[40vh] overflow-y-auto lg:max-h-[70vh]">
-          {!ready ? <p className="p-4 text-sm text-[var(--bi-muted)]">목록을 불러오는 중입니다.</p> : !filtered.length ? <p className="p-4 text-sm text-[var(--bi-muted)]">{rows.length ? '검색 결과가 없습니다.' : experience ? '등록된 경험이 없습니다.' : '아직 작성한 자기소개서가 없습니다.'}</p> : filtered.map(row => <button key={row.id} type="button" disabled={editing} aria-pressed={selectedId === row.id} onClick={() => open(row.id)} className={`block w-full border-b border-[var(--bi-border)] px-4 py-3 text-left last:border-b-0 disabled:cursor-default focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--bi-accent)] ${selectedId === row.id ? 'bg-[var(--bi-sidebar-active)]' : 'hover:bg-[var(--bi-bg)]'}`}>
+          {!ready ? <p className="p-4 text-sm text-[var(--bi-muted)]">목록을 불러오는 중입니다.</p> : !filtered.length ? <p className="p-4 text-sm text-[var(--bi-muted)]">{rows.length ? '검색 결과가 없습니다.' : portfolio ? '아직 작성한 포트폴리오가 없습니다.' : experience ? '등록된 경험이 없습니다.' : '아직 작성한 자기소개서가 없습니다.'}</p> : filtered.map(row => <button key={row.id} type="button" disabled={editing} aria-pressed={selectedId === row.id} onClick={() => open(row.id)} className={`block w-full border-b border-[var(--bi-border)] px-4 py-3 text-left last:border-b-0 disabled:cursor-default focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--bi-accent)] ${selectedId === row.id ? 'bg-[var(--bi-sidebar-active)]' : 'hover:bg-[var(--bi-bg)]'}`}>
             <span className="block text-[11px] text-[var(--bi-muted)]">{row.project || scopeLabels[row.scope]}</span><strong className="mt-1 block text-sm">{row.title}</strong><span className="mt-1 block line-clamp-2 text-xs leading-5 text-[var(--bi-muted)]">{row.summary}</span>
           </button>)}
         </div>
@@ -138,7 +144,7 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
           </div>
           {editing && draft ? <fieldset disabled={saving} className="min-w-0 space-y-5">
             <label className="block text-xs font-semibold">제목<input className={`${field} mt-1`} maxLength={200} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></label>
-            <div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-semibold">{experience ? '프로젝트' : '지원 회사'}<input className={`${field} mt-1`} maxLength={200} value={draft.project} onChange={event => setDraft({ ...draft, project: event.target.value })} /></label><label className="block text-xs font-semibold">구분<select className={`${field} mt-1`} value={draft.scope} onChange={event => setDraft({ ...draft, scope: event.target.value as RecruitmentScope })}>{Object.entries(scopeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+            <div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-semibold">{projectLabel}<input className={`${field} mt-1`} maxLength={200} value={draft.project} onChange={event => setDraft({ ...draft, project: event.target.value })} /></label><label className="block text-xs font-semibold">구분<select className={`${field} mt-1`} value={draft.scope} onChange={event => setDraft({ ...draft, scope: event.target.value as RecruitmentScope })}>{Object.entries(scopeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
             <label className="block text-xs font-semibold">요약<textarea className={`${field} mt-1`} rows={3} maxLength={2000} value={draft.summary} onChange={event => setDraft({ ...draft, summary: event.target.value })} /></label>
             <label className="block text-xs font-semibold">태그 (쉼표로 구분)<input className={`${field} mt-1`} value={draft.tags.join(',')} onChange={event => setDraft({ ...draft, tags: event.target.value.split(',') })} /></label>
             {draft.sections.map((section, index) => <div key={index} className="space-y-2 border-t border-[var(--bi-border)] pt-4">

@@ -1,8 +1,8 @@
 # 채용 자료
 
-채용 메뉴의 경험정리(`/recruitment/experiences`)와 자기소개서(`/recruitment/cover-letters`)는 OWNER 전용이다. 기존 포트폴리오는 그대로 유지한다.
+채용 메뉴의 포트폴리오(`/portfolio`), 경험정리(`/recruitment/experiences`)와 자기소개서(`/recruitment/cover-letters`)는 OWNER 전용이다. 포트폴리오는 처음 저장된 문서를 자동으로 열고 동일한 항목별 편집기를 사용한다.
 
-문서는 기존 공유 PostgreSQL의 `app_setting`에 `recruitment:document:<id>` 키로 저장한다. `kind`는 `EXPERIENCE` 또는 `COVER_LETTER`, `scope`는 `COMPANY`, `PERSONAL`, `GENERAL`이다. 제목·프로젝트(지원 회사)·요약·태그·본문 항목·출처 URL 및 `revision`, `updatedAt`을 보존한다. 테이블 추가나 마이그레이션은 없다. 자료 내용을 코드나 localStorage에 저장하지 않는다.
+문서는 기존 공유 PostgreSQL의 `app_setting`에 `recruitment:document:<id>` 키로 저장한다. `kind`는 `PORTFOLIO`, `EXPERIENCE` 또는 `COVER_LETTER`, `scope`는 `COMPANY`, `PERSONAL`, `GENERAL`이다. 제목·프로젝트(지원 회사)·요약·태그·본문 항목·출처 URL 및 `revision`, `updatedAt`을 보존한다. 테이블 추가나 마이그레이션은 없다. 자료 내용을 코드나 localStorage에 저장하지 않는다. 포트폴리오의 이력서 본문도 DB에만 보관하며 경험정리·자기소개서 목록과 분리한다. 초기 자료는 아래 등록 도구로 명시적으로 넣고 GET에서 생성하지 않는다.
 
 목록 GET은 본문과 출처를 제외한 요약만 조회한다. 상세 GET은 선택한 문서만 읽으며 GET은 데이터를 생성하지 않는다. PUT은 서버에서 OWNER와 같은 출처의 JSON 요청을 확인하고 내용을 검증한다. 신규 문서는 expectedRevision 0, 수정은 조회한 revision을 요구한다. 저장은 기존 JSON 전체를 비교한 조건부 갱신이며 충돌 시 409를 반환한다. 클라이언트는 실패한 편집 내용을 유지한다. 본문은 React 텍스트로 출력하며 HTML을 실행하지 않는다.
 

@@ -1,4 +1,4 @@
-export type RecruitmentKind = 'EXPERIENCE' | 'COVER_LETTER';
+export type RecruitmentKind = 'EXPERIENCE' | 'COVER_LETTER' | 'PORTFOLIO';
 export type RecruitmentScope = 'COMPANY' | 'PERSONAL' | 'GENERAL';
 export type RecruitmentDocumentInput = {
   kind: RecruitmentKind;
@@ -27,7 +27,7 @@ export function parseRecruitmentDocument(value: unknown): RecruitmentDocumentInp
     if (typeof value !== 'string' || value.length > max || required && !value.trim()) throw new RecruitmentError(`${name} 내용을 확인하세요. (최대 ${max.toLocaleString()}자)`);
     return value;
   };
-  if (!['EXPERIENCE', 'COVER_LETTER'].includes(String(row.kind))) throw new RecruitmentError('문서 종류를 확인하세요.');
+  if (!['EXPERIENCE', 'COVER_LETTER', 'PORTFOLIO'].includes(String(row.kind))) throw new RecruitmentError('문서 종류를 확인하세요.');
   if (!['COMPANY', 'PERSONAL', 'GENERAL'].includes(String(row.scope))) throw new RecruitmentError('프로젝트 구분을 확인하세요.');
   if (!Array.isArray(row.tags) || row.tags.length > 20) throw new RecruitmentError('태그는 20개까지 입력할 수 있습니다.');
   if (!Array.isArray(row.sections) || !row.sections.length || row.sections.length > 30) throw new RecruitmentError('내용 항목은 1~30개여야 합니다.');

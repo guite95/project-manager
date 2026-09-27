@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   return recruitmentResponse(async () => {
     await requireRecruitmentOwner();
     const kind = new URL(request.url).searchParams.get('kind');
-    if (kind !== 'EXPERIENCE' && kind !== 'COVER_LETTER') throw new RecruitmentError('문서 종류가 필요합니다.');
+    if (kind !== 'EXPERIENCE' && kind !== 'COVER_LETTER' && kind !== 'PORTFOLIO') throw new RecruitmentError('문서 종류가 필요합니다.');
     return NextResponse.json(await listRecruitmentDocuments(kind));
   });
 }
