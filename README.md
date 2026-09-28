@@ -355,6 +355,11 @@ PPTX 변환 결과 PDF는 최대 16MB이며 변환 프로세스는 격리된 임
 ```bash
 node scripts/install-flow-tools.mjs
 ~/.local/bin/pm-flow list
+~/.local/bin/pm-flow list tns
+~/.local/bin/pm-flow today
+~/.local/bin/pm-flow today --status open
+~/.local/bin/pm-flow tasks tns
+~/.local/bin/pm-flow tasks tns --status all --placement today
 ~/.local/bin/pm-flow pull tns/finance/finance-sales --out draft.json
 ~/.local/bin/pm-flow validate draft.json
 ~/.local/bin/pm-flow diff draft.json
@@ -365,6 +370,24 @@ Node 22.6 이상이 필요하다. CLI는 다른 프로젝트의 작업 디렉터
 개인 SSH 설정을 사용한다. 출력 파일은 호출한 디렉터리 기준이다. 기존 프로젝트/카테고리에서
 `new project/category/chart --out draft.json`으로 신규 차트를 준비할 수 있다.
 프로젝트·카테고리 생성/이동, ERD와 콘텐츠 문서는 이 CLI 범위에 포함되지 않는다.
+
+`pm-flow list`는 프로젝트별 `project`(slug)와 `project_title`(이름)만 한 번씩 출력한다.
+카테고리·차트 목록은 `pm-flow list <project-slug>`로 조회한다.
+
+`pm-flow today`는 프로젝트 구분 없이 오늘의 할 일에 등록된 항목을 목록 순서대로 JSON 조회한다.
+완료 항목도 기본으로 포함하며 `--status open|done|all`로 필터한다. 프로젝트 slug도 각 항목에 포함한다.
+한국 시간 기준 날짜와 `count`, `tasks`를 반환한다. 보드의 날짜 이월 규칙에 따라 지난 날짜 항목은
+제외하고, 날짜가 없거나 오늘 이후인 항목은 유지한다. 조회 과정에서 이월·삭제·완료 처리는 하지 않는다.
+
+`pm-flow tasks <project-slug>`는 외부 AI가 프로젝트별 할 일을 읽는 명령이다.
+기본은 미완료(`--status open`)이며 이슈 풀과 오늘 목록을 모두 조회한다.
+`--status done|all`, `--placement pool|today|all`로 범위를 지정한다.
+JSON에는 `project`, `filters`, `count`, `tasks`가 있으며 항목의 ID·제목·완료 여부·위치·오늘 목록 날짜를 제공한다.
+등록된 프로젝트 slug를 정확히 지정해야 하며 다른 프로젝트나 미분류 항목은 포함하지 않는다.
+할 일 표시를 끈 프로젝트도 명시적으로 조회할 수 있고 `project.showInTasks`에 상태를 표시한다.
+읽기는 날짜 이월·완료 처리 등 어떤 DB 변경도 수행하지 않는다. `today`는 저장된 위치이므로
+지난 날짜 항목도 포함할 수 있다. `done`은 현재 남아 있는 완료 항목이며 과거 완료 이력 조회가 아니다.
+기존 개인 SSH 인증을 사용하며 공개 AI API나 앱 계정별 접근용 명령은 아니다.
 
 `apply`는 `~/.pm-backups/` 원문 백업과 SHA-256 재검증, 행 잠금, revision 조건 저장,
 DB 재조회 대조를 수행한다. revision 0은 신규 생성 전용이다. 충돌 시 최신 문서를 pull해

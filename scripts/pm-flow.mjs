@@ -5,12 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { readFlowSshConfig } from '../lib/flows/ssh-config.mjs';
+import { parseTaskOptions, readProjectTasks, parseTodayOptions, readTodayTasks } from '../lib/server/project-tasks.ts';
 
 const root = resolve(dirname(await realpath(fileURLToPath(import.meta.url))), '..');
 const args = process.argv.slice(2);
 const [command, target] = args;
 const help = `pm-flow — 범용 화면·로직 플로우차트
-  list [project]                  프로젝트/카테고리/차트 목록
+  list                            프로젝트 목록 (slug·이름만)
+  list project                    해당 프로젝트의 카테고리/차트 목록
+  today [--status open|done|all]   오늘의 할 일 전체 JSON 조회 (기본: 완료 포함)
+  tasks project [--status open|done|all] [--placement pool|today|all]
+                                 프로젝트 할 일 JSON 조회 (기본: 미완료, 모든 위치)
   pull project/category/chart --out file.json
   new project/category/chart --out file.json [--title 제목]
   validate file.json              오프라인 검증
@@ -33,11 +38,13 @@ try {
   if (command === 'skills') {
     print([{ name: 'pm-flow-author', path: resolve(root, 'skills/pm-flow-author/SKILL.md') }, { name: 'pm-flow-review', path: resolve(root, 'skills/pm-flow-review/SKILL.md') }]); process.exit(0);
   }
-  if (!['list','pull','new','validate','diff','apply'].includes(command)) throw new Error('알 수 없는 명령입니다. pm-flow help를 확인하세요.');
-  if (command !== 'list' && !target) throw new Error('대상 경로나 JSON 파일이 필요합니다.');
+  if (!['list','today','tasks','pull','new','validate','diff','apply'].includes(command)) throw new Error('알 수 없는 명령입니다. pm-flow help를 확인하세요.');
+  if (!['list','today'].includes(command) && !target) throw new Error('대상 경로나 JSON 파일이 필요합니다.');
   const allowed = command === 'new' ? ['--out','--title'] : command === 'pull' ? ['--out'] : [];
-  for (let i = 2; i < args.length; i += 2) if (!allowed.includes(args[i]) || !args[i + 1]) throw new Error('알 수 없거나 값이 없는 옵션입니다.');
-  if (['list','pull','diff','apply'].includes(command) && process.env.PM_FLOW_CHILD !== '1') {
+  const taskOptions = command === 'tasks' ? parseTaskOptions(target, args.slice(2)) : undefined;
+  const todayOptions = command === 'today' ? parseTodayOptions(args.slice(1)) : undefined;
+  if (!['tasks','today'].includes(command)) for (let i = 2; i < args.length; i += 2) if (!allowed.includes(args[i]) || !args[i + 1]) throw new Error('알 수 없거나 값이 없는 옵션입니다.');
+  if (['list','today','tasks','pull','diff','apply'].includes(command) && process.env.PM_FLOW_CHILD !== '1') {
     // 사용자가 점유한 터널은 건드리지 않고 임시 포트를 선택한다.
     const server = createServer();
     await new Promise((yes, no) => { server.once('error', no); server.listen(0, '127.0.0.1', yes); });
@@ -69,8 +76,14 @@ try {
       if (process.env.SHARED_DATABASE !== '1') throw new Error('공유 DB 연결 래퍼를 사용하세요.');
       const { prisma } = await import('../lib/db.ts');
       try {
-        if (command === 'list') {
-          const rows = await prisma.$queryRaw`SELECT p.slug AS project, p.title AS project_title, c.slug AS category, c.title AS category_title, d.slug AS chart, d.document->>'title' AS title, d.revision FROM flow_project p LEFT JOIN flow_category c ON c.project_slug=p.slug LEFT JOIN flow_document d ON d.project_slug=c.project_slug AND d.category_slug=c.slug WHERE (${target ?? null}::text IS NULL OR p.slug=${target ?? null}) ORDER BY p.position,c.position,d.position`;
+        if (command === 'today') {
+          print(await readTodayTasks(prisma, todayOptions));
+        } else if (command === 'tasks') {
+          print(await readProjectTasks(prisma, taskOptions));
+        } else if (command === 'list') {
+          const rows = target
+            ? await prisma.$queryRaw`SELECT p.slug AS project, p.title AS project_title, c.slug AS category, c.title AS category_title, d.slug AS chart, d.document->>'title' AS title, d.revision FROM flow_project p LEFT JOIN flow_category c ON c.project_slug=p.slug LEFT JOIN flow_document d ON d.project_slug=c.project_slug AND d.category_slug=c.slug WHERE p.slug=${target} ORDER BY p.position,c.position,d.position`
+            : await prisma.$queryRaw`SELECT slug AS project, title AS project_title FROM flow_project ORDER BY position,slug`;
           print(rows);
         } else if (command === 'pull') {
           const parts = target.split('/'); if (parts.length !== 3) throw new Error('project/category/chart 형식이 필요합니다.');

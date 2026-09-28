@@ -5,7 +5,7 @@ description: Project Management의 범용 화면·로직 플로우차트를 코�
 
 # 범용 플로우 검토
 
-CLI는 `~/.local/bin/pm-flow`다. `pm-flow list`, `pm-flow pull project/category/chart --out review.json`으로 런타임 원문을 확인한다. 저장소의 초기 TS 차트는 역사적 fixture이며 정본이 아니다.
+CLI는 `~/.local/bin/pm-flow`다. `pm-flow list`로 프로젝트를, `pm-flow list <project-slug>`로 카테고리·차트를 확인한 뒤 `pm-flow pull project/category/chart --out review.json`으로 런타임 원문을 확인한다. 저장소의 초기 TS 차트는 역사적 fixture이며 정본이 아니다.
 
 요청된 프로젝트의 실제 코드와 사용자가 확정한 업무 규칙을 기준으로 검토한다.
 

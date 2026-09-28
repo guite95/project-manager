@@ -99,13 +99,20 @@ node scripts/install-flow-tools.mjs
 ## CLI 사용
 
 ```bash
-pm-flow list
-pm-flow list tns
+pm-flow list       # 프로젝트 slug·이름만
+pm-flow list tns   # 해당 프로젝트의 카테고리·차트
+pm-flow today     # 오늘의 할 일 전체 (완료 포함)
+pm-flow today --status open  # 오늘의 미완료 항목만
+pm-flow tasks tns # 해당 프로젝트의 미완료 항목
 pm-flow pull tns/finance/finance-sales --out draft.json
 pm-flow validate draft.json
 pm-flow diff draft.json
 pm-flow apply draft.json
 ```
+
+`today`는 프로젝트를 지정하지 않고 오늘 목록 전체를 조회합니다. `--status open|done|all`로
+완료 여부를 선택하며 기본은 `all`입니다. 한국 시간과 보드의 날짜 이월 규칙으로 지난 날짜 항목은
+제외하지만 DB의 항목을 이동하거나 삭제하지는 않습니다. 각 항목에는 프로젝트 slug가 포함됩니다.
 
 새 차트는 기존 프로젝트와 카테고리를 선택한 뒤 템플릿을 생성합니다.
 

@@ -1,9 +1,9 @@
 /** 기존 기본 배치. 저장 후에는 DB 프로젝트와 외부 프로젝트를 같은 순서로 다룬다. */
 export function defaultSidebarOrder(flowSlugs: string[], externalSlugs: string[]): string[] {
   return [...new Set([
-    ...flowSlugs.filter((slug) => slug !== "jespro"),
+    ...flowSlugs.filter((slug) => slug !== "zespro"),
     ...externalSlugs,
-    ...flowSlugs.filter((slug) => slug === "jespro"),
+    ...flowSlugs.filter((slug) => slug === "zespro"),
   ])];
 }
 

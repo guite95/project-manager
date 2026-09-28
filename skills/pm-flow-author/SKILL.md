@@ -11,10 +11,15 @@ description: 다른 프로젝트의 코드와 업무 규칙을 분석해 Project
 
 - CLI는 `~/.local/bin/pm-flow`에 설치된다. PATH에 없으면 이 절대 경로를 쓴다.
 - 다른 컴퓨터의 설치·업데이트는 작성가이드 `/guide`의 GitHub 원격 설치 절차를 따른다. 로컬 개발용은 이 SKILL.md의 실제 경로에서 저장소 루트까지 올라가 `node scripts/install-flow-tools.mjs`를 실행한다. 기존 설치 충돌은 덮어쓰지 않는다.
-- `pm-flow list`로 프로젝트와 카테고리를 확인한다. 대상이 불명확하면 코드 조사와 초안을 진행하면서 대상만 질문한다.
+- `pm-flow list`로 프로젝트 slug·이름을 확인하고 `pm-flow list <project-slug>`로 해당 프로젝트의 카테고리·차트를 확인한다. 대상이 불명확하면 코드 조사와 초안을 진행하면서 대상만 질문한다.
+- 프로젝트 할 일이 필요하면 `pm-flow tasks <project-slug>`로 미완료 목록을 JSON으로 조회한다. `--status open|done|all`, `--placement pool|today|all`을 지원한다. 읽기 전용이며 날짜 이월이나 완료 처리를 하지 않는다. `todayDate`는 저장된 날짜이고 `done`은 현재 항목의 상태로, 과거 완료 이력 전체가 아니다.
 - CLI는 현재 작업 디렉터리와 관계없이 Project Management `~/.config/pm-flow/ssh.env`의 개인 SSH 설정으로 공유 DB에 접속한다. 설정 파일이 없으면 개발 저장소의 `.env`를 사용한다. ERP 등 분석 대상 프로젝트의 구현을 바꾸는 도구가 아니다.
 
 ## 작성 순서
+
+오늘의 할 일 전체 조회는 `pm-flow today`, 미완료만 조회는 `pm-flow today --status open`을 사용한다.
+프로젝트 지정 없이 JSON을 반환하고 기본은 완료 포함이다. 한국 시간 기준 보드의 날짜 이월 규칙으로
+지난 날짜 항목을 제외하며 DB 변경은 하지 않는다. 각 항목의 `projectSlug`로 소속을 확인한다.
 
 1. 기존 차트는 `pm-flow pull project/category/chart --out draft.json`, 신규는 `pm-flow new project/category/chart --out draft.json --title "업무 흐름"`으로 시작한다. 출력 파일이 이미 있으면 덮어쓰지 않는다.
 2. 코드 근거와 사용자 결정에 따라 `chart.nodes`, `chart.edges`, 설명을 작성한다. 기존 ID와 revision은 유지한다. 새 차트의 revision은 0이다.
