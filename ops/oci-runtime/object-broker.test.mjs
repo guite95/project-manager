@@ -6,6 +6,7 @@ import { once } from 'node:events';
 import { Readable } from 'node:stream';
 import { createHash } from 'node:crypto';
 import { createObjectBrokerServer } from './object-broker.mjs';
+import { validateBrokerReference } from '../../lib/server/object-storage-broker-protocol.mjs';
 
 const body = Buffer.from('sample');
 const ref = { scope: 'materials', project: 'p', slug: 's', sha256: createHash('sha256').update(body).digest('hex'), bytes: body.length };
@@ -28,7 +29,8 @@ async function fixture(t, store, options = {}) {
 test('host independently rejects arbitrary paths, scope, extra fields, traversal and invalid sizes before calling OCI', async t => {
   let calls = 0;
   const { request } = await fixture(t, { getObject: async () => { calls++; throw new Error('secret'); } });
-  const variants = [{ ...ref, scope: 'vault' }, { ...ref, bucket: 'other' }, { ...ref, bytes: 0 }, { ...ref, bytes: 16 * 1024 * 1024 + 1 },
+  assert.equal(validateBrokerReference({ ...ref, bytes: 250 * 1024 * 1024 }), `materials/p/s/${ref.sha256}`);
+  const variants = [{ ...ref, scope: 'vault' }, { ...ref, bucket: 'other' }, { ...ref, bytes: 0 }, { ...ref, bytes: 250 * 1024 * 1024 + 1 },
     { ...ref, sha256: 'A'.repeat(64) }, ...['..', '.', '', '../x', 'a/b', 'a\\b', '%2f', '%252e', 'a\0b', 'x'.repeat(257)].map(project => ({ ...ref, project }))];
   for (const input of variants) assert.equal((await request('GET', route(input))).status, 400);
   for (const path of ['/metadata', '/v1/objects/bad', `${route(ref)}?bucket=other`, '/v1/objects/' + 'a'.repeat(9000)]) assert.equal((await request('GET', path)).status, 400);

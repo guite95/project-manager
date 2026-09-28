@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   if (project === 'common' || !await getFlowProjectIdentity(project)) return jsonError('프로젝트가 없습니다.', 404);
   // Content-Length가 없는 청크 요청도 읽는 도중 상한을 적용한다.
   const maxBody = MAX_MATERIAL_BYTES + 64 * 1024;
-  if (Number(request.headers.get('content-length')) > maxBody) return jsonError('파일은 최대 10MB까지 추가할 수 있습니다.', 413);
+  if (Number(request.headers.get('content-length')) > maxBody) return jsonError('파일은 최대 250MB까지 추가할 수 있습니다.', 413);
   let form: FormData;
   const reader = request.body?.getReader();
   if (!reader) return jsonError('파일이 없습니다.', 400);
@@ -32,7 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
       const { done, value } = await reader.read();
       if (done) break;
       length += value.byteLength;
-      if (length > maxBody) { await reader.cancel(); return jsonError('파일은 최대 10MB까지 추가할 수 있습니다.', 413); }
+      if (length > maxBody) { await reader.cancel(); return jsonError('파일은 최대 250MB까지 추가할 수 있습니다.', 413); }
       chunks.push(new Uint8Array(value));
     }
     form = await new Response(new Blob(chunks), { headers: { 'Content-Type': request.headers.get('content-type')! } }).formData();
@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pro
   finally { reader.releaseLock(); }
   const file = form.get('file');
   if (!(file instanceof File) || !file.size) return jsonError('PDF, HTML 또는 PPTX 파일을 선택해 주세요.', 400);
-  if (file.size > MAX_MATERIAL_BYTES) return jsonError('파일은 최대 10MB까지 추가할 수 있습니다.', 413);
+  if (file.size > MAX_MATERIAL_BYTES) return jsonError('파일은 최대 250MB까지 추가할 수 있습니다.', 413);
   const title = form.get('title');
   if (typeof title !== 'string' || !title.trim() || title.trim().length > 200) return jsonError('자료 제목은 1~200자로 입력해 주세요.', 400);
   const bytes = Buffer.from(await file.arrayBuffer());

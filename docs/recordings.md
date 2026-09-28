@@ -6,7 +6,7 @@
 
 - `project_recording`: 프로젝트 FK, 원본 파일명/크기/형식, 종류/설명, 서버 소유 OCI 참조, 전사 상태와 lease, Google operation 및 임시 GCS 경로.
 - `recording_transcript`: 녹음 ID를 FK/PK로 사용한 별도 레코드. 전사 텍스트, 언어, provider/model, 인식 결과 JSON과 생성 시각. TXT 다운로드는 이 텍스트만 반환한다.
-- OCI 비공개 버킷의 `recordings/<project>/<id>/<sha256>`에 원본 바이트를 그대로 보존한다. 업로드/다운로드 시 크기와 SHA-256을 검증한다. 기존 자료실의 `materials/` 경로 및 16MB 객체 제한은 그대로다.
+- OCI 비공개 버킷의 `recordings/<project>/<id>/<sha256>`에 원본 바이트를 그대로 보존한다. 업로드/다운로드 시 크기와 SHA-256을 검증한다. 자료실의 `materials/` 경로는 별도 250MB 객체 제한을 적용한다.
 - 녹음은 100MiB까지 허용한다. M4A(AAC), MP3, WAV, FLAC, OGG(Opus), WebM(Opus). 파일명/확장자/시그니처/실제 바이트 상한을 검사한다. 지원하지 않는 내부 코덱은 Google 작업 실패로 표시한다.
 - 원본과 전사본은 자동 만료하지 않는다. GET은 조회만 한다. 목록에는 원본 저장소 참조와 전사문을 포함하지 않는다.
 - VIEWER는 조회/다운로드, EDITOR는 업로드/재시도할 수 있다. 각 API에서 DB 세션과 프로젝트 권한을 검사한다. multipart 업로드와 재시도에 same-origin 검사를 적용한다.
@@ -60,7 +60,7 @@ pnpm db:shared -- pnpm recordings:worker --once
 2. 같은 프로젝트의 `us` 멀티 리전에 전용 비공개 staging 버킷을 만든다. uniform bucket-level access와 public access prevention을 켠다. 기존 서비스 계정에 해당 버킷의 객체 생성/조회/삭제 권한만 부여한다. Speech 서비스 에이전트도 입력 객체를 읽을 수 있어야 한다. 기존 보관 버킷에 만료 규칙을 추가하지 않는다.
 3. 공유 DB를 읽기 전용으로 검사·백업한 뒤 `20260918120000_project_recordings`를 `prisma migrate deploy`로 적용한다. 새 테이블만 추가하며 기존 데이터 변환은 없다.
 4. 검증된 main 릴리스의 호스트 코드를 준비한다. root 소유0600 `/etc/project-management-recordings.enabled`에 `enabled` 한 줄을 기록하고, 비밀 아닌 `GOOGLE_SPEECH_BUCKET`/`GOOGLE_SPEECH_LOCATION=us`를 운영 설정에 추가한다. Vault marker가 없는 환경에서는 활성화를 거부한다. 정상 배포는 Vault override 다음에 recordings override를 적용하고, 앱과 같은 immutable 이미지의 worker를 생성한다. systemd가 호스트 준비 상태를 확인하고 시작/재시작한다. worker는 포트를 열지 않으며 WIF/OCI 신원과 migration Secret을 받지 않는다.
-5. Nginx의 이 앱 location에 `client_max_body_size 101m`과 업로드에 충분한 timeout을 적용한다. Next proxy는 101MB, 업로드 API는 100MiB + 64KiB multipart 상한이다.
+5. Nginx의 이 앱 location에 `client_max_body_size 251m`과 업로드에 충분한 timeout을 적용한다. Next proxy는 251MB이며, 녹음 업로드 API는 100MiB + 64KiB multipart 상한을 별도로 유지한다.
 6. 짧은 승인된 녹음으로 인증된 업로드 → 완료 → 두 다운로드를 확인한다. OCI SHA-256, TXT 내용, GCS 임시 객체 정리, 프로젝트/VIEWER 권한도 별도 확인한다.
 
 ```sh

@@ -79,7 +79,7 @@ python3 /Users/janguk/.codex/skills/oci-ssh/scripts/oci_ssh.py --script < ops/oc
 
 ## 경계와 남는 위험
 
-- 앱 → `/run/project-management-broker/storage.sock`: 지정 버킷의 `materials`(16MiB), `recordings`(100MiB) 객체 GET/조건부 PUT/DELETE만 처리한다. 목록·임의 URL·버킷·서명·Vault 조회 기능은 없다.
+- 앱 → `/run/project-management-broker/storage.sock`: 지정 버킷의 `materials`(250MiB), `recordings`(100MiB) 객체 GET/조건부 PUT/DELETE만 처리한다. 목록·임의 URL·버킷·서명·Vault 조회 기능은 없다.
 - 호스트의 OCI Instance Principal과 Google WIF는 호스트에 남는다. 앱에는 `/run/project-management-google/access-token.json`의 단기 Google bearer token만 전달한다.
 - 사용자별 문서 접근 권한은 계속 앱의 DB 세션/프로젝트 정책이 담당한다. 중계는 PM의 프로젝트 사이를 별도 IAM으로 격리하지 않는다. 침해된 PM 앱은 알려진 PM 객체와 해당 Google 서비스 계정 권한을 토큰 유효기간 동안 사용할 수 있다.
 - 동일 VM root·Docker 관리자·특권 모니터링은 공통 신뢰 영역이다. root 침해 보호/VM별 IAM 분리를 구현한 것이 아니다.

@@ -15,9 +15,9 @@ async function collect(stream, size) {
   return bytes;
 }
 
-export function createObjectBrokerServer({ config, store, maxConcurrent = 4, timeoutMs = 60_000 }) {
+export function createObjectBrokerServer({ config, store, maxConcurrent = 4, timeoutMs = 5 * 60_000 }) {
   if (!config || !/^[a-zA-Z0-9_-]+$/.test(config.namespace ?? '') || !/^[a-zA-Z0-9_.-]+$/.test(config.bucket ?? '') ||
-      !Number.isInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 8 || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) throw new Error('OBJECT_BROKER_CONFIGURATION');
+      !Number.isInteger(maxConcurrent) || maxConcurrent < 1 || maxConcurrent > 8 || !Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 10 * 60_000) throw new Error('OBJECT_BROKER_CONFIGURATION');
   // Copy fixed configuration so a caller cannot change the bucket during a request.
   const fixed = { namespaceName: config.namespace, bucketName: config.bucket };
   let active = 0;

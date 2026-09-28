@@ -49,14 +49,14 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
     <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-6">
     {writable && adding ? <form onSubmit={upload} className="mb-7 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 md:p-5">
       <h2 className="mb-1 text-[15px] font-semibold">자료 추가</h2>
-      <p id="material-file-help" className="mb-4 text-[12px] text-[var(--bi-muted)]">PDF·HTML·PPTX 파일을 추가하면 형식에 맞게 미리보기를 제공합니다. PPTX는 PDF 미리보기도 함께 생성합니다. 파일당 최대 10MB, HTML은 UTF-8 형식입니다.</p>
+      <p id="material-file-help" className="mb-4 text-[12px] text-[var(--bi-muted)]">PDF·HTML·PPTX 파일을 추가하면 형식에 맞게 미리보기를 제공합니다. PPTX는 PDF 미리보기도 함께 생성합니다. 파일당 최대 250MB, HTML은 UTF-8 형식입니다.</p>
       <FormGrid>
         <label className="space-y-2 text-[12px]">파일 선택
           <input ref={fileInput} type="file" accept=".pdf,.html,.htm,.pptx,application/pdf,text/html,application/vnd.openxmlformats-officedocument.presentationml.presentation" disabled={busy} required aria-describedby="material-file-help" className={`${inputClass} block py-2`} onChange={event => {
             const file = event.target.files?.[0] ?? null;
             setError('');
             if (file && (!/\.(pdf|html?|pptx)$/i.test(file.name) || !file.size || file.size > MAX_MATERIAL_BYTES)) {
-              setError('비어 있지 않은 PDF, HTML 또는 PPTX 파일(최대 10MB)을 선택해 주세요.'); setSelected(null); event.target.value = ''; return;
+              setError('비어 있지 않은 PDF, HTML 또는 PPTX 파일(최대 250MB)을 선택해 주세요.'); setSelected(null); event.target.value = ''; return;
             }
             setSelected(file); if (file) setTitle(file.name.replace(/\.(pdf|html?|pptx)$/i, '').slice(0, 200));
           }} />

@@ -13,7 +13,7 @@ export async function prepareMaterialContent(
 ): Promise<MaterialContent> {
   const bytes = Buffer.from(input);
   if (!bytes.length) throw new MaterialUploadError('비어 있지 않은 파일을 선택해 주세요.', 400);
-  if (bytes.length > MAX_MATERIAL_BYTES) throw new MaterialUploadError('파일은 최대 10MB까지 추가할 수 있습니다.', 413);
+  if (bytes.length > MAX_MATERIAL_BYTES) throw new MaterialUploadError('파일은 최대 250MB까지 추가할 수 있습니다.', 413);
   const format = /\.pdf$/i.test(fileName) ? 'pdf' : /\.html?$/i.test(fileName) ? 'html' : /\.pptx$/i.test(fileName) ? 'pptx' : null;
   if (!format) throw new MaterialUploadError('PDF, HTML 또는 PPTX 파일만 추가할 수 있습니다.', 415);
   const data = bytes.toString('base64');

@@ -1,5 +1,5 @@
-export const MAX_MATERIAL_BYTES = 10 * 1024 * 1024;
-export const MAX_MATERIAL_PREVIEW_BYTES = 16 * 1024 * 1024;
+export const MAX_MATERIAL_BYTES = 250 * 1024 * 1024;
+export const MAX_MATERIAL_PREVIEW_BYTES = 250 * 1024 * 1024;
 export const MATERIAL_CATEGORY = 'project-materials';
 type MaterialBase = { kind: 'material'; fileName: string; byteLength: number; data: string };
 export type MaterialPdfPreview = { format: 'pdf'; fileName: string; byteLength: number; data: string };
@@ -102,7 +102,7 @@ export function inspectPptxArchive(input: Uint8Array): PptxArchiveEntry[] {
     }
     localRanges.push({ start: localHeaderOffset, end: localEnd });
     expandedBytes += uncompressedSize;
-    if (uncompressedSize > 32 * 1024 * 1024 || expandedBytes > 128 * 1024 * 1024) throw new Error('PPTX 압축 해제 크기가 제한을 초과합니다.');
+    if (uncompressedSize > 256 * 1024 * 1024 || expandedBytes > MAX_MATERIAL_BYTES * 4) throw new Error('PPTX 압축 해제 크기가 제한을 초과합니다.');
     entries.push({ name, flags, compression, crc32, compressedSize, uncompressedSize, localHeaderOffset });
     cursor = next;
   }
@@ -116,7 +116,7 @@ export function inspectPptxArchive(input: Uint8Array): PptxArchiveEntry[] {
 }
 
 export function validatePptxSource(value: { fileName: unknown; byteLength: unknown; data: unknown }) {
-  const fail = (): never => { throw new Error('올바른 PPTX 파일(최대 10MB)이 필요합니다.'); };
+  const fail = (): never => { throw new Error('올바른 PPTX 파일(최대 250MB)이 필요합니다.'); };
   if (!safeFileName(value.fileName) || !/\.pptx$/i.test(value.fileName as string)) fail();
   const binary = decodeData(value.data, value.byteLength, MAX_MATERIAL_BYTES, fail);
   try { inspectPptxArchive(Uint8Array.from(binary, character => character.charCodeAt(0))); }
@@ -146,7 +146,7 @@ export function hasMaterialStorageReference(value: unknown) {
 
 /** 브라우저와 서버 양쪽에서 같은 파일 경계를 검증한다. */
 export function validateMaterial(value: Record<string, unknown>): asserts value is MaterialContent {
-  const fail = (): never => { throw new Error('올바른 PDF, UTF-8 HTML 또는 PPTX 파일(최대 10MB)이 필요합니다.'); };
+  const fail = (): never => { throw new Error('올바른 PDF, UTF-8 HTML 또는 PPTX 파일(최대 250MB)이 필요합니다.'); };
   if (value.kind !== 'material' || !['pdf', 'html', 'pptx'].includes(value.format as string) || !safeFileName(value.fileName)) fail();
   if (value.format === 'pdf') {
     validatePdf(value.fileName, value.byteLength, value.data, MAX_MATERIAL_BYTES, fail);
