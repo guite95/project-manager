@@ -1,0 +1,6 @@
+interface:
+  display_name: "자소서 구성"
+  short_description: "문항별 핵심 답과 경험 배치, 두괄식 흐름 및 분량을 설계"
+  default_prompt: "$cover-letter-outline로 이 자기소개서의 문항별 개요를 만들어줘. 확인된 경험을 배치하고 지원동기, 두괄식 핵심 답, 중복과 분량을 점검하되 본문은 아직 작성하지 마."
+policy:
+  allow_implicit_invocation: true

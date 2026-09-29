@@ -1,0 +1,9 @@
+interface:
+  display_name: JD 분석
+  short_description: 채용공고의 실제 업무와 지원 자격, 경험 연결 및 지원 전략 분석
+  default_prompt: $jd-analyzer로 이 채용공고의 실제 업무와 요구 역량을 분석하고, 경험자료가 있으면 지원 자격과 직무 적합성을
+    구분해 검토해줘.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  allow_implicit_invocation: true

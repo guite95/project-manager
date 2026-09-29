@@ -1,0 +1,6 @@
+interface:
+  display_name: "자소서 초안 작성"
+  short_description: "확인된 경험과 개요로 질문에 직접 답하는 자기소개서 초안 작성"
+  default_prompt: "$cover-letter-draft로 이 개요와 확인된 경험을 바탕으로 자기소개서 초안을 작성해줘. 지원동기와 실제 역할을 보존하고 문항과 글자 수 제한에 맞춰줘."
+policy:
+  allow_implicit_invocation: true

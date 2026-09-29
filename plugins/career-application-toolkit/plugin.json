@@ -1,0 +1,28 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "career-application-toolkit",
+  "version": "0.3.0",
+  "description": "Analyze job descriptions, draft and improve cover letters, and optionally evaluate writing quality through a private Jev MCP service while preserving facts.",
+  "author": {
+    "name": "UK JANG"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "취업 지원 도구",
+        "shortDescription": "JD 분석·자소서 작성과 선택적 Jev 품질 평가",
+        "longDescription": "채용공고의 실제 업무, 지원 자격, 요구 역량과 사용자 경험의 연결을 분석하고, 작성된 자기소개서·경력기술서 등의 글에서 AI처럼 느껴질 수 있는 표현을 찾아 사실과 작성자의 목소리를 보존하며 수정 방향을 제안합니다. 일반 Chat에서 선택적으로 MCP를 연결해 JD 관련성·문단·문장 품질을 평가하고 미달 부분을 사실 범위 안에서 수정합니다. 평가 점수는 AI 작성 확률이 아닙니다.",
+        "developerName": "UK JANG",
+        "category": "Productivity",
+        "capabilities": [
+          "Interactive"
+        ],
+        "defaultPrompt": [
+          "이 채용공고의 실제 업무와 요구 역량을 분석해줘.",
+          "내 경험과 이 채용공고를 연결해서 지원 전략을 정리해줘.",
+          "이 자기소개서에서 AI티가 나는 부분을 찾아 자연스럽게 다듬어줘."
+        ]
+      }
+    }
+  }
+}

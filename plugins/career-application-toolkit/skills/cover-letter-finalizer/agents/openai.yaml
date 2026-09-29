@@ -1,0 +1,6 @@
+interface:
+  display_name: "자소서 최종 수정"
+  short_description: "피드백을 반영하고 문항, 사실, 문체와 분량을 제출 전에 점검"
+  default_prompt: "$cover-letter-finalizer로 이 자기소개서에 피드백을 반영해 최종 수정해줘. 사실과 개인 기여를 보존하고 문항 충족, 두괄식, 중복과 글자 수를 점검해줘."
+policy:
+  allow_implicit_invocation: true

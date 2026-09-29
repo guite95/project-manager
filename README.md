@@ -71,6 +71,8 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 
 배포는 `docs/deploy.md` 를 본다.
 
+일반 Chat용 자기소개서 품질 평가·Jev MCP와 플러그인 후보는 [구현 및 연결 준비](docs/career-quality-runtime.md)를 본다. 기본 비활성이며 OAuth·Vault 설정, 배포와 플러그인 게시는 별도 작업이다.
+
 ## 라우트
 
 | 경로 | 내용 |

@@ -4,6 +4,7 @@ import { resolveActor } from './lib/access/store';
 import { permits, routeRequirement } from './lib/access/policy';
 import { sameOrigin } from './lib/access/http';
 import { prisma } from './lib/db';
+import { isCareerRoute } from './lib/career/auth';
 export async function proxy(request: NextRequest) {
   const pathname=request.nextUrl.pathname;
   const read=request.method==='GET'||request.method==='HEAD';
@@ -13,6 +14,8 @@ export async function proxy(request: NextRequest) {
     response.headers.set('X-Robots-Tag','noindex, nofollow');
     return response;
   };
+  // Only these exact routes use bearer OAuth. Their handlers never accept session cookies.
+  if(isCareerRoute(pathname,request.method)) return protect(NextResponse.next());
   if(!read && !sameOrigin(request)) return protect(NextResponse.json({message:'다른 출처의 요청은 허용하지 않습니다.'},{status:403}));
   if(!read && pathname.startsWith('/share/')) return protect(new NextResponse(null,{status:405,headers:{Allow:'GET, HEAD'}}));
   if(read && (pathname==='/login'||/^\/(invite|share)\/[A-Za-z0-9_-]{43}$/.test(pathname)) || request.method==='POST' && ['/api/login','/api/invite'].includes(pathname)) return protect(NextResponse.next());
