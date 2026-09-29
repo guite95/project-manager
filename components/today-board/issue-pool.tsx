@@ -8,6 +8,7 @@ import {
 } from "react-icons/hi";
 import { EditButton, InlineEdit } from "@/components/inline-edit";
 import { Button } from "@/components/erp/button";
+import { Tooltip } from "@/components/erp/tooltip";
 import {
   ISSUE_DRAG_TYPE,
   PERSONAL_ISSUES_SLUG,
@@ -478,16 +479,17 @@ function ProjectIssues({
                 }}
                 value={issue.title}
               >
-                <button
-                  aria-label={`${issue.title} 선택`}
-                  aria-pressed={selectedIds.has(issue.id)}
-                  className="min-w-0 flex-1 cursor-pointer truncate rounded-[3px] text-left text-[12px] text-[var(--bi-fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)]"
-                  onClick={() => toggleSelected(issue.id)}
-                  title={issue.title}
-                  type="button"
-                >
-                  {issue.title}
-                </button>
+                <Tooltip className="flex-1" content={issue.title}>
+                  <button
+                    aria-label={`${issue.title} 선택`}
+                    aria-pressed={selectedIds.has(issue.id)}
+                    className="min-w-0 flex-1 cursor-pointer truncate rounded-[3px] text-left text-[12px] text-[var(--bi-fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)]"
+                    onClick={() => toggleSelected(issue.id)}
+                    type="button"
+                  >
+                    {issue.title}
+                  </button>
+                </Tooltip>
               </InlineEdit>
               <Button
                 aria-label={`${issue.title} 오늘의 할 일로 보내기`}

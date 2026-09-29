@@ -4,6 +4,7 @@ import { useState } from "react";
 import { HiOutlineArrowRight } from "react-icons/hi";
 import { Badge } from "@/components/erp/badge";
 import { Button } from "@/components/erp/button";
+import { Tooltip } from "@/components/erp/tooltip";
 import { EditButton, InlineEdit } from "@/components/inline-edit";
 import {
   ISSUE_DRAG_TYPE,
@@ -120,16 +121,18 @@ export function TodayList({
                   }}
                   value={item.title}
                 >
-                  <label
-                    className={`min-w-0 flex-1 truncate text-[12px] ${
-                      item.done
-                        ? "text-[var(--bi-muted)] line-through"
-                        : "text-[var(--bi-fg)]"
-                    }`}
-                    htmlFor={`today-item-${item.id}`}
-                  >
-                    {item.title}
-                  </label>
+                  <Tooltip className="flex-1" content={item.title}>
+                    <label
+                      className={`min-w-0 flex-1 truncate text-[12px] ${
+                        item.done
+                          ? "text-[var(--bi-muted)] line-through"
+                          : "text-[var(--bi-fg)]"
+                      }`}
+                      htmlFor={`today-item-${item.id}`}
+                    >
+                      {item.title}
+                    </label>
+                  </Tooltip>
                 </InlineEdit>
                 <span className="shrink-0">
                   <Badge variant="neutral">
