@@ -1,0 +1,84 @@
+{
+  "date": "2026-09-29",
+  "scope": "Explicitly authorized server preparation only; no application deployment",
+  "database": {
+    "migration": "20260929160000_career_better_auth",
+    "migrationSha256": "c8765d70e460b886fd2bad56a5df85c9e928edf2a4034f1391ac19f382664c77",
+    "helper": "ops/oci-runtime/migrate-pm.mjs",
+    "identity": "dedicated migration identity, not runtime app identity",
+    "completedAt": "2026-09-29T08:19:06.106143+00:00",
+    "migrationCountBefore": 9,
+    "migrationCountAfter": 10,
+    "oauthTableCount": 13,
+    "oauthTablesEmpty": true,
+    "existingAccountCount": 3,
+    "existingAccountFieldsUnchanged": true,
+    "activeOwnerCount": 1,
+    "oauthEpochZero": true,
+    "epochTriggerPresent": true,
+    "runtimeSelectInsertUpdateDeletePrivilegesVerified": true,
+    "evidenceDirectory": "/var/backups/oci-vault-migration/career-migration-snf2f3fq",
+    "backups": [
+      {
+        "path": "/var/backups/oci-vault-migration/pm-20260929T081220212572Z.dump",
+        "bytes": 823905181,
+        "sha256": "d1ff8ad17b5d47cd2431749ffcc2a6442416745976f1c700aae08ae3bcb7f0ef",
+        "archiveReadable": true
+      },
+      {
+        "path": "/var/backups/oci-vault-migration/pm-20260929T081641675599Z.dump",
+        "bytes": 823913992,
+        "sha256": "54f723fa62fbe28a0f1d23cec68af119f8d2474dd60bb3fd1b3856684c63d073",
+        "archiveReadable": true
+      }
+    ],
+    "restoreRehearsal": false,
+    "migrationArtifact": "project-management:43ee2d88c78eef80b8b9f4f394a6427dd6e31b89",
+    "artifactTagIsContentDigestNotGitCommit": true,
+    "artifactPurpose": "Existing serving image plus only the approved migration SQL",
+    "artifactRemoved": true,
+    "migrationContainerSecretsAndLockRemoved": true,
+    "initialArtifactFailure": "Docker interpreted a bare image ID as a remote repository; no DDL had run. Resolved with a local tag after verifying its identical image ID."
+  },
+  "vault": {
+    "secrets": ["OPENROUTER_API_KEY", "CAREER_OAUTH_SECRET"],
+    "version": 1,
+    "manifest": "ops/oci-runtime/vault-manifest.project-management.json",
+    "policyMetadata": "ops/oci-runtime/vault-access.career.json",
+    "policyBoundary": "Exact two secret IDs, existing host dynamic group and pm-vault-host-egress network source; read secret-bundles only",
+    "existingPoliciesChanged": false,
+    "existingThreeSecretValuesUnchanged": true,
+    "publisherReloadedNotRestarted": true,
+    "publisherSha256": "4a027c6baef9a40fbb2145368203e89f2ea1f4381ef75cb80bbd7c441f34575e",
+    "hostConfigBackup": "/var/backups/oci-vault-migration/career-secrets-kcr_mrdj",
+    "runtimeFileCount": 5,
+    "runtimeFileOwnerGroup": "root:987",
+    "runtimeFileMode": "0640",
+    "newFilesReadableByApp": true,
+    "localEnvFileMode": "0600"
+  },
+  "servingApplication": {
+    "image": "project-management:b7043cf528c17a39ecce4321151134fa36830d87",
+    "imageId": "sha256:7a102d951bb69760ba66b1c78780bf80729dbaba4c32aedbc7de744e6feebf2e",
+    "pid": 2069605,
+    "startedAt": "2026-09-29T00:51:57.977809973Z",
+    "imagePidStartTimeUnchanged": true,
+    "loginHttpStatus": 200,
+    "publicHttpsLoginHttpStatus": 200,
+    "runtimeAndSecretServicesActive": true,
+    "applicationDeployed": false
+  },
+  "localVerification": {
+    "tests": {"total": 481, "passed": 475, "skipped": 6, "failed": 0},
+    "vaultTests": {"total": 21, "passed": 20, "skipped": 1, "failed": 0},
+    "typecheck": "passed",
+    "build": "passed",
+    "boundedVaultReview": "No Critical or Important findings; live state verified separately"
+  },
+  "pending": [
+    "Commit and deliver source, keeping publisher allowlist and Vault manifest together",
+    "Wire opt-in career Compose overlay and non-secret settings during approved application deployment",
+    "Confirm exact ChatGPT client and callback, HTTPS/proxy and OAuth/MCP end-to-end behavior",
+    "Approved hosted plugin replacement"
+  ]
+}

@@ -28,6 +28,8 @@
 
 ## Verification and documentation
 
+- Career MCP self-hosted OAuth uses Better Auth with existing active OWNER identity, no second password/social signup. `career_oauth_*` is isolated provider state; `access_user.oauth_epoch` and its security-change trigger revoke grants. Apply `20260929160000_career_better_auth` before the new Prisma client, separately from deployment. Preserve exact endpoint allowlists, browser-bound one-time consent, PKCE, encrypted keys and per-request/per-tool epoch checks. `CAREER_OAUTH_SECRET` uses the protected runtime generation; no public DCR or account endpoints. See `docs/career-oauth.md`.
+
 - Recruitment portfolios, experiences and cover letters are OWNER-only documents in shared `app_setting` keys `recruitment:document:<id>`, separated by `PORTFOLIO`, `EXPERIENCE` and `COVER_LETTER` kinds. Resume and portfolio contents stay in the DB, never in application code. Lists exclude bodies; detail reads one document; writes validate expected revision and preserve edits on conflict. GET never seeds. Drive originals are references, not automatically synchronized. See `docs/recruitment.md`.
 - Private application credentials (certificates, awards, language scores, dates and registration numbers) live separately in `app_setting` key `recruitment:credentials`. `/api/portfolio/credentials` requires OWNER for reads and writes; never include these fields in general recruitment lists, document copy or public shares. Preserve partial dates and leading zeros in identifiers. Initial separation requires inspection, verified backup and revision-checked transaction; no automatic GET seeding.
 

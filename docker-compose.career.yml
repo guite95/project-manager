@@ -1,0 +1,11 @@
+# Explicit opt-in, appended after existing Vault/identity/recordings overrides.
+# No secrets in this environment map. No extra ports, mounts or services.
+services:
+  app:
+    environment:
+      CAREER_MCP_ENABLED: ${CAREER_MCP_ENABLED:-false}
+      CAREER_OAUTH_ENABLED: ${CAREER_OAUTH_ENABLED:-false}
+      CAREER_MCP_RESOURCE: ${CAREER_MCP_RESOURCE:-}
+      CAREER_MCP_OWNER_ID: ${CAREER_MCP_OWNER_ID:-}
+      CAREER_MCP_CLIENT_ID: ${CAREER_MCP_CLIENT_ID:-}
+      CAREER_OAUTH_REDIRECT_URI: ${CAREER_OAUTH_REDIRECT_URI:-}

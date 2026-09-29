@@ -99,3 +99,14 @@ test('migration manifest is a separate root-group profile and cannot request ses
   assert.throws(() => validateManifest({...manifest, gid: 987}));
   assert.throws(() => validateManifest({...manifest, files: [...manifest.files, {name:'SESSION_SECRET',secretId:secret('sessionfixture'),versionNumber:1}]}));
 });
+test('career secrets publish only in the PM runtime profile, with protected files and no migration access',async t=>{
+  const f=await fixture(t);
+  f.manifest.files.push({name:'OPENROUTER_API_KEY',secretId:secret('routerfixture'),versionNumber:1},{name:'CAREER_OAUTH_SECRET',secretId:secret('oauthfixture'),versionNumber:1});
+  assert.deepEqual(await syncSecrets(f),{service:'project-management',files:4});
+  for(const name of ['OPENROUTER_API_KEY','CAREER_OAUTH_SECRET']){
+    assert.equal(await readFile(`${f.dir}/current/${name}`,'utf8'),'fixture-1');
+    assert.equal((await stat(`${f.dir}/current/${name}`)).mode&0o777,0o640);
+    const migration={service:'project-management-migration',gid:0,files:[{name:'DATABASE_URL',secretId:secret('migrationfixture'),versionNumber:1},{name,secretId:secret('appsecretfixture'),versionNumber:1}]};
+    assert.throws(()=>validateManifest(migration));
+  }
+});

@@ -113,7 +113,7 @@ export function canonical(value:unknown):string {
 }
 export const hash=(value:unknown)=>`sha256:${createHash('sha256').update(canonical(value)).digest('hex')}`;
 export const MODEL='typesafe/jev-1.13';
-export const VERSIONS={rubricVersion:'career-quality/0.1.0',policyVersion:'career-policy/0.1.0',promptVersion:'career-prompt/0.1.0',segmentationVersion:'career-segments/0.1.0'};
+export const VERSIONS={rubricVersion:'career-quality/0.2.0',policyVersion:'career-policy/0.2.0',promptVersion:'career-prompt/0.2.0',segmentationVersion:'career-segments/0.1.0'};
 export function identify(x:EvaluationInput,sessionId:string,draftVersion:number) {
   const draftHash=hash(x.answers.map(({questionId,text})=>({questionId,text})).sort((a,b)=>a.questionId<b.questionId?-1:1));
   const {sources,jd,facts,questions,styleReferenceSourceIds,editScope,mode}=x;

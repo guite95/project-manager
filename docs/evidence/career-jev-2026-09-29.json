@@ -1,0 +1,1446 @@
+{
+  "date": "2026-09-29",
+  "scope": "Synthetic data only. No DB, ChatGPT, deployment or publication. Targeted assertions are not general accuracy estimates.",
+  "totalCalls": 57,
+  "totalReportedCost": 0.005491458,
+  "unknownCostCalls": 0,
+  "runs": [
+    {
+      "stage": "calibration-before-review",
+      "plan": {
+        "type": "plan",
+        "suite": "calibration",
+        "fixtureHash": "sha256:36f8afe19d1679b5fba35d90be5c941149ed1d856d75991c50233e17927476bd",
+        "versions": {
+          "rubricVersion": "career-quality/0.2.0",
+          "policyVersion": "career-policy/0.2.0",
+          "promptVersion": "career-prompt/0.2.0",
+          "segmentationVersion": "career-segments/0.1.0"
+        },
+        "cases": [
+          {
+            "id": "cal-grounded",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "PASS"
+              },
+              {
+                "kind": "match",
+                "id": "r1",
+                "status": "MET"
+              }
+            ]
+          },
+          {
+            "id": "cal-invented",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "FAIL"
+              }
+            ]
+          },
+          {
+            "id": "cal-missing",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "UNKNOWN"
+              }
+            ]
+          }
+        ],
+        "limits": {
+          "maxCalls": 12,
+          "maxCost": 0.03
+        }
+      },
+      "cases": [
+        {
+          "id": "cal-grounded",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "status": "PASS",
+              "actual": "PASS",
+              "confidence": 0.93,
+              "expected": "PASS"
+            },
+            {
+              "kind": "match",
+              "id": "r1",
+              "status": "PASS",
+              "actual": "MET",
+              "confidence": 1,
+              "expected": "MET"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 92.4125,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659593-h0kTFGqUClAspcANQyRt",
+            "gen-dec-1790659593-nXXALc1n9HTq5Ry3sRfr",
+            "gen-dec-1790659593-VNUXueo7whvA54ZxMAq0"
+          ]
+        },
+        {
+          "id": "cal-invented",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "status": "PASS",
+              "actual": "FAIL",
+              "confidence": 0.95,
+              "expected": "FAIL"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 84.98750000000001,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659594-Tc1EO67GaWNTZKBIEq3j",
+            "gen-dec-1790659594-0IrwZOyADhrpqZIsIvtG",
+            "gen-dec-1790659594-vnkUDoFzBRMvUos7YTYQ",
+            "gen-dec-1790659594-QXydHkVwtf8UNMRyGn6G"
+          ]
+        },
+        {
+          "id": "cal-missing",
+          "status": "NEEDS_INPUT",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "status": "PASS",
+              "actual": "UNKNOWN",
+              "confidence": null,
+              "expected": "UNKNOWN"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 63.125,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659595-0xY8nIYW7VZUyVp4TO3x"
+          ]
+        }
+      ],
+      "summary": {
+        "type": "summary",
+        "suite": "calibration",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ABSTAIN": 0,
+          "ERROR": 0
+        },
+        "missingChecks": 0,
+        "calls": 8,
+        "reportedCost": 0.0007888439999999999,
+        "unknownCostCalls": 0,
+        "costComplete": true,
+        "stopped": false,
+        "receipts": [
+          {
+            "id": "gen-dec-1790659593-h0kTFGqUClAspcANQyRt",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 894,
+              "output_tokens": 48,
+              "cost": 0.000037548
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659593-nXXALc1n9HTq5Ry3sRfr",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1039,
+              "output_tokens": 52,
+              "cost": 0.000043638
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659593-VNUXueo7whvA54ZxMAq0",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4561,
+              "output_tokens": 265,
+              "cost": 0.000191562
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659594-Tc1EO67GaWNTZKBIEq3j",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 894,
+              "output_tokens": 48,
+              "cost": 0.000037548
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659594-0IrwZOyADhrpqZIsIvtG",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1039,
+              "output_tokens": 52,
+              "cost": 0.000043638
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659594-vnkUDoFzBRMvUos7YTYQ",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4577,
+              "output_tokens": 265,
+              "cost": 0.000192234
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659594-QXydHkVwtf8UNMRyGn6G",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1964,
+              "output_tokens": 62,
+              "cost": 0.000082488
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659595-0xY8nIYW7VZUyVp4TO3x",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 3814,
+              "output_tokens": 224,
+              "cost": 0.000160188
+            },
+            "validation": "PASS"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "holdout-initial-stopped-on-parser-error",
+      "plan": {
+        "type": "plan",
+        "suite": "holdout",
+        "fixtureHash": "sha256:709ef502ba58e4b869e76559eb914021919afe1bd5a63a44d8b4ba3c0feba4e1",
+        "versions": {
+          "rubricVersion": "career-quality/0.2.0",
+          "policyVersion": "career-policy/0.2.0",
+          "promptVersion": "career-prompt/0.2.0",
+          "segmentationVersion": "career-segments/0.1.0"
+        },
+        "cases": [
+          {
+            "id": "hold-report-grounded",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "PASS"
+              },
+              {
+                "kind": "gate",
+                "id": "G3",
+                "status": "PASS"
+              },
+              {
+                "kind": "match",
+                "id": "r1",
+                "status": "MET"
+              }
+            ]
+          },
+          {
+            "id": "hold-invented-savings",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "FAIL"
+              }
+            ]
+          },
+          {
+            "id": "hold-team-credit",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "FAIL"
+              }
+            ]
+          },
+          {
+            "id": "hold-plan-inflation",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "FAIL"
+              }
+            ]
+          },
+          {
+            "id": "hold-source-missing",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "UNKNOWN"
+              }
+            ]
+          },
+          {
+            "id": "hold-answer-omission",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G1",
+                "status": "FAIL"
+              },
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "PASS"
+              }
+            ]
+          },
+          {
+            "id": "hold-internal-contradiction",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G3",
+                "status": "FAIL"
+              }
+            ]
+          },
+          {
+            "id": "hold-off-topic",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G1",
+                "status": "FAIL"
+              },
+              {
+                "kind": "match",
+                "id": "r1",
+                "status": "MET"
+              }
+            ]
+          },
+          {
+            "id": "hold-source-conflict",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "UNKNOWN"
+              }
+            ]
+          }
+        ],
+        "limits": {
+          "maxCalls": 48,
+          "maxCost": 0.07
+        }
+      },
+      "cases": [
+        {
+          "id": "hold-report-grounded",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "PASS",
+              "actual": "PASS",
+              "confidence": 0.91,
+              "status": "PASS"
+            },
+            {
+              "kind": "gate",
+              "id": "G3",
+              "expected": "PASS",
+              "actual": "PASS",
+              "confidence": 1,
+              "status": "PASS"
+            },
+            {
+              "kind": "match",
+              "id": "r1",
+              "expected": "MET",
+              "actual": "MET",
+              "confidence": 0.99,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 93.9,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659641-aBy0NwIhoB6V6ehR0NcN",
+            "gen-dec-1790659641-rXQwhW9jB5ZtLUS967N1",
+            "gen-dec-1790659641-yZh6777OnpkUXHhR3yDq"
+          ]
+        },
+        {
+          "id": "hold-invented-savings",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 0.97,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 86.82499999999999,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659641-U5MaaNW1KbhcqjOA7Xdl",
+            "gen-dec-1790659642-8xeYtqZsTGc6HYed3ZZP",
+            "gen-dec-1790659642-kTiIPcCe1TGEK5iW39pg",
+            "gen-dec-1790659642-e4nQaBZiDAgT338k5kbZ",
+            "gen-dec-1790659642-Xn0yFfZh7k76mOn0alpZ"
+          ]
+        },
+        {
+          "id": "hold-team-credit",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 0.99,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 69.8,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659642-bVYyRpOrQcv3tdRnIBPQ",
+            "gen-dec-1790659643-CwnNZc6l75pd11kzVkfn",
+            "gen-dec-1790659643-jz2N4aIyTIE7AliDO0Dg",
+            "gen-dec-1790659643-lFW8uq9zY2GIHsx3X4Bi"
+          ]
+        },
+        {
+          "id": "hold-plan-inflation",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 0.99,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 58.0625,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659644-XyAc9AnoG8NIkGsFGUZe",
+            "gen-dec-1790659644-LPyz3oqzYyw9nZCthEn3",
+            "gen-dec-1790659644-LEK58ilJyS13V6JWFpeA",
+            "gen-dec-1790659644-YVzJYarQzB5MMdJJcTFn"
+          ]
+        },
+        {
+          "id": "hold-source-missing",
+          "status": "NEEDS_INPUT",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "UNKNOWN",
+              "actual": "UNKNOWN",
+              "confidence": null,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 81.5,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659645-hfAaKjtmm4CXhGTo6Joh",
+            "gen-dec-1790659645-zmQWRiXPzaWMCgZd9aHk"
+          ]
+        },
+        {
+          "id": "hold-answer-omission",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G1",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 0.9,
+              "status": "PASS"
+            },
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "PASS",
+              "actual": "PASS",
+              "confidence": 0.68,
+              "status": "ABSTAIN"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 73.91250000000001,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659645-ZWxuJnbNrUBiwlZWx6ih",
+            "gen-dec-1790659645-ozxaQKyLyvICJEbIjihM",
+            "gen-dec-1790659646-xrUNc7gwNBerxbonPkyh",
+            "gen-dec-1790659646-khvQWwrrzhv1G7qyrJsD"
+          ]
+        },
+        {
+          "id": "hold-internal-contradiction",
+          "status": "ERROR",
+          "stopReason": "INVALID_PROVIDER_SCORE",
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G3",
+              "expected": "FAIL",
+              "status": "ERROR"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": null,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659646-rDCntlxMH1kDTIDNxfcZ",
+            "gen-dec-1790659646-N4W3nWtynCkZIBMocj9I"
+          ]
+        }
+      ],
+      "summary": {
+        "type": "summary",
+        "suite": "holdout",
+        "counts": {
+          "PASS": 8,
+          "FAIL": 0,
+          "ABSTAIN": 1,
+          "ERROR": 1
+        },
+        "missingChecks": 3,
+        "calls": 25,
+        "reportedCost": 0.0022853460000000006,
+        "unknownCostCalls": 0,
+        "costComplete": true,
+        "stopped": true,
+        "receipts": [
+          {
+            "id": "gen-dec-1790659641-aBy0NwIhoB6V6ehR0NcN",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 954,
+              "output_tokens": 48,
+              "cost": 0.000040068
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659641-rXQwhW9jB5ZtLUS967N1",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1099,
+              "output_tokens": 52,
+              "cost": 0.000046158
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659641-yZh6777OnpkUXHhR3yDq",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4695,
+              "output_tokens": 265,
+              "cost": 0.00019719
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659641-U5MaaNW1KbhcqjOA7Xdl",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 954,
+              "output_tokens": 48,
+              "cost": 0.000040068
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659642-8xeYtqZsTGc6HYed3ZZP",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1099,
+              "output_tokens": 52,
+              "cost": 0.000046158
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659642-kTiIPcCe1TGEK5iW39pg",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4716,
+              "output_tokens": 265,
+              "cost": 0.000198072
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659642-e4nQaBZiDAgT338k5kbZ",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 2206,
+              "output_tokens": 62,
+              "cost": 0.000092652
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659642-Xn0yFfZh7k76mOn0alpZ",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 2206,
+              "output_tokens": 62,
+              "cost": 0.000092652
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659642-bVYyRpOrQcv3tdRnIBPQ",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 882,
+              "output_tokens": 48,
+              "cost": 0.000037044
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659643-CwnNZc6l75pd11kzVkfn",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1027,
+              "output_tokens": 53,
+              "cost": 0.000043134
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659643-jz2N4aIyTIE7AliDO0Dg",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4544,
+              "output_tokens": 265,
+              "cost": 0.000190848
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659643-lFW8uq9zY2GIHsx3X4Bi",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1622,
+              "output_tokens": 43,
+              "cost": 0.000068124
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659644-XyAc9AnoG8NIkGsFGUZe",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 888,
+              "output_tokens": 48,
+              "cost": 0.000037296
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659644-LPyz3oqzYyw9nZCthEn3",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1033,
+              "output_tokens": 53,
+              "cost": 0.000043386
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659644-LEK58ilJyS13V6JWFpeA",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4532,
+              "output_tokens": 265,
+              "cost": 0.000190344
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659644-YVzJYarQzB5MMdJJcTFn",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1956,
+              "output_tokens": 83,
+              "cost": 0.000082152
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659645-hfAaKjtmm4CXhGTo6Joh",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 3824,
+              "output_tokens": 224,
+              "cost": 0.000160608
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659645-zmQWRiXPzaWMCgZd9aHk",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1155,
+              "output_tokens": 23,
+              "cost": 0.00004851
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659645-ZWxuJnbNrUBiwlZWx6ih",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 954,
+              "output_tokens": 48,
+              "cost": 0.000040068
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659645-ozxaQKyLyvICJEbIjihM",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1099,
+              "output_tokens": 52,
+              "cost": 0.000046158
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659646-xrUNc7gwNBerxbonPkyh",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4602,
+              "output_tokens": 265,
+              "cost": 0.000193284
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659646-khvQWwrrzhv1G7qyrJsD",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1587,
+              "output_tokens": 43,
+              "cost": 0.000066654
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659646-rDCntlxMH1kDTIDNxfcZ",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 954,
+              "output_tokens": 48,
+              "cost": 0.000040068
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659646-N4W3nWtynCkZIBMocj9I",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1099,
+              "output_tokens": 52,
+              "cost": 0.000046158
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659647-9ypj7DaKZRTt4frAusk9",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4726,
+              "output_tokens": 265,
+              "cost": 0.000198492
+            },
+            "validation": "ERROR"
+          }
+        ]
+      }
+    },
+    {
+      "stage": "parser-diagnostic",
+      "calls": 1,
+      "id": "gen-dec-1790659687-S4Lt3BaUuzsRfI3e51eT",
+      "model": "typesafe/jev-1.13-20260917",
+      "usage": {
+        "input_tokens": 4726,
+        "output_tokens": 265,
+        "cost": 0.000198492
+      },
+      "status": "INVALID_PROVIDER_SCORE",
+      "reproduction": {
+        "score": 3.29,
+        "probabilities": {
+          "0": 0.01,
+          "1": 0.01,
+          "2": 0.2,
+          "3": 0.28,
+          "4": 0.5
+        }
+      }
+    },
+    {
+      "stage": "holdout-selected-after-parser-and-review-fixes",
+      "plan": {
+        "type": "plan",
+        "suite": "holdout",
+        "fixtureHash": "sha256:38e47eca24d4e3950d95a26cea2cbeab1ab38fa97c1f3d43392f87558a5707a2",
+        "versions": {
+          "rubricVersion": "career-quality/0.2.0",
+          "policyVersion": "career-policy/0.2.0",
+          "promptVersion": "career-prompt/0.2.0",
+          "segmentationVersion": "career-segments/0.1.0"
+        },
+        "cases": [
+          {
+            "id": "hold-report-grounded",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "PASS"
+              },
+              {
+                "kind": "gate",
+                "id": "G3",
+                "status": "PASS"
+              },
+              {
+                "kind": "match",
+                "id": "r1",
+                "status": "MET"
+              }
+            ]
+          },
+          {
+            "id": "hold-invented-savings",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "FAIL"
+              }
+            ]
+          },
+          {
+            "id": "hold-answer-omission",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G1",
+                "status": "FAIL"
+              },
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "PASS"
+              }
+            ]
+          },
+          {
+            "id": "hold-internal-contradiction",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G3",
+                "status": "FAIL"
+              }
+            ]
+          },
+          {
+            "id": "hold-off-topic",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G1",
+                "status": "FAIL"
+              },
+              {
+                "kind": "match",
+                "id": "r1",
+                "status": "MET"
+              }
+            ]
+          },
+          {
+            "id": "hold-source-conflict",
+            "expected": [
+              {
+                "kind": "gate",
+                "id": "G2",
+                "status": "UNKNOWN"
+              }
+            ]
+          }
+        ],
+        "limits": {
+          "maxCalls": 26,
+          "maxCost": 0.06
+        }
+      },
+      "cases": [
+        {
+          "id": "hold-report-grounded",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "PASS",
+              "actual": "PASS",
+              "confidence": 0.95,
+              "status": "PASS"
+            },
+            {
+              "kind": "gate",
+              "id": "G3",
+              "expected": "PASS",
+              "actual": "PASS",
+              "confidence": 1,
+              "status": "PASS"
+            },
+            {
+              "kind": "match",
+              "id": "r1",
+              "expected": "MET",
+              "actual": "MET",
+              "confidence": 0.99,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 93.9625,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659887-7f0U1g18TcAMRzosIssR",
+            "gen-dec-1790659887-FzKXCjd8agcmusuxJswf",
+            "gen-dec-1790659887-7jDHmHATYXntiunebQad"
+          ]
+        },
+        {
+          "id": "hold-invented-savings",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 0.97,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 86.3,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659888-sR2ZMQONw1gur7LRUz3T",
+            "gen-dec-1790659888-QxJqMK2Axz06vfeANh0n",
+            "gen-dec-1790659888-BvnnALBYuAI8gxovl0rf",
+            "gen-dec-1790659888-xszUYSVNYZnxQ6KxsFi4",
+            "gen-dec-1790659889-ssBALrgD1F2wWtd5OQJ3"
+          ]
+        },
+        {
+          "id": "hold-answer-omission",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G1",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 0.85,
+              "status": "PASS"
+            },
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "PASS",
+              "actual": "PASS",
+              "confidence": 0.75,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 75.16250000000001,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659889-7SLoym3K4gQVxK0rDGRF",
+            "gen-dec-1790659889-EuD0waOuP2Gn94cdW57L",
+            "gen-dec-1790659889-tNlFsMX6rrdD4IiSzcLB",
+            "gen-dec-1790659890-YcLItvROqFO294haLVP3"
+          ]
+        },
+        {
+          "id": "hold-internal-contradiction",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G3",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 0.95,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 70.225,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659890-uKRpN8rSxH0rMYe3Lbor",
+            "gen-dec-1790659890-dEKvL8mkcOmXfkVGi435",
+            "gen-dec-1790659890-tcpnPlmcuMdDPCHuXTCg",
+            "gen-dec-1790659891-h0hmS0rktvgjAgrT599D",
+            "gen-dec-1790659891-93CqRdlok2awQNAdcGIa"
+          ]
+        },
+        {
+          "id": "hold-off-topic",
+          "status": "REVIEW",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G1",
+              "expected": "FAIL",
+              "actual": "FAIL",
+              "confidence": 1,
+              "status": "PASS"
+            },
+            {
+              "kind": "match",
+              "id": "r1",
+              "expected": "MET",
+              "actual": "MET",
+              "confidence": 0.99,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 23.699999999999996,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659891-hm1vNYsw7Q7VS5oHfdQn",
+            "gen-dec-1790659891-6sjbcQdAPwFtwsgNgQpb",
+            "gen-dec-1790659892-Xl1WOdnPWDMfre2Ye49B",
+            "gen-dec-1790659892-PS5f0OW36NwYgr8mwaxV"
+          ]
+        },
+        {
+          "id": "hold-source-conflict",
+          "status": "NEEDS_INPUT",
+          "stopReason": null,
+          "checks": [
+            {
+              "kind": "gate",
+              "id": "G2",
+              "expected": "UNKNOWN",
+              "actual": "UNKNOWN",
+              "confidence": null,
+              "status": "PASS"
+            }
+          ],
+          "scores": [
+            {
+              "questionId": "q1",
+              "score100": 70.3875,
+              "excludedMetricIds": []
+            }
+          ],
+          "requestIds": [
+            "gen-dec-1790659892-uWCBL6DmsZJExldomPy4",
+            "gen-dec-1790659892-OwBepghZk46CgDqp8XVI"
+          ]
+        }
+      ],
+      "summary": {
+        "type": "summary",
+        "suite": "holdout",
+        "counts": {
+          "PASS": 10,
+          "FAIL": 0,
+          "ABSTAIN": 0,
+          "ERROR": 0
+        },
+        "missingChecks": 0,
+        "calls": 23,
+        "reportedCost": 0.0022187759999999996,
+        "unknownCostCalls": 0,
+        "costComplete": true,
+        "stopped": false,
+        "receipts": [
+          {
+            "id": "gen-dec-1790659887-7f0U1g18TcAMRzosIssR",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 980,
+              "output_tokens": 52,
+              "cost": 0.00004116
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659887-FzKXCjd8agcmusuxJswf",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1125,
+              "output_tokens": 54,
+              "cost": 0.00004725
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659887-7jDHmHATYXntiunebQad",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4721,
+              "output_tokens": 276,
+              "cost": 0.000198282
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659888-sR2ZMQONw1gur7LRUz3T",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 980,
+              "output_tokens": 52,
+              "cost": 0.00004116
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659888-QxJqMK2Axz06vfeANh0n",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1125,
+              "output_tokens": 54,
+              "cost": 0.00004725
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659888-BvnnALBYuAI8gxovl0rf",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4742,
+              "output_tokens": 276,
+              "cost": 0.000199164
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659888-xszUYSVNYZnxQ6KxsFi4",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 2232,
+              "output_tokens": 72,
+              "cost": 0.000093744
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659889-ssBALrgD1F2wWtd5OQJ3",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 2232,
+              "output_tokens": 72,
+              "cost": 0.000093744
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659889-7SLoym3K4gQVxK0rDGRF",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 980,
+              "output_tokens": 52,
+              "cost": 0.00004116
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659889-EuD0waOuP2Gn94cdW57L",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1125,
+              "output_tokens": 54,
+              "cost": 0.00004725
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659889-tNlFsMX6rrdD4IiSzcLB",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4628,
+              "output_tokens": 276,
+              "cost": 0.000194376
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659890-YcLItvROqFO294haLVP3",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1613,
+              "output_tokens": 48,
+              "cost": 0.000067746
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659890-uKRpN8rSxH0rMYe3Lbor",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 980,
+              "output_tokens": 52,
+              "cost": 0.00004116
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659890-dEKvL8mkcOmXfkVGi435",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1125,
+              "output_tokens": 54,
+              "cost": 0.00004725
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659890-tcpnPlmcuMdDPCHuXTCg",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4752,
+              "output_tokens": 276,
+              "cost": 0.000199584
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659891-h0hmS0rktvgjAgrT599D",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 2593,
+              "output_tokens": 93,
+              "cost": 0.000108906
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659891-93CqRdlok2awQNAdcGIa",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 2593,
+              "output_tokens": 93,
+              "cost": 0.000108906
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659891-hm1vNYsw7Q7VS5oHfdQn",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 980,
+              "output_tokens": 52,
+              "cost": 0.00004116
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659891-6sjbcQdAPwFtwsgNgQpb",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1125,
+              "output_tokens": 54,
+              "cost": 0.00004725
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659892-Xl1WOdnPWDMfre2Ye49B",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4626,
+              "output_tokens": 276,
+              "cost": 0.000194292
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659892-PS5f0OW36NwYgr8mwaxV",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1891,
+              "output_tokens": 72,
+              "cost": 0.000079422
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659892-uWCBL6DmsZJExldomPy4",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 1235,
+              "output_tokens": 54,
+              "cost": 0.00005187
+            },
+            "validation": "PASS"
+          },
+          {
+            "id": "gen-dec-1790659892-OwBepghZk46CgDqp8XVI",
+            "model": "typesafe/jev-1.13-20260917",
+            "usage": {
+              "input_tokens": 4445,
+              "output_tokens": 234,
+              "cost": 0.00018669
+            },
+            "validation": "PASS"
+          }
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Initial holdout stopped at case 7; no result was silently marked successful.",
+    "Three cases (team credit, planned completion, missing evidence) passed in the first holdout, but were not rerun after parser/source-context/coverage fixes within the 60-call limit.",
+    "No semantic prompt tuning on holdout. Parser compatibility and source-context preservation were fixed after observations/review.",
+    "A low-confidence correct answer was ABSTAIN in the first holdout and PASS in the rerun; this is not an independently measured confidence calibration.",
+    "Final selected holdout has 10 passing targeted assertions, but all overall outcomes remain REVIEW or NEEDS_INPUT, not automatic approval.",
+    "The empirical probability tolerance is not a documented provider rounding guarantee.",
+    "After live runs, a deterministic regression fixed low-confidence JD requirement promotion to eligibility MET. No additional live call was made; the matched requirements in the final selected live cases had confidence >= 0.99."
+  ]
+}

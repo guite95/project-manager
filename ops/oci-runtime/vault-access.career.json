@@ -1,0 +1,11 @@
+{
+  "region": "ap-chuncheon-1",
+  "policyId": "ocid1.policy.oc1..aaaaaaaa734setufzugj4zz4sql53hb26c5lplw7ptd2xnh5jdvk5qgho4sa",
+  "policyName": "pm-career-host-secret-bundles",
+  "accessProfile": "vault-access.json",
+  "resourceType": "secret-bundles",
+  "verb": "read",
+  "secretNames": ["pm-career-openrouter-api-key", "pm-career-oauth-secret"],
+  "manifest": "vault-manifest.project-management.json",
+  "existingPoliciesChanged": false
+}

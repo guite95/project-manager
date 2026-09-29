@@ -6,14 +6,17 @@ import {evaluate, type EvaluationResult} from '../career/evaluator.ts';
 import {applyRewrite, compareCandidate, rewriteSchema} from '../career/rewrite.ts';
 import type {DecisionProvider} from '../career/jev.ts';
 import {parseRecruitmentDocument, recruitmentKey, recruitmentText, type RecruitmentDocument} from '../recruitment.ts';
+import {careerAuthorization} from '../career/authorization-context.ts';
 
 type Entry={input:EvaluationInput;result:EvaluationResult;accepted:boolean};
 export type CareerSession={id:string;ownerId:string;revision:number;requestHash:string;state:'RUNNING'|'COMPLETE';providerAttempts:number;history:Entry[];selectedVersion:number;pending:EvaluationInput|null;progress:EvaluationResult|null;startedAt:string;updatedAt:string;saved:{requestHash:string;documentId:string;revision:number}|null};
 const json=(value:unknown)=>JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 const key=(id:string)=>{if(!/^[a-f0-9]{64}$/.test(id))return fail('INVALID_SESSION_ID');return `career:session:${id}`;};
 export async function requireCareerOwner(ownerId:string,db:Prisma.TransactionClient=prisma) {
-  const owner=await db.accessUser.findUnique({where:{id:ownerId},select:{id:true,active:true,role:true}});
+  const owner=await db.accessUser.findUnique({where:{id:ownerId},select:{id:true,active:true,role:true,oauthEpoch:true}});
   if(!owner?.active||owner.role!=='OWNER')return fail('MCP_OWNER_REQUIRED');
+  const auth=careerAuthorization.getStore();
+  if(auth?.oauthEpoch!==undefined&&(auth.ownerId!==ownerId||auth.oauthEpoch!==owner.oauthEpoch||!auth.grantDeadline||auth.grantDeadline<=Date.now()/1000))return fail('MCP_UNAUTHORIZED');
   return owner;
 }
 export async function getCareerSession(ownerId:string,id:string):Promise<CareerSession> {

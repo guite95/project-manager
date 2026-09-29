@@ -277,6 +277,8 @@ model AiOpsDocumentEmbedding {
 
 /// OWNER는 최초 등록된 개인 데이터 소유자다. 역할 값은 SQL CHECK로 제한한다.
 model AccessUser {
+  oauthEpoch Int @default(0) @map("oauth_epoch")
+  oauthUser CareerOAuthUser?
   id String @id
   username String @unique
   name String
@@ -288,6 +290,255 @@ model AccessUser {
   memberships AccessMembership[]
   @@map("access_user")
 }
+
+model CareerOAuthUser {
+  id String @id
+  name String
+  email String @unique
+  emailVerified Boolean @default(false) @map("email_verified")
+  image String?
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  session_userIdRows CareerOAuthSession[] @relation("session_userId")
+  account_userIdRows CareerOAuthAccount[] @relation("account_userId")
+  oauthClient_userIdRows CareerOAuthClient[] @relation("oauthClient_userId")
+  oauthRefreshToken_userIdRows CareerOAuthRefreshToken[] @relation("oauthRefreshToken_userId")
+  oauthAccessToken_userIdRows CareerOAuthAccessToken[] @relation("oauthAccessToken_userId")
+  oauthConsent_userIdRows CareerOAuthConsent[] @relation("oauthConsent_userId")
+  owner AccessUser @relation(fields: [id], references: [id], onDelete: Cascade, map: "career_oauth_user_owner_fkey")
+  @@map("career_oauth_user")
+}
+
+model CareerOAuthSession {
+  id String @id
+  expiresAt DateTime @map("expires_at")
+  token String @unique
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+  userId String @map("user_id")
+  ownerEpoch Int @map("owner_epoch")
+  userIdRelation CareerOAuthUser @relation("session_userId", fields: [userId], references: [id], onDelete: Cascade)
+  oauthRefreshToken_sessionIdRows CareerOAuthRefreshToken[] @relation("oauthRefreshToken_sessionId")
+  oauthAccessToken_sessionIdRows CareerOAuthAccessToken[] @relation("oauthAccessToken_sessionId")
+  @@index([userId])
+  @@map("career_oauth_session")
+}
+
+model CareerOAuthAccount {
+  id String @id
+  accountId String @map("account_id")
+  providerId String @map("provider_id")
+  userId String @map("user_id")
+  accessToken String? @map("access_token")
+  refreshToken String? @map("refresh_token")
+  idToken String? @map("id_token")
+  accessTokenExpiresAt DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope String?
+  password String?
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  userIdRelation CareerOAuthUser @relation("account_userId", fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("career_oauth_account")
+}
+
+model CareerOAuthVerification {
+  id String @id
+  identifier String
+  value String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  @@index([identifier])
+  @@map("career_oauth_verification")
+}
+
+model CareerOAuthJwks {
+  id String @id
+  publicKey String @map("public_key")
+  privateKey String @map("private_key")
+  createdAt DateTime @map("created_at")
+  expiresAt DateTime? @map("expires_at")
+  alg String?
+  crv String?
+  @@map("career_oauth_jwks")
+}
+
+model CareerOAuthClient {
+  id String @id
+  clientId String @unique @map("client_id")
+  clientSecret String? @map("client_secret")
+  clientDiscoveryId String? @map("client_discovery_id")
+  disabled Boolean? @default(false)
+  skipConsent Boolean? @map("skip_consent")
+  enableEndSession Boolean? @map("enable_end_session")
+  subjectType String? @map("subject_type")
+  scopes String[] @default([])
+  clientCredentialsScopes String[] @default([]) @map("client_credentials_scopes")
+  userId String? @map("user_id")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  name String?
+  uri String?
+  icon String?
+  contacts String[] @default([])
+  tos String?
+  policy String?
+  softwareId String? @map("software_id")
+  softwareVersion String? @map("software_version")
+  softwareStatement String? @map("software_statement")
+  redirectUris String[] @default([]) @map("redirect_uris")
+  postLogoutRedirectUris String[] @default([]) @map("post_logout_redirect_uris")
+  backchannelLogoutUri String? @map("backchannel_logout_uri")
+  backchannelLogoutSessionRequired Boolean? @map("backchannel_logout_session_required")
+  tokenEndpointAuthMethod String? @map("token_endpoint_auth_method")
+  applicationType String? @map("application_type")
+  jwks String?
+  jwksUri String? @map("jwks_uri")
+  grantTypes String[] @default([]) @map("grant_types")
+  responseTypes String[] @default([]) @map("response_types")
+  requirePKCE Boolean? @map("require_p_k_c_e")
+  dpopBoundAccessTokens Boolean? @default(false) @map("dpop_bound_access_tokens")
+  referenceId String? @map("reference_id")
+  metadata Json?
+  userIdRelation CareerOAuthUser? @relation("oauthClient_userId", fields: [userId], references: [id], onDelete: Cascade)
+  oauthClientResource_clientIdRows CareerOAuthClientResource[] @relation("oauthClientResource_clientId")
+  oauthRefreshToken_clientIdRows CareerOAuthRefreshToken[] @relation("oauthRefreshToken_clientId")
+  oauthAccessToken_clientIdRows CareerOAuthAccessToken[] @relation("oauthAccessToken_clientId")
+  oauthConsent_clientIdRows CareerOAuthConsent[] @relation("oauthConsent_clientId")
+  @@index([userId])
+  @@map("career_oauth_client")
+}
+
+model CareerOAuthResource {
+  id String @id
+  identifier String @unique
+  name String
+  accessTokenTtl Int? @map("access_token_ttl")
+  refreshTokenTtl Int? @map("refresh_token_ttl")
+  signingAlgorithm String? @map("signing_algorithm")
+  signingKeyId String? @map("signing_key_id")
+  allowedScopes String[] @default([]) @map("allowed_scopes")
+  customClaims Json? @map("custom_claims")
+  dpopBoundAccessTokensRequired Boolean? @default(false) @map("dpop_bound_access_tokens_required")
+  disabled Boolean? @default(false)
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  policyVersion Int? @default(1) @map("policy_version")
+  metadata Json?
+  oauthClientResource_resourceIdRows CareerOAuthClientResource[] @relation("oauthClientResource_resourceId")
+  @@map("career_oauth_resource")
+}
+
+model CareerOAuthClientResource {
+  id String @id
+  clientId String @map("client_id")
+  resourceId String @map("resource_id")
+  metadata Json?
+  createdAt DateTime? @map("created_at")
+  clientIdRelation CareerOAuthClient @relation("oauthClientResource_clientId", fields: [clientId], references: [clientId], onDelete: Cascade)
+  resourceIdRelation CareerOAuthResource @relation("oauthClientResource_resourceId", fields: [resourceId], references: [identifier], onDelete: Cascade)
+  @@index([clientId])
+  @@index([resourceId])
+  @@unique([clientId, resourceId])
+  @@map("career_oauth_client_resource")
+}
+
+model CareerOAuthRefreshToken {
+  id String @id
+  token String @unique
+  clientId String @map("client_id")
+  sessionId String? @map("session_id")
+  userId String @map("user_id")
+  referenceId String? @map("reference_id")
+  authorizationCodeId String? @map("authorization_code_id")
+  resources String[] @default([])
+  requestedUserInfoClaims String[] @default([]) @map("requested_user_info_claims")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @map("created_at")
+  revoked DateTime?
+  rotatedAt DateTime? @map("rotated_at")
+  rotationReplayResponse String? @map("rotation_replay_response")
+  rotationReplayExpiresAt DateTime? @map("rotation_replay_expires_at")
+  authTime DateTime? @map("auth_time")
+  confirmation Json?
+  scopes String[] @default([])
+  clientIdRelation CareerOAuthClient @relation("oauthRefreshToken_clientId", fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionIdRelation CareerOAuthSession? @relation("oauthRefreshToken_sessionId", fields: [sessionId], references: [id], onDelete: SetNull)
+  userIdRelation CareerOAuthUser @relation("oauthRefreshToken_userId", fields: [userId], references: [id], onDelete: Cascade)
+  oauthAccessToken_refreshIdRows CareerOAuthAccessToken[] @relation("oauthAccessToken_refreshId")
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@map("career_oauth_refresh_token")
+}
+
+model CareerOAuthAccessToken {
+  id String @id
+  token String @unique
+  clientId String @map("client_id")
+  sessionId String? @map("session_id")
+  userId String? @map("user_id")
+  referenceId String? @map("reference_id")
+  authorizationCodeId String? @map("authorization_code_id")
+  resources String[] @default([])
+  requestedUserInfoClaims String[] @default([]) @map("requested_user_info_claims")
+  refreshId String? @map("refresh_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @map("created_at")
+  revoked DateTime?
+  confirmation Json?
+  scopes String[] @default([])
+  clientIdRelation CareerOAuthClient @relation("oauthAccessToken_clientId", fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionIdRelation CareerOAuthSession? @relation("oauthAccessToken_sessionId", fields: [sessionId], references: [id], onDelete: SetNull)
+  userIdRelation CareerOAuthUser? @relation("oauthAccessToken_userId", fields: [userId], references: [id], onDelete: Cascade)
+  refreshIdRelation CareerOAuthRefreshToken? @relation("oauthAccessToken_refreshId", fields: [refreshId], references: [id], onDelete: Cascade)
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@index([refreshId])
+  @@map("career_oauth_access_token")
+}
+
+model CareerOAuthConsent {
+  id String @id
+  clientId String @map("client_id")
+  userId String? @map("user_id")
+  referenceId String? @map("reference_id")
+  resources String[] @default([])
+  requestedUserInfoClaims String[] @default([]) @map("requested_user_info_claims")
+  scopes String[] @default([])
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+  clientIdRelation CareerOAuthClient @relation("oauthConsent_clientId", fields: [clientId], references: [clientId], onDelete: Cascade)
+  userIdRelation CareerOAuthUser? @relation("oauthConsent_userId", fields: [userId], references: [id], onDelete: Cascade)
+  @@index([clientId])
+  @@index([userId])
+  @@map("career_oauth_consent")
+}
+
+model CareerOAuthClientAssertion {
+  id String @id
+  expiresAt DateTime @map("expires_at")
+  @@map("career_oauth_client_assertion")
+}
+
+model CareerOAuthRequest {
+  id String @id
+  query String
+  stage String
+  consentHash String? @map("consent_hash")
+  ownerEpoch Int? @map("owner_epoch")
+  expiresAt DateTime @map("expires_at")
+  @@index([expiresAt])
+  @@map("career_oauth_request")
+}
+
 model AccessSession {
   tokenHash String @id @map("token_hash")
   userId String @map("user_id")

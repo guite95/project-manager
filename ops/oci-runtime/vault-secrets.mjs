@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 
 // Fixed profiles only; migration credentials never share an application's mount.
 const profiles = Object.freeze({
-  'project-management': { required: ['DATABASE_URL', 'SESSION_SECRET'], optional: ['APP_PASSWORD_HASH'] },
+  'project-management': { required: ['DATABASE_URL', 'SESSION_SECRET'], optional: ['APP_PASSWORD_HASH', 'OPENROUTER_API_KEY', 'CAREER_OAUTH_SECRET'] },
   'project-management-migration': { required: ['DATABASE_URL'], optional: [], gid: 0 },
   'flight': { required: ['CONFIG_JSON'], optional: [] },
   'flight-migration': { required: ['DATABASE_URL'], optional: [], gid: 0 },

@@ -31,8 +31,33 @@ export type Decision={type:'score'|'choice';score:number|null;choice:string|null
 export type DecisionResponse={id:string;model:string;answers:Record<string,Decision>;usage:{input_tokens:number;output_tokens:number;cost:number}};
 const record=(x:unknown):x is Record<string,unknown>=>Boolean(x&&typeof x==='object'&&!Array.isArray(x));
 const unit=(x:unknown):x is number=>typeof x==='number'&&Number.isFinite(x)&&x>=0&&x<=1;
+// Empirical compatibility envelope, NOT a vendor guarantee of nearest rounding:
+// live responses include score 3.29 with a displayed weighted mean of 3.25.
+// Admit at most one percentage point per probability and half a score cent.
+// Require a feasible unit-mass distribution; retain the raw returned numbers.
+function scoreBounds(keys:string[],p:Record<string,number>) {
+  const epsilon=.01+1e-9;
+  const low=keys.map(k=>Math.max(0,p[k]-epsilon)),high=keys.map(k=>Math.min(1,p[k]+epsilon));
+  const total=low.reduce((a,b)=>a+b,0);
+  if(total>1 || high.reduce((a,b)=>a+b,0)<1)fail('INVALID_PROVIDER_PROBABILITIES');
+  const bound=(descending:boolean)=>{
+    let rest=1-total,mean=low.reduce((n,v,i)=>n+i*v,0);
+    for(const i of keys.map((_,i)=>i).sort((a,b)=>descending?b-a:a-b)){
+      const take=Math.min(rest,high[i]-low[i]);mean+=i*take;rest-=take;
+    }
+    return mean;
+  };
+  return {minimum:bound(false)-.005-1e-9,maximum:bound(true)+.005+1e-9};
+}
+export function readDecisionReceipt(value:unknown):Pick<DecisionResponse,'id'|'model'|'usage'>|null {
+  if(!record(value)||typeof value.id!=='string'||!value.id||typeof value.model!=='string'||!value.model||!record(value.usage))return null;
+  const usage=value.usage;
+  if(![usage.input_tokens,usage.output_tokens].every(n=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0)||typeof usage.cost!=='number'||!Number.isFinite(usage.cost)||usage.cost<0)return null;
+  return {id:value.id,model:value.model,usage:usage as DecisionResponse['usage']};
+}
 export function parseDecisions(value:unknown,questions:Record<string,DecisionQuestion>):DecisionResponse {
-  if(!record(value)||typeof value.id!=='string'||!value.id||typeof value.model!=='string'||!/^typesafe\/jev-1\.13(?:-\d{8})?$/.test(value.model)||!record(value.answers)||!record(value.usage)) return fail('INVALID_PROVIDER_RESPONSE');
+  const receipt=readDecisionReceipt(value);
+  if(!receipt||!/^typesafe\/jev-1\.13(?:-\d{8})?$/.test(receipt.model)||!record(value)||!record(value.answers)) return fail('INVALID_PROVIDER_RESPONSE');
   const raw=value.answers;
   if(Object.keys(raw).length!==Object.keys(questions).length || Object.keys(raw).some(k=>!Object.hasOwn(questions,k))) fail('INVALID_PROVIDER_COVERAGE');
   const answers:Record<string,Decision>={};
@@ -40,14 +65,13 @@ export function parseDecisions(value:unknown,questions:Record<string,DecisionQue
     const a=raw[id];if(!record(a)||a.type!==q.type||!record(a.probabilities)) return fail('INVALID_PROVIDER_RESPONSE');
     const keys=q.type==='score'?q.criteria.map((_,i)=>String(i)):Object.keys(q.criteria);
     const probabilities=a.probabilities;
-    if(Object.keys(probabilities).length!==keys.length||keys.some(k=>!unit(probabilities[k]))||Math.abs(Object.values(probabilities).reduce<number>((sum,n)=>sum+Number(n),0)-1)>0.001) fail('INVALID_PROVIDER_PROBABILITIES');
+    if(Object.keys(probabilities).length!==keys.length||keys.some(k=>!unit(probabilities[k]))) fail('INVALID_PROVIDER_PROBABILITIES');
     if(a.confidence!==undefined && !unit(a.confidence)) fail('INVALID_PROVIDER_CONFIDENCE');
     const p=probabilities as Record<string,number>;
-    if(q.type==='score' && (typeof a.score!=='number'||!Number.isFinite(a.score)||a.score<0||a.score>4||Math.abs(keys.reduce((n,k)=>n+Number(k)*p[k],0)-a.score)>0.01)) fail('INVALID_PROVIDER_SCORE');
+    const bounds=scoreBounds(keys,p);
+    if(q.type==='score' && (typeof a.score!=='number'||!Number.isFinite(a.score)||a.score<0||a.score>keys.length-1||a.score<bounds.minimum||a.score>bounds.maximum)) fail('INVALID_PROVIDER_SCORE');
     if(q.type==='choice' && (typeof a.choice!=='string'||!keys.includes(a.choice)||p[a.choice]+0.001<Math.max(...Object.values(p)))) fail('INVALID_PROVIDER_CHOICE');
     answers[id]={type:q.type,score:q.type==='score'?a.score as number:null,choice:q.type==='choice'?a.choice as string:null,confidence:a.confidence===undefined?null:a.confidence as number,probabilities:p};
   }
-  const usage=value.usage;
-  if(![usage.input_tokens,usage.output_tokens].every(n=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0)||typeof usage.cost!=='number'||!Number.isFinite(usage.cost)||usage.cost<0) fail('INVALID_PROVIDER_USAGE');
-  return {id:value.id,model:value.model,answers,usage:usage as DecisionResponse['usage']};
+  return {...receipt,answers};
 }
