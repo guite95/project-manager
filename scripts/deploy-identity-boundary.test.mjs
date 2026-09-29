@@ -39,7 +39,10 @@ else if(command==='sudo'){
   else if(args.some(a=>a.endsWith('/migrate-pm.mjs')))process.exit(1);
   else if(!['restart','start','reload'].some(a=>args.includes(a))&&!args.some(a=>a.endsWith('/vault-readiness.mjs')||a.endsWith('/identity-readiness.mjs')))process.exit(9);
 }else if(command==='docker'){
-  if(args.join(' ')==='compose config --format json')process.stdout.write(fs.readFileSync(path.join(dir,'compose.json')));
+  if(args.join(' ')==='compose config --format json'){
+    fs.writeFileSync(path.join(dir,'selected-compose'),process.env.COMPOSE_FILE);
+    process.stdout.write(fs.readFileSync(path.join(dir,'compose.json')));
+  }
   else process.exit(9);
 }else if(command!=='flock')process.exit(9);
 `;
@@ -51,6 +54,10 @@ else if(command==='sudo'){
     encoding:'utf8',env:{...process.env,PATH:`${dir}:${process.env.PATH}`,PM_FIXTURE_DIR:dir,PM_FIXTURE_RECORDINGS:recordings?'enabled':'disabled'},
   });
   assert.equal(result.status,1,result.stderr);
+  // Removing/reordering the career overlay must not silently disable OAuth on deployment.
+  assert.equal(readFileSync(join(dir,'selected-compose'),'utf8'),recordings
+    ? 'docker-compose.yml:docker-compose.identity-boundary.yml:docker-compose.vault.yml:docker-compose.recordings.yml:docker-compose.career.yml'
+    : 'docker-compose.yml:docker-compose.identity-boundary.yml:docker-compose.vault.yml:docker-compose.career.yml');
   const calls=readFileSync(join(dir,'calls'),'utf8').trim().split('\n').map(JSON.parse);
   assert.equal(calls.filter(args=>args.some(a=>a.endsWith('/migrate-pm.mjs'))).length,1);
   assert.equal(calls.some(args=>args.includes('stop')||args.includes('up')),false);

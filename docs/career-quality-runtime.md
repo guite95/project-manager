@@ -1,6 +1,6 @@
 # 일반 Chat용 자기소개서 품질 MCP
 
-2026-09-29 로컬 구현 및 **가상 자료 Jev 실호출 검증 완료**. 운영 배포·OAuth 연결·ChatGPT 웹 검증·플러그인 게시 전이다. [평가 설계](career-quality-design.md), [데이터 규약](career-quality-contract.md)를 구현하며 점수는 AI 작성 확률이나 채용 합격 확률이 아니다. 실제 사용자 자료의 정확도는 검증하지 않았다.
+2026-09-29 로컬 구현 및 **가상 자료 Jev 실호출 검증 완료**. 운영 앱 배포·MCP/OAuth 설정 활성화·공개 HTTPS 검색정보 검증까지 완료했으며 실제 ChatGPT OAuth 연결·웹 검증·플러그인 게시는 아직이다. [평가 설계](career-quality-design.md), [데이터 규약](career-quality-contract.md)를 구현하며 점수는 AI 작성 확률이나 채용 합격 확률이 아니다. 실제 사용자 자료의 정확도는 검증하지 않았다.
 
 ## 사용 흐름
 
@@ -88,7 +88,7 @@ node --experimental-strip-types scripts/career-jev-probe.mjs --live --suite hold
 
 기본 `CAREER_MCP_ENABLED` 미설정/false는 endpoint와 discovery를 404로 닫는다. true인데 필수 구성이 빠지면 503으로 닫는다. 기존 웹 로그인 쿠키를 원격 MCP 토큰으로 재사용하지 않는다.
 
-기존에 검증된 OAuth 2.1/OIDC 인증 제공자를 **별도 선택·설정**해야 한다. 이 변경은 자체 인증 서버를 만들거나 외부 서비스를 자동 등록하지 않는다. 제공자는 ChatGPT의 OAuth 연결 방식에 맞춰 Authorization Code + PKCE, OAuth metadata, resource audience, 정확한 redirect URI/client 등록을 지원해야 한다. 지원되는 client 등록 방식(CIMD/DCR/사전 등록)은 제공자와 ChatGPT 연결 화면에서 확인한다.
+현재 운영은 기존 OWNER 계정을 사용하는 자체 Better Auth로 결정했다. 외부 Auth0·카카오 계정은 필요하지 않으며 정확한 callback과 사전 등록 public client, PKCE S256을 사용한다. 자체 인증의 추가 설정·15분 토큰·폐기 정책은 [Better Auth 운영 안내](career-oauth.md)를 따른다. 아래 issuer/JWKS/subject 표와 일반 JWT 설명은 외부 인증 모드 기준이며 자체 모드에서는 파생값을 사용한다.
 
 필요한 비밀이 아닌 런타임 설정:
 
@@ -106,9 +106,9 @@ JWT는 RS256/ES256 서명, issuer, resource audience, sub, iat/exp(최대 1시�
 
 공개 discovery: `/.well-known/oauth-protected-resource/mcp/career`. MCP 인증 실패는 WWW-Authenticate로 이 주소를 안내한다. proxy 예외는 이 discovery 읽기와 정확한 `/mcp/career` 경로만이며 나머지 사이트의 쿠키 인증·same-origin 정책은 유지한다. Host는 resource host, Origin이 있으면 사이트 origin 또는 `https://chatgpt.com`만 허용한다.
 
-2026-09-29 서버 준비에서 `OPENROUTER_API_KEY`, `CAREER_OAUTH_SECRET`을 기존 OCI Vault에 등록했다. manifest에 정확한 secret ID/version을 고정하고 기존 호스트 dynamic group·egress 조건으로 두 secret의 bundle read만 허용했다. publisher를 reload하여 보호된 runtime generation에 제공했으며 앱은 재시작하지 않았다. 기존 프로세스는 이전 generation을 계속 사용하고 새 기능은 앱 배포 이후 사용한다. 파일 모드가 설정되면 env의 키로 fallback하지 않는다. 키는 ZIP/Git/Chat에 넣지 않는다.
+2026-09-29 서버 준비에서 `OPENROUTER_API_KEY`, `CAREER_OAUTH_SECRET`을 기존 OCI Vault에 등록했다. manifest에 정확한 secret ID/version을 고정하고 기존 호스트 dynamic group·egress 조건으로 두 secret의 bundle read만 허용했다. 최초 준비에서는 publisher만 reload했으며 이후 승인된 앱 배포·설정 활성화로 앱에도 제공했다. 파일 모드가 설정되면 env의 키로 fallback하지 않는다. 키는 ZIP/Git/Chat에 넣지 않는다.
 
-`docker-compose.vault.yml`은 environment 전체를 override하므로 활성화할 때 **비밀이 아닌** CAREER 설정을 담은 `docker-compose.career.yml`을 기존 Vault/identity/recordings override 뒤에 추가한다. 기존 배포 자동화에는 아직 자동 포함되지 않는다. DB 공개 포트나 새 장기 PM API 키는 만들지 않는다. Nginx의 인증 헤더 전달·Host·요청 제한/timeout도 배포 시 별도 확인한다.
+`docker-compose.vault.yml`은 environment 전체를 override하므로 활성화할 때 **비밀이 아닌** CAREER 설정을 담은 `docker-compose.career.yml`을 기존 Vault/identity/recordings override 뒤에 추가한다. 서버에 적용했으며 CI 업로드·자동 포함 변경도 소스에 반영했다. 이전 배포 스크립트로 되돌리면 설정 반영이 사라질 수 있다. DB 공개 포트나 새 장기 PM API 키는 만들지 않는다. 공개 HTTPS 검색정보와 미인증 거부는 확인했지만 실제 토큰의 proxy 전달·평가 timeout은 연결 후 검증한다.
 
 2026-09-29 최초 P-Grid 매뉴얼 읽기는 Unauthorized였다. 이후 사용자가 P-Grid 읽기를 명시적으로 면제했으므로 기존 프로젝트의 백업·최소 권한·비밀 보호·별도 배포 승인 규칙을 적용한다.
 
@@ -127,14 +127,14 @@ node scripts/package-career-plugin.mjs --output /Users/janguk/Downloads/career-a
 
 패키지 검사는 manifest 동기화, 5개 스킬 frontmatter·참조 경로, 기존 프롬프트·무관한 원본 파일의 byte 보존, 비밀파일/헤더 부재, ZIP 무결성을 확인한다. 기존 출력 ZIP은 덮어쓰지 않는다. 스킬 기본 Python validator는 로컬 PyYAML 부재로 실행되지 않아 이 패키지 검사와 별도 가상 사용자 시나리오 검토로 보완했다. 일반 Chat의 실제 동작 검증은 아직 아니다.
 
-배포 전 ZIP은 **게시 대기 후보**다. 미배포 MCP 주소가 들어 있으므로 현재 웹 플러그인을 바로 교체하지 않았다. 게시 직전에 현재 release를 다시 읽고 변경 여부를 확인한 뒤 `expected_release_id`를 적용한다. 게시 후 파일 read-back 및 새 일반 Chat에서 인증·조회·합성 평가·충돌 시나리오를 확인한다.
+ZIP은 **게시 대기 후보**다. MCP 서버는 활성화했지만 실제 ChatGPT 연결 검증 전이므로 현재 웹 플러그인을 교체하지 않았다. 게시 직전에 현재 release를 다시 읽고 변경 여부를 확인한 뒤 `expected_release_id`를 적용한다. 게시 후 파일 read-back 및 새 일반 Chat에서 인증·조회·합성 평가·충돌 시나리오를 확인한다.
 
 ## 운영 적용 상태와 남은 순서
 
-1. **완료:** 자체 Better Auth 결정, 실제 활성 OWNER 1명 확인. P-Grid 읽기는 사용자 면제. 정확한 ChatGPT client/callback은 미확정.
+1. **완료:** 자체 Better Auth 결정, 실제 활성 OWNER 1명 확인. P-Grid 읽기는 사용자 면제. client `career-chatgpt`와 사용자 제공 callback을 서버에 적용했다.
 2. **완료:** 운영 DB 백업·OAuth migration·Vault 두 키 등록·최소 권한·runtime generation 게시. [서버 준비 이력](career-oauth.md#서버-준비-이력--2026-09-29)을 따른다.
-3. **미실행:** 변경 소스 전달과 승인된 앱 배포. 새 Vault allowlist와 manifest가 함께 전달되어야 한다. 비밀 아닌 CAREER 설정 및 선택 Compose overlay도 배포 시 연결한다. 최초 실제 평가 전에 평가용 저장·외부 전송 동의가 필요하다.
-4. discovery/토큰 거절/OWNER 확인/합성 Jev 평가로 준비 상태 확인. 평가 기준 보정은 별도 작업.
+3. **완료:** 앱 배포 및 비밀 아닌 CAREER 설정·Compose overlay 활성화. 다음 배포에도 유지하기 위한 CI/배포 스크립트 변경을 OAuth 호환성 수정과 함께 전달한다. [활성화 기록](evidence/career-activation-2026-09-29.json)은 활성화 당시의 상태다.
+4. **일부 완료:** 공개 HTTPS discovery/JWKS 200과 미인증 MCP 401 확인. 실제 ChatGPT OWNER 확인·동의·토큰 교환·도구 호출은 남았다. 최초 실제 평가 전에 평가용 저장·외부 전송 동의가 필요하며 평가 기준 보정은 별도 작업이다.
 5. 승인된 플러그인 0.3.0 게시와 파일 재조회.
 6. 사용자의 일반 Chat에서 연결 및 실제 작성/수정 확인. 브라우저 검증은 사용자 요청 때만 한다.
 

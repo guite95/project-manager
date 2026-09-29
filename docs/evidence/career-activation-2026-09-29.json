@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-29",
+  "activationSucceeded": true,
+  "imageTag": "project-management:b6de208dffe0bd22c52cb0901889636e2c842706",
+  "imageId": "sha256:8ae01b3446e055c78ab10e983cfa7cad6c459a6912eac42b45ea0b6c3f1d5f22",
+  "appStartedAt": "2026-09-29T13:06:44.753622957Z",
+  "resource": "https://project.dev-uk.shop/mcp/career",
+  "clientId": "career-chatgpt",
+  "redirectUri": "https://chatgpt.com/connector/oauth/fKDWttZ9fv__",
+  "backups": [
+    "/var/backups/oci-vault-migration/career-activation-hqsi8i_d",
+    "/var/backups/oci-vault-migration/career-activation-cdww30a3"
+  ],
+  "publicHttps": {
+    "login": 200,
+    "authorizationMetadata": 200,
+    "resourceMetadata": 200,
+    "jwks": 200,
+    "jwksKeyCount": 0,
+    "mcpUnauthenticatedGet": 401,
+    "mcpUnauthenticatedPost": 401,
+    "resourceMetadataChallengePresent": true
+  },
+  "workerUnchanged": true,
+  "imageMountsPortsUnchanged": true,
+  "secretsRemainFileOnly": true,
+  "embeddingRemainsDisabled": true,
+  "databaseWrittenByActivation": false,
+  "jevCalled": false,
+  "browserOperated": false,
+  "hostedPluginChanged": false,
+  "chatgptEndToEndVerified": false,
+  "sourceCommitPushStillRequired": true,
+  "serverScriptSha256": "2b803a903bde3f895de98302441e2effef21b3b8c99dd19778f667ac0d300e33",
+  "overlaySha256": "ffb5e80859d840abf3785a108e8eddbb9da37582842883c504b29545adade5b6",
+  "verification": {
+    "tests": { "total": 481, "passed": 475, "skipped": 6, "failed": 0 },
+    "focusedDeploymentTestsPassed": 3,
+    "typecheck": "passed",
+    "build": "passed",
+    "shellSyntax": "passed"
+  },
+  "incident": {
+    "initialFailure": "Installed docker compose create does not support --no-deps; rollback repeated the unsupported option.",
+    "recovery": "Original configuration and existing app container were verified; service restarted and login returned 200 before the second attempt.",
+    "successfulRetry": "Removed unsupported option, confirmed no app dependencies, and ran create dry-run before stopping the app.",
+    "temporaryScriptReview": "A missing-container rollback gap was identified; the one-off script will not be reused or shipped and is removed after recording evidence."
+  }
+}

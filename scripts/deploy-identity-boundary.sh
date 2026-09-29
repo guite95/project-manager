@@ -30,6 +30,10 @@ if [[ "$PM_RECORDINGS_MODE" == enabled ]]; then
   [[ "$PM_DEPLOYMENT_MODE" == vault ]]
   export COMPOSE_FILE="$COMPOSE_FILE:docker-compose.recordings.yml"
 fi
+if [[ "$PM_DEPLOYMENT_MODE" == vault ]]; then
+  # Non-secret flags remain opt-in; append after the Vault environment override.
+  export COMPOSE_FILE="$COMPOSE_FILE:docker-compose.career.yml"
+fi
 sudo -n /opt/node24/bin/node /opt/project-management-runtime/current/ops/oci-runtime/identity-readiness.mjs "$PM_RUNTIME_GID"
 python3 - <<'PY'
 import os,json,subprocess

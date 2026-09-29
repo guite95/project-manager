@@ -17,8 +17,11 @@ export function oauthRouteKind(path:string,method:string):'server'|'browser'|'au
   return null;
 }
 export function validateOAuthQuery(query:URLSearchParams,config:OAuthConfig|null):URLSearchParams {
-  const allowed=['client_id','redirect_uri','response_type','resource','scope','state','code_challenge','code_challenge_method'];
+  const allowed=['client_id','redirect_uri','response_type','resource','scope','state','code_challenge','code_challenge_method','ui_locales'];
   if(!config||[...query.keys()].some(k=>!allowed.includes(k)||query.getAll(k).length!==1)||query.toString().length>2500||query.get('client_id')!==config.clientId||query.get('redirect_uri')!==config.redirectUri||query.get('resource')!==config.resource||query.get('response_type')!=='code'||query.get('code_challenge_method')!=='S256'||!/^[-_A-Za-z0-9]{43}$/.test(query.get('code_challenge')??'')||!query.get('state')||query.get('state')!.length>512)throw new Error('OAUTH_INVALID_REQUEST');
+  // Locale hints never affect identity or grants; preserve the exact browser-bound query.
+  const locales=query.get('ui_locales');
+  if(locales!==null&&(locales.length>128||locales.trim()!==locales||!/^[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*(?: [A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*)*$/.test(locales)))throw new Error('OAUTH_INVALID_REQUEST');
   const scopes=(query.get('scope')??'').split(' ');
   if(!scopes.includes('career:read')||scopes.some(s=>!OAUTH_SCOPES.includes(s))||new Set(scopes).size!==scopes.length)throw new Error('OAUTH_INVALID_SCOPE');
   return query;

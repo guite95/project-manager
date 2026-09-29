@@ -47,7 +47,7 @@ Better Auth / OAuth Provider **1.7.6**을 서버 내부에서 운영하는 구�
 1. 기존 DB와 migration 이력을 읽기 검사하고 검증된 백업을 확보한다.
 2. `20260929160000_career_better_auth` forward migration을 기존 migration identity로 적용한다. **새 Prisma client 배포보다 먼저 적용**한다. 기존 계정에 열이 추가되므로 feature flag가 꺼져 있어도 이 순서는 필요하다. 운영 reset/db push/migrate dev는 사용하지 않는다.
 3. OAuth 비밀과 기존 Jev 키를 Vault에 등록하고 runtime manifest의 정확한 secret/version 및 IAM 권한을 추가한다. 보호된 generation에 `CAREER_OAUTH_SECRET`, `OPENROUTER_API_KEY` 파일을 제공한다. 환경 변수나 배포 로그에 키를 출력하지 않는다. 2026-09-29 서버 준비에서 실제 두 secret의 version 1을 등록했고 manifest 및 별도 최소 권한 정책은 `ops/oci-runtime/vault-manifest.project-management.json`, `vault-access.career.json`에 기록했다.
-4. 승인된 배포에 `docker-compose.career.yml`을 기존 Vault/identity/recordings override **뒤에** 선택적으로 추가한다. 이 파일은 비밀, 포트, 마운트를 추가하지 않으며 기본 비활성이다. 현재 배포 자동화에는 자동으로 포함되지 않는다.
+4. 승인된 배포에 `docker-compose.career.yml`을 기존 Vault/identity/recordings override **뒤에** 추가한다. 이 파일은 비밀, 포트, 마운트를 추가하지 않으며 기본 비활성이다. Vault 배포의 마지막 overlay로 포함하는 소스 변경과 CI 업로드 변경은 아래 활성화 이력을 따른다.
 5. HTTPS host/proxy, discovery, JWKS, 무인증 MCP의 401 challenge를 확인한다. ChatGPT 연결 설정의 client/callback을 정확히 맞춘다.
 6. 실제 OWNER 로그인 → 동의 → MCP 목록/문서 읽기 → 별도 동의된 Jev 호출 → 새 대화에서 연결 재사용 → 연결 해제 후 거부를 확인한다. 그 후에 플러그인 교체/게시한다.
 
@@ -67,9 +67,23 @@ DB의 암호화된 키를 읽는 데 OAuth 비밀이 필요하므로 이 비밀�
 
 서버 준비 후 전체 테스트 481개 중 475 통과·기존 스킵 6·실패 0, Vault 관련 21개 중 20 통과·기존 스킵 1·실패 0, typecheck/build 통과. 별도 코드 검토에서 이번 Vault 변경의 Critical/Important 지적은 없었다. 해당 검토의 운영 IAM/DB 검증 제외 항목은 별도 실제 운영 조회로 확인했다.
 
-**남은 단계:** 커밋/소스 전달 → 앱 배포 및 HTTPS/proxy 검증 → 정확한 ChatGPT client/callback 설정과 OWNER 로그인·동의·MCP 실연결 → 승인된 플러그인 교체. 현재 배포 자동화는 `docker-compose.career.yml`을 자동 포함하지 않으므로 배포 전에 이를 연결해야 한다. 이 서버 준비에서는 커밋·푸시·앱 배포·ChatGPT 설정·브라우저 검증을 하지 않았다.
+위 최초 서버 준비에서는 커밋·푸시·앱 배포·ChatGPT 설정·브라우저 검증을 하지 않았다. 이후 앱 배포와 설정 활성화 상태는 아래와 같다.
+
+## MCP/OAuth 활성화 — 2026-09-29
+
+- 사용자가 제공한 callback `https://chatgpt.com/connector/oauth/fKDWttZ9fv__`(끝 밑줄 2개), client ID `career-chatgpt`를 사용했다. 기존 활성 OWNER를 읽기 확인하고 비밀이 아닌 설정 여섯 개만 서버에 적용했다.
+- 배포된 `b6de208dffe0bd22c52cb0901889636e2c842706` 이미지를 그대로 사용해 앱 컨테이너를 재생성했다. 이미지·포트·마운트는 유지했고 recordings worker는 재시작하지 않았다. 두 비밀은 기존 Vault 파일로만 공급하며 embedding은 계속 비활성이다.
+- 외부 HTTPS에서 로그인·resource metadata·authorization metadata·JWKS는 200, 미인증 MCP GET/POST는 metadata challenge를 포함한 401을 확인했다. JWKS의 키는 0개이며 GET으로 생성하지 않는다. 실제 OWNER 확인·동의·토큰 교환 성공을 의미하지 않는다.
+- 첫 재생성 시도는 설치된 Compose의 `create`가 `--no-deps`를 지원하지 않아 실패했고 자동 복구도 같은 옵션으로 실패했다. 원래 설정·컨테이너를 확인한 뒤 기존 앱을 다시 시작해 로그인 200을 확인했다. 해당 옵션을 제거하고 의존 서비스 부재 확인 및 dry-run을 선행한 두 번째 시도에서 활성화했다. 무중단 작업은 아니었다.
+- 서버 백업은 `/var/backups/oci-vault-migration/career-activation-hqsi8i_d`(첫 시도), `/var/backups/oci-vault-migration/career-activation-cdww30a3`(성공)에 보존한다. 환경 파일 백업은 서버 밖으로 복사하지 않았다.
+- 이번 작업은 DB migration/데이터 쓰기·유료 Jev 호출·브라우저 조작·플러그인 게시를 하지 않았다. 임시 실행 스크립트의 컨테이너 부재 시 rollback 보완 지적은 재사용 금지 및 스크립트 삭제로 처리하며 배포 코드에 포함하지 않는다.
+- 로컬 전체 테스트 481개 중 475 통과·기존 스킵 6·실패 0, typecheck/build, 배포 집중 테스트 3/3, 셸 구문 검사를 통과했다. 저장소 배포 변경의 독립 검토에서 차단 지적은 없었다.
+
+**소스 전달과 남은 단계:** 활성화 당시 미커밋이었던 CI 업로드·배포 스크립트 변경을 이번 OAuth 호환성 수정과 함께 전달한다. 이전 소스의 CI로 되돌리면 재생성에서 Career 설정이 누락될 수 있다. 배포 완료 후 실제 ChatGPT에서 검색 재시도 → OWNER 로그인·동의 → MCP 실연결을 검증하고, 별도 승인된 평가 및 플러그인 교체를 진행한다. [비밀 없는 활성화 기록](evidence/career-activation-2026-09-29.json)의 소스 전달 상태는 활성화 당시의 스냅샷이다.
 
 ## 로컬 검증
+
+2026-09-29 실제 ChatGPT 연결 시도에서 authorize 요청에 `ui_locales`가 포함되어 `OAUTH_REQUEST_DENIED`(400)가 발생했다. client/callback/resource/scope는 운영 설정과 일치했으며 로컬 재현에서 locale 항목 유무만으로 허용/거절이 갈렸다. 이를 선택적 표시 언어 힌트로 허용하되 최대 128자, 공백으로 구분한 ASCII 언어 태그 형식, 중복 금지를 적용했다. 인증·권한 판단에는 사용하지 않으며 브라우저에 결합한 원래 query는 재작성하지 않는다. 실제 Better Auth 처리기로 OWNER 확인·동의·PKCE 토큰 교환과 scope 보존을 회귀 검증했다. 수정 후 전체 테스트 485개 중 479 통과·기존 스킵 6·실패 0, 타입 검사·빌드 통과. **운영 재배포 및 ChatGPT 재시도 전에는 연결 오류가 해결됐다고 볼 수 없다.**
 
 `NODE_OPTIONS=--experimental-strip-types pnpm test`, `pnpm typecheck`, `pnpm build`를 사용한다. DB 테스트는 `assertTestDatabase`가 허용한 `localhost:5432/project_management_test`만 사용한다. `pnpm dev`는 공유 DB 터널을 열기 때문에 OAuth 테스트에 사용하지 않는다.
 
