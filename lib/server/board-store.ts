@@ -10,6 +10,7 @@ import { prisma } from "../db.ts";
 import type { ProjectNote } from "../project-notes.ts";
 import { planRollover } from "../rollover.ts";
 import { PERSONAL_ISSUES_SLUG } from "../today-board.ts";
+import { assertTaskIssues, assertTaskProject, mergeTaskSlugs, taskProjectFilter, visibleTaskSlugs, type TaskAccess } from './task-access.ts';
 import type {
   CustomProject,
   Issue,
@@ -69,9 +70,9 @@ async function readSettings(): Promise<{
 }
 
 /** 지난 날짜의 오늘 항목을 정리한다. 정리할 게 없으면 쓰기 쿼리를 돌리지 않는다. */
-async function runRollover(today: string): Promise<void> {
+async function runRollover(today: string, access?: TaskAccess): Promise<void> {
   const rows = await prisma.issue.findMany({
-    where: { placement: "today" },
+    where: { placement: "today", projectSlug: taskProjectFilter(access) },
     select: { id: true, todayDate: true, done: true },
   });
 
@@ -88,19 +89,19 @@ async function runRollover(today: string): Promise<void> {
 
   await prisma.$transaction([
     prisma.issue.updateMany({
-      where: { id: { in: plan.returnToPool } },
+      where: { id: { in: plan.returnToPool }, projectSlug: taskProjectFilter(access) },
       data: { placement: "pool", todayDate: null, done: false },
     }),
-    prisma.issue.deleteMany({ where: { id: { in: plan.remove } } }),
+    prisma.issue.deleteMany({ where: { id: { in: plan.remove }, projectSlug: taskProjectFilter(access) } }),
   ]);
 }
 
-export async function loadBoard(today: string): Promise<TodayBoard> {
-  await runRollover(today);
+export async function loadBoard(today: string, access?: TaskAccess): Promise<TodayBoard> {
+  await runRollover(today, access);
 
   const [rows, projects, settings] = await Promise.all([
-    prisma.issue.findMany({ orderBy: { position: "asc" } }),
-    prisma.customProject.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.issue.findMany({ where: { projectSlug: taskProjectFilter(access) }, orderBy: { position: "asc" } }),
+    prisma.customProject.findMany({ where: { slug: taskProjectFilter(access) }, orderBy: { createdAt: "asc" } }),
     readSettings(),
   ]);
 
@@ -114,8 +115,8 @@ export async function loadBoard(today: string): Promise<TodayBoard> {
         createdAt: project.createdAt.toISOString(),
       }),
     ),
-    projectOrder: settings.projectOrder,
-    collapsedProjects: settings.collapsedProjects,
+    projectOrder: visibleTaskSlugs(settings.projectOrder, access),
+    collapsedProjects: visibleTaskSlugs(settings.collapsedProjects, access),
   };
 }
 
@@ -134,7 +135,8 @@ export async function createIssue(input: {
   projectSlug: string;
   title: string;
   now: string;
-}): Promise<Issue> {
+}, access?: TaskAccess): Promise<Issue> {
+  assertTaskProject(input.projectSlug, access);
   return prisma.$transaction(async tx => {
     // 프로젝트 표시 변경과 이슈 추가가 교차할 때도 잠금 순서대로 판정한다.
     const projects = await tx.$queryRaw<{ showInTasks: boolean }[]>`SELECT show_in_tasks AS "showInTasks" FROM flow_project WHERE slug = ${input.projectSlug} FOR SHARE`;
@@ -171,6 +173,7 @@ export class IssueBatchError extends Error {
 export async function movePoolIssues(input:
   | { ids: string[]; action: "today"; today: string }
   | { ids: string[]; action: "project"; projectSlug: string },
+  access?: TaskAccess,
 ): Promise<number> {
   const { ids } = input;
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 5000 ||
@@ -183,6 +186,7 @@ export async function movePoolIssues(input:
   }
 
   return prisma.$transaction(async (tx) => {
+    if (input.action === "project") assertTaskProject(input.projectSlug, access);
     if (input.action === "project" && input.projectSlug !== PERSONAL_ISSUES_SLUG) {
       const flow = await tx.$queryRaw<{ showInTasks: boolean }[]>`SELECT show_in_tasks AS "showInTasks" FROM flow_project WHERE slug = ${input.projectSlug} FOR SHARE`;
       if (flow[0]?.showInTasks === false) throw new IssueBatchError("할 일 표시가 해제된 프로젝트입니다.");
@@ -198,6 +202,7 @@ export async function movePoolIssues(input:
       where: { id: { in: ids } },
       select: { id: true, placement: true, projectSlug: true },
     });
+    for (const row of rows) assertTaskProject(row.projectSlug, access);
     if (rows.length !== ids.length || rows.some((row) => row.placement !== "pool")) {
       throw new IssueBatchError("할 일 목록이 변경되었습니다. 새로고침 후 다시 선택하세요.");
     }
@@ -236,41 +241,37 @@ export async function movePoolIssues(input:
 export async function setIssueTitle(
   id: string,
   title: string,
+  access?: TaskAccess,
 ): Promise<void> {
   const trimmed = title.trim();
   if (!trimmed) return;
-  await prisma.issue.updateMany({ where: { id }, data: { title: trimmed } });
+  await assertTaskIssues([id], access);
+  await prisma.issue.updateMany({ where: { id, projectSlug: taskProjectFilter(access) }, data: { title: trimmed } });
 }
 
-export async function deleteIssue(id: string): Promise<void> {
-  await prisma.issue.delete({ where: { id } });
+export async function deleteIssue(id: string, access?: TaskAccess): Promise<void> {
+  await assertTaskIssues([id], access);
+  await prisma.issue.delete({ where: { id, projectSlug: taskProjectFilter(access) } });
 }
 
 export async function moveIssue(
   id: string,
   placement: Placement,
   today: string,
+  access?: TaskAccess,
 ): Promise<void> {
-  const position = await nextPosition(placement);
-
-  if (placement === "today") {
-    await prisma.issue.update({
-      where: { id },
-      data: { placement, todayDate: today, position },
-    });
-    return;
-  }
-
-  // 풀로 되돌아가면 완료 표시가 의미를 잃는다. 체크를 푼 것과 같게 다뤄
-  // 그날 쌓인 이력도 함께 지운다. 그러지 않으면 다시 체크할 때 같은 날짜에
-  // 이력이 두 번 남는다.
-  await prisma.$transaction([
-    prisma.completion.deleteMany({ where: { issueId: id, completedOn: today } }),
-    prisma.issue.update({
-      where: { id },
-      data: { placement, todayDate: null, done: false, position },
-    }),
-  ]);
+  await prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT id FROM issue WHERE id = ${id} FOR UPDATE`;
+    await assertTaskIssues([id], access, tx);
+    const position = await nextPosition(placement, tx);
+    if (placement === "today") {
+      await tx.issue.update({ where: { id }, data: { placement, todayDate: today, position } });
+      return;
+    }
+    // 풀로 돌려보낼 때 그날 완료 이력도 함께 지운다.
+    await tx.completion.deleteMany({ where: { issueId: id, completedOn: today } });
+    await tx.issue.update({ where: { id }, data: { placement, todayDate: null, done: false, position } });
+  });
 }
 
 /**
@@ -283,11 +284,12 @@ export async function setIssueDone(input: {
   completionId: string;
   today: string;
   now: string;
-}): Promise<void> {
-  const issue = await prisma.issue.findUnique({ where: { id: input.id } });
-  if (!issue) return;
-
+}, access?: TaskAccess): Promise<void> {
   await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM issue WHERE id = ${input.id} FOR UPDATE`;
+    const issue = await tx.issue.findUnique({ where: { id: input.id } });
+    if (!issue) return;
+    assertTaskProject(issue.projectSlug, access);
     await tx.issue.update({
       where: { id: input.id },
       data: { done: input.done },
@@ -313,12 +315,13 @@ export async function setIssueDone(input: {
 }
 
 /** 넘어온 순서대로 0부터 다시 매긴다. 목록에 없는 id 는 무시된다. */
-export async function reorderIssues(ids: string[]): Promise<void> {
-  await prisma.$transaction(
-    ids.map((id, index) =>
-      prisma.issue.updateMany({ where: { id }, data: { position: index } }),
-    ),
-  );
+export async function reorderIssues(ids: string[], access?: TaskAccess): Promise<void> {
+  await prisma.$transaction(async tx => {
+    await assertTaskIssues(ids, access, tx);
+    for (const [index, id] of ids.entries()) {
+      await tx.issue.updateMany({ where: { id, projectSlug: taskProjectFilter(access) }, data: { position: index } });
+    }
+  });
 }
 
 export async function createCustomProject(input: {
@@ -341,14 +344,28 @@ export async function createCustomProject(input: {
 }
 
 /** 프로젝트만 지운다. 그 프로젝트의 이슈는 손대지 않는다. 화면이 미분류로 묶는다. */
-export async function deleteCustomProject(slug: string): Promise<void> {
+export async function deleteCustomProject(slug: string, access?: TaskAccess): Promise<void> {
+  assertTaskProject(slug, access);
   await prisma.customProject.delete({ where: { slug } });
 }
 
 export async function saveSettings(settings: {
   projectOrder: string[];
   collapsedProjects: string[];
-}): Promise<void> {
+}, access?: TaskAccess): Promise<void> {
+  if (access?.hiddenProjectSlugs.length) {
+    await prisma.$transaction(async tx => {
+      await tx.appSetting.upsert({ where: { key: BOARD_SETTING_KEY }, create: { key: BOARD_SETTING_KEY, value: {} }, update: {} });
+      await tx.$queryRaw`SELECT key FROM app_setting WHERE key = ${BOARD_SETTING_KEY} FOR UPDATE`;
+      const row = await tx.appSetting.findUnique({ where: { key: BOARD_SETTING_KEY } });
+      const value = (row?.value ?? {}) as { projectOrder?: unknown; collapsedProjects?: unknown };
+      await tx.appSetting.update({ where: { key: BOARD_SETTING_KEY }, data: { value: {
+        projectOrder: mergeTaskSlugs(asStrings(value.projectOrder), settings.projectOrder, access),
+        collapsedProjects: mergeTaskSlugs(asStrings(value.collapsedProjects), settings.collapsedProjects, access),
+      } } });
+    });
+    return;
+  }
   await prisma.appSetting.upsert({
     where: { key: BOARD_SETTING_KEY },
     create: { key: BOARD_SETTING_KEY, value: settings },

@@ -6,6 +6,7 @@ import { preserveFlowLayout } from '../flows/layout.ts';
 import type { ErdSnapshot } from '../erd/chart.ts';
 import { hasMaterialStorageReference } from '../materials.ts';
 import { restoreMaterial } from './material-storage.mjs';
+import { taskProjectFilter, type TaskAccess } from './task-access.ts';
 
 /** No process/global cache: a new request must see DB edits without redeployment. */
 export async function listFlowProjects(projectSlug?: string): Promise<FlowProject[]> {
@@ -27,8 +28,8 @@ export async function getFlowProject(slug: string): Promise<FlowProject | undefi
   return (await listFlowProjects(slug))[0];
 }
 
-export async function listFlowProjectNames() {
-  return prisma.flowProject.findMany({select:{slug:true,title:true,scope:true,showInTasks:true},orderBy:[{position:'asc'},{slug:'asc'}]});
+export async function listFlowProjectNames(access?: TaskAccess) {
+  return prisma.flowProject.findMany({where:{slug:taskProjectFilter(access)},select:{slug:true,title:true,scope:true,showInTasks:true},orderBy:[{position:'asc'},{slug:'asc'}]});
 }
 
 export async function getFlowDocument(projectSlug: string, slug: string) {

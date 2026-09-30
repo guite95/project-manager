@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { cache } from 'react';
+import { loadTaskAccess, type TaskAccess } from '../server/task-access.ts';
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from '../session.ts';
 import { AccessError, resolveActor } from './store.ts';
 export const currentActor = cache(async () => resolveActor((await cookies()).get(SESSION_COOKIE_NAME)?.value??''));
@@ -8,6 +9,12 @@ export async function requireActor() {
   const actor=await currentActor();
   if(!actor) throw new AccessError('로그인이 필요합니다.',401);
   return actor;
+}
+export async function requireTaskAccess() {
+  return loadTaskAccess(await requireActor());
+}
+export function taskResponse(action: (access: TaskAccess) => Promise<Response>) {
+  return accessResponse(async () => action(await requireTaskAccess()));
 }
 export function sessionResponse(token: string) {
   const response=new NextResponse(null,{status:204});

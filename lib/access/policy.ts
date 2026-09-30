@@ -21,6 +21,11 @@ export function routeRequirement(path: string, method: string): Requirement {
   if (path === '/api/logout' && method === 'POST' || path === '/api/account/password' && method === 'POST') return {kind:'authenticated'};
   if (path === '/api/project-registry' && ['GET','POST','PATCH'].includes(method)) return {kind:'admin'};
   if (path === '/settings' && read(method) || path === '/api/access' && ['GET','POST'].includes(method)) return {kind:'admin'};
+  if (read(method) && ['/today', '/today/history', '/api/board', '/api/task-projects', '/api/history'].includes(path)) return {kind:'admin'};
+  if (path === '/api/issues' && method === 'POST' || path === '/api/issues/batch' && method === 'POST' ||
+      path === '/api/issues/order' && method === 'PUT' || path === '/api/settings' && method === 'PUT' ||
+      /^\/api\/issues\/[^/]+$/.test(path) && !['batch', 'order'].includes(path.split('/').at(-1)!) && ['PATCH', 'DELETE'].includes(method) ||
+      /^\/api\/projects\/[^/]+$/.test(path) && method === 'DELETE') return {kind:'admin'};
   let match = path.match(/^\/flows\/([^/]+)(?:\/(notes|materials|meetings|recordings)(?:\/([^/]+))?)?$/);
   if (match && read(method)) return {kind:'project',project:match[1],action:'read'};
   match = path.match(/^\/api\/flows\/([^/]+)\/recordings(?:\/([^/]+)\/(audio|transcript|text|retry))?$/);

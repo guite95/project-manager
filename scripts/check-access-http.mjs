@@ -5,6 +5,8 @@ import { once } from 'node:events';
 import { createServer } from 'node:net';
 import { randomUUID } from 'node:crypto';
 import { assertTestDatabase } from '../lib/test-database.ts';
+import { todayInSeoul } from '../lib/format/date-time.ts';
+import { PERSONAL_ISSUES_SLUG } from '../lib/today-board.ts';
 assertTestDatabase(process.env.TEST_DATABASE_URL);
 process.env.DATABASE_URL=process.env.TEST_DATABASE_URL;
 const {prisma}=await import('../lib/db.ts');
@@ -12,6 +14,7 @@ const {hashPassword}=await import('../lib/password.ts');
 const {issueSession,manageAccess,tokenHash}=await import('../lib/access/store.ts');
 const prefix=`http-${randomUUID().slice(0,8)}`;
 const project=`${prefix}-project`, other=`${prefix}-other`;
+const personal=`${prefix}-private`, taskDate=todayInSeoul();
 const owner={id:`${prefix}-owner`,role:'OWNER',memberships:[]};
 const users=[owner,{id:`${prefix}-admin`,role:'ADMIN'},{id:`${prefix}-viewer`,role:'MEMBER'},{id:`${prefix}-editor`,role:'MEMBER'}];
 const chart={slug:'document',title:'HTTP 테스트 문서',nodes:[],edges:[],content:{kind:'notice',text:'only this document'}};
@@ -20,6 +23,14 @@ try {
   const passwordHash=await hashPassword('local-test-password-only');
   for(const user of users) await prisma.accessUser.create({data:{id:user.id,username:user.id,name:user.id,role:user.role,passwordHash}});
   for(const slug of [project,other]) await prisma.flowProject.create({data:{slug,title:slug,position:999,categories:{create:{slug:'work',title:'Work',position:0,charts:{create:{slug:chart.slug,position:0,document:chart}}}}}});
+  await prisma.flowProject.create({data:{slug:personal,title:'Private task project',scope:'PERSONAL',personalGroup:'TOY',position:999}});
+  await prisma.accessMembership.create({data:{userId:users[1].id,projectSlug:personal,role:'EDITOR'}});
+  for (const [index, [key, projectSlug, placement]] of [
+    ['company-pool', project, 'pool'], ['company-today', project, 'today'],
+    ['private-pool', personal, 'pool'], ['private-today', personal, 'today'],
+    ['personal-pool', PERSONAL_ISSUES_SLUG, 'pool'], ['personal-today', PERSONAL_ISSUES_SLUG, 'today'],
+  ].entries()) await prisma.issue.create({data:{id:`${prefix}-${key}`,projectSlug,title:key,placement,todayDate:placement==='today'?taskDate:null,position:index,createdAt:new Date()}});
+  await prisma.completion.createMany({data:[project,personal,PERSONAL_ISSUES_SLUG].map((projectSlug,index)=>({id:`${prefix}-completion-${index}`,projectSlug,title:'Task completion',completedOn:taskDate,completedAt:new Date()}))});
   for(const [index,role] of [[2,'VIEWER'],[3,'EDITOR']]) await prisma.accessMembership.create({data:{userId:users[index].id,projectSlug:project,role}});
   const cookies=await Promise.all(users.map(async user=>`pm_session=${await issueSession(user.id)}`));
   const share=await manageAccess(owner,{action:'share',projectSlug:project,chartSlug:chart.slug,days:1});
@@ -65,6 +76,37 @@ try {
   await check(`/api/flows/${project}/document`,200,{user:2});
   await check(`/api/flows/${other}/document`,403,{user:2});
   for(const endpoint of ['/api/access','/api/board','/api/history','/api/ai-ops/overview','/today','/personal']) await check(endpoint,403,{user:2});
+  // 관리자에게는 개인 멤버십이 있어도 개인 이슈·오늘 항목·완료 이력을 공개하지 않는다.
+  await check('/today',200,{user:1});
+  const historyHtml=await (await check('/today/history?view=summary',200,{user:1})).text();
+  assert.ok(!historyHtml.includes('href="/today/history?view=summary"'));checks++;
+  const taskProjects=await (await check('/api/task-projects',200,{user:1})).json();
+  assert.ok(taskProjects.some(row=>row.slug===project));assert.ok(!taskProjects.some(row=>row.slug===personal));checks+=2;
+  const taskBoard=await (await check('/api/board',200,{user:1})).json();
+  assert.ok(taskBoard.issues.some(row=>row.id===`${prefix}-company-pool`));
+  assert.ok(taskBoard.today.some(row=>row.id===`${prefix}-company-today`));
+  assert.ok([...taskBoard.issues,...taskBoard.today].every(row=>![personal,PERSONAL_ISSUES_SLUG].includes(row.projectSlug)));checks+=3;
+  const taskHistory=await (await check(`/api/history?from=${taskDate}&to=${taskDate}`,200,{user:1})).json();
+  assert.ok(taskHistory.completions.some(row=>row.projectSlug===project));
+  assert.ok(taskHistory.completions.every(row=>![personal,PERSONAL_ISSUES_SLUG].includes(row.projectSlug)));checks+=2;
+  const taskSnapshot=await prisma.issue.findMany({where:{id:{startsWith:prefix}},orderBy:{id:'asc'}});
+  for (const key of ['private-pool','private-today','personal-pool','personal-today']) {
+    await check(`/api/issues/${prefix}-${key}`,403,{user:1,method:'PATCH',body:{title:'Blocked',placement:'pool',done:true}});
+    await check(`/api/issues/${prefix}-${key}`,403,{user:1,method:'DELETE'});
+  }
+  for (const projectSlug of [personal,PERSONAL_ISSUES_SLUG]) {
+    await check('/api/issues',403,{user:1,method:'POST',body:{projectSlug,title:'Blocked'}});
+    await check('/api/issues/batch',403,{user:1,method:'POST',body:{ids:[`${prefix}-company-pool`],action:'project',projectSlug}});
+  }
+  await check('/api/issues/batch',403,{user:1,method:'POST',body:{ids:[`${prefix}-company-pool`,`${prefix}-private-pool`],action:'today'}});
+  await check('/api/issues/order',403,{user:1,method:'PUT',body:{ids:[`${prefix}-company-pool`,`${prefix}-personal-pool`]}});
+  await check(`/api/projects/${personal}`,403,{user:1,method:'DELETE'});
+  assert.deepEqual(await prisma.issue.findMany({where:{id:{startsWith:prefix}},orderBy:{id:'asc'}}),taskSnapshot);checks++;
+  const addedTask=await (await check('/api/issues',201,{user:1,method:'POST',body:{projectSlug:project,title:'Allowed task'}})).json();
+  await check(`/api/issues/${addedTask.id}`,204,{user:1,method:'PATCH',body:{title:'Updated task',placement:'today',done:true}});
+  await check(`/api/issues/${addedTask.id}`,204,{user:1,method:'DELETE'});
+  await check('/api/issues',403,{user:2,method:'POST',body:{projectSlug:project,title:'Member task'}});
+  await check('/api/task-projects',403,{user:2});
   for(const endpoint of ['/flows/%70ersonal-ilchul','/api/flows/%70ersonal-ilchul/document','/api/notes/%70ersonal-ilchul']) await check(endpoint,403,{user:1});
   await check(`/api/flows/${project}/document`,403,{user:2,method:'PUT',body:{chart,revision:1}});
   await check(`/api/flows/${project}/document`,403,{user:3,method:'PUT',origin:'https://other.invalid',body:{chart,revision:1}});
@@ -106,8 +148,10 @@ try {
   await prisma.accessAudit.deleteMany({where:{actorId:{in:[...users.map(u=>u.id),...(issued?[issued.id]:[])]}}});
   await prisma.accessThrottle.deleteMany({where:{key:{in:[`login:${users[2].id}`,`login:${prefix}-issued`,'login:bootstrap','login:global'].map(tokenHash)}}});
   await prisma.projectNote.deleteMany({where:{id:{in:[project,other]}}});
+  await prisma.completion.deleteMany({where:{OR:[{id:{startsWith:prefix}},{projectSlug:project}]}});
+  await prisma.issue.deleteMany({where:{OR:[{id:{startsWith:prefix}},{projectSlug:project}]}});
   await prisma.flowDocument.deleteMany({where:{projectSlug:{in:[project,other]}}});
   await prisma.flowCategory.deleteMany({where:{projectSlug:{in:[project,other]}}});
-  await prisma.flowProject.deleteMany({where:{slug:{in:[project,other]}}});
+  await prisma.flowProject.deleteMany({where:{slug:{in:[project,other,personal]}}});
   await prisma.$disconnect();
 }

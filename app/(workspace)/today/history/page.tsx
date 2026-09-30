@@ -16,6 +16,8 @@ import {
 } from "@/lib/server/work-summary-store";
 import { todayInSeoul } from "@/lib/format/date-time";
 import { validWorkDate } from "@/lib/work-summary";
+import { requireActor } from '@/lib/access/http';
+import { loadTaskAccess } from '@/lib/server/task-access';
 
 export default async function TodayHistoryPage({
   searchParams,
@@ -23,13 +25,15 @@ export default async function TodayHistoryPage({
   searchParams: Promise<{ view?: string; date?: string }>;
 }) {
   const query = await searchParams;
-  const summaryView = query.view === "summary";
+  const actor = await requireActor();
+  const access = await loadTaskAccess(actor);
+  const summaryView = actor.role === 'OWNER' && query.view === "summary";
   const dates = summaryView ? await listWorkSummaryDates() : [];
   const date = validWorkDate(query.date)
     ? query.date
     : (dates[0] ?? todayInSeoul());
   const report = summaryView ? await loadWorkSummary(date) : null;
-  const flowProjects = await listFlowProjectNames();
+  const flowProjects = await listFlowProjectNames(access);
   return (
     <div className="min-w-0 w-full">
       <PageHeader
@@ -62,7 +66,7 @@ export default async function TodayHistoryPage({
               href: "/today/history?view=summary",
               active: summaryView,
             },
-          ].map((tab) => (
+          ].filter(tab => actor.role === 'OWNER' || tab.href === '/today/history').map((tab) => (
             <Link
               key={tab.title}
               href={tab.href}

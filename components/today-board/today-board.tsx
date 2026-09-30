@@ -39,7 +39,7 @@ import {
 } from "@/lib/today-board";
 
 type TaskProject = { slug: string; title: string; scope?: string; showInTasks?: boolean };
-export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }) {
+export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { flowProjects: TaskProject[]; showPersonalIssues?: boolean }) {
   const [projects, setProjects] = useState(flowProjects);
   const [projectError, setProjectError] = useState<string | null>(null);
   useEffect(() => { setProjects(flowProjects); }, [flowProjects]);
@@ -105,7 +105,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }
         loaded.today.length === 0 &&
         loaded.customProjects.length === 0;
 
-      if (serverEmpty) {
+      if (serverEmpty && showPersonalIssues) {
         try {
           const payload = readLegacyData(window.localStorage, projectSlugs);
           if (hasLegacyData(payload)) {
@@ -128,7 +128,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }
     return () => {
       cancelled = true;
     };
-  }, [projectSlugs]);
+  }, [projectSlugs, showPersonalIssues]);
 
   /**
    * 화면 상태를 먼저 바꾸고 서버에 반영한다. 실패하면 서버 상태를 다시 받아
@@ -311,6 +311,7 @@ export function TodayBoardView({ flowProjects }: { flowProjects: TaskProject[] }
         <IssuePool
           groups={groups}
           personalGroups={personalGroups}
+          showPersonalIssues={showPersonalIssues}
           onAdd={handleAdd}
           onRemove={handleRemove}
           onRemoveProject={handleRemoveProject}

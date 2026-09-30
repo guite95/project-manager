@@ -29,6 +29,7 @@ export function workspaceSectionIds(role: string, projects: FlowNavigationProjec
   const hasCompanyProjects = projects.some(project => !isPersonalProject(project));
   const hasPersonalProjects = projects.some(project => isPersonalProject(project));
   return [
+    ...(role === "ADMIN" ? ["today" as const] : []),
     ...(hasCompanyProjects ? ["projects" as const] : []),
     ...(hasPersonalProjects ? ["personal" as const] : []),
     ...(role === "ADMIN" ? ["settings" as const] : []),

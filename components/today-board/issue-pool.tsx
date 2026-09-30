@@ -23,6 +23,7 @@ import {
 type IssuePoolProps = {
   groups: IssueGroup[];
   personalGroups: IssueGroup[];
+  showPersonalIssues?: boolean;
   onAdd: (projectSlug: string, title: string) => void;
   onRemove: (issue: Issue) => void;
   onRename: (issue: Issue, title: string) => void;
@@ -42,6 +43,7 @@ type CategoryId = (typeof CATEGORY_TABS)[number]["id"];
 export function IssuePool({
   groups,
   personalGroups,
+  showPersonalIssues = true,
   onAdd,
   onRemove,
   onRename,
@@ -52,6 +54,8 @@ export function IssuePool({
 }: IssuePoolProps) {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("project");
   const tabId = useId();
+  const categoryTabs = showPersonalIssues ? CATEGORY_TABS : CATEGORY_TABS.filter(tab => tab.id === 'project');
+  const selectedCategory = showPersonalIssues ? activeCategory : 'project';
 
   return (
     <section
@@ -73,23 +77,21 @@ export function IssuePool({
             event.key === "Home"
               ? 0
               : event.key === "End"
-                ? CATEGORY_TABS.length - 1
-                : activeCategory === "project"
-                  ? 1
-                  : 0;
-          setActiveCategory(CATEGORY_TABS[next].id);
+                ? categoryTabs.length - 1
+                : (categoryTabs.findIndex(tab => tab.id === selectedCategory) + 1) % categoryTabs.length;
+          setActiveCategory(categoryTabs[next].id);
           event.currentTarget
             .querySelectorAll<HTMLButtonElement>('[role="tab"]')
             [next]?.focus();
         }}
         role="tablist"
       >
-        {CATEGORY_TABS.map((tab) => (
+        {categoryTabs.map((tab) => (
           <button
             aria-controls={`${tabId}-${tab.id}-panel`}
-            aria-selected={activeCategory === tab.id}
+            aria-selected={selectedCategory === tab.id}
             className={`border-b-2 px-0.5 pb-1 text-[13px] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)] ${
-              activeCategory === tab.id
+              selectedCategory === tab.id
                 ? "border-[var(--bi-accent)] font-semibold text-[var(--bi-accent)]"
                 : "border-transparent font-medium text-[var(--bi-muted)] hover:text-[var(--bi-fg)]"
             }`}
@@ -105,7 +107,7 @@ export function IssuePool({
               if (event.dataTransfer.types.includes(ISSUE_DRAG_TYPE)) event.preventDefault();
             }}
             role="tab"
-            tabIndex={activeCategory === tab.id ? 0 : -1}
+            tabIndex={selectedCategory === tab.id ? 0 : -1}
             type="button"
           >
             {tab.title}
@@ -115,7 +117,7 @@ export function IssuePool({
 
       <div
         aria-labelledby={`${tabId}-project-tab`}
-        className={activeCategory === "project" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
+        className={selectedCategory === "project" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
         id={`${tabId}-project-panel`}
         role="tabpanel"
       >
@@ -131,9 +133,9 @@ export function IssuePool({
           onDropIssuesToProject={onDropIssuesToProject}
         />
       </div>
-      <div
+      {showPersonalIssues && <div
         aria-labelledby={`${tabId}-personal-tab`}
-        className={activeCategory === "personal" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
+        className={selectedCategory === "personal" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
         id={`${tabId}-personal-panel`}
         role="tabpanel"
       >
@@ -148,7 +150,7 @@ export function IssuePool({
           onMoveProject={onMoveProject}
           onDropIssuesToProject={onDropIssuesToProject}
         />
-      </div>
+      </div>}
     </section>
   );
 }
