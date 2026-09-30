@@ -17,6 +17,8 @@ type TodayListProps = {
   date: string;
   items: TodayItem[];
   projectTitles: Record<string, string>;
+  personalIssuesVisible: boolean;
+  onTogglePersonalIssues?: () => void;
   onToggle: (item: TodayItem) => void;
   onRename: (item: TodayItem, title: string) => void;
   onReturn: (item: TodayItem) => void;
@@ -38,6 +40,8 @@ export function TodayList({
   date,
   items,
   projectTitles,
+  personalIssuesVisible,
+  onTogglePersonalIssues,
   onToggle,
   onRename,
   onReturn,
@@ -54,12 +58,27 @@ export function TodayList({
       className="flex min-w-0 flex-col gap-3 lg:min-h-0"
     >
       <div className="flex min-h-[26px] shrink-0 flex-wrap items-center justify-between gap-2">
-        <h3
-          className="text-[13px] font-semibold text-[var(--bi-fg)]"
-          id="today-list-heading"
-        >
-          오늘의 할 일
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3
+            className="text-[13px] font-semibold text-[var(--bi-fg)]"
+            id="today-list-heading"
+          >
+            오늘의 할 일
+          </h3>
+          {onTogglePersonalIssues && (
+            <Button
+              aria-checked={personalIssuesVisible}
+              aria-label="개인 이슈 표시"
+              className="w-[42px] shrink-0"
+              onClick={onTogglePersonalIssues}
+              role="switch"
+              size="sm"
+              variant={personalIssuesVisible ? "primary" : "secondary"}
+            >
+              {personalIssuesVisible ? "ON" : "OFF"}
+            </Button>
+          )}
+        </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="text-[11px] text-[var(--bi-muted)]">
             {formatBoardDate(date)} · {doneCount}/{items.length} 완료
@@ -94,7 +113,9 @@ export function TodayList({
       >
         {items.length === 0 ? (
           <p className="m-0 px-3 py-10 text-center text-[11px] text-[var(--bi-muted)]">
-            오른쪽 이슈를 끌어다 놓으세요.
+            {onTogglePersonalIssues && !personalIssuesVisible
+              ? "표시할 프로젝트 이슈가 없습니다."
+              : "오른쪽 이슈를 끌어다 놓으세요."}
           </p>
         ) : (
           <ul className="m-0 list-none p-0">

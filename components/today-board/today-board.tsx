@@ -19,6 +19,7 @@ import {
   readLegacyData,
 } from "@/lib/import-legacy";
 import {
+  filterTodayItems,
   groupIssuesByProject,
   splitIssuePoolGroups,
   PERSONAL_ISSUES_SLUG,
@@ -65,6 +66,7 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
   // null 은 "아직 서버에서 안 받아옴". 서버 렌더와 어긋나지 않도록 첫 렌더에서는
   // 안내만 보여준다.
   const [board, setBoard] = useState<TodayBoard | null>(null);
+  const [includePersonalIssues, setIncludePersonalIssues] = useState(true);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
 
@@ -301,7 +303,11 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
       <div className="grid grid-cols-1 items-start gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch">
         <TodayList
           date={today}
-          items={board.today}
+          items={filterTodayItems(board.today, projects, includePersonalIssues)}
+          personalIssuesVisible={includePersonalIssues}
+          onTogglePersonalIssues={showPersonalIssues
+            ? () => setIncludePersonalIssues((current) => !current)
+            : undefined}
           onDropIssues={handleDropIssues}
           onRename={handleRename}
           onReturn={handleReturn}

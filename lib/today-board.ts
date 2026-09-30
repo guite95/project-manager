@@ -113,6 +113,20 @@ export function splitIssuePoolGroups(groups: IssueGroup[]): {
   };
 }
 
+/** 개인 공용 이슈와 DB에서 개인으로 분류한 프로젝트를 오늘 목록에서만 숨긴다. */
+export function filterTodayItems(
+  items: TodayItem[],
+  registryProjects: { slug: string; scope?: string }[],
+  includePersonalIssues = true,
+): TodayItem[] {
+  if (includePersonalIssues) return items;
+  const personalSlugs = new Set([
+    PERSONAL_ISSUES_SLUG,
+    ...registryProjects.filter(isPersonalProject).map((project) => project.slug),
+  ]);
+  return items.filter((item) => !personalSlugs.has(item.projectSlug));
+}
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
