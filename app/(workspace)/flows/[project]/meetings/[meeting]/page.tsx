@@ -19,7 +19,7 @@ export default async function MeetingPage({ params }: Props) {
   const { project: projectSlug, meeting: meetingSlug } = await params;
   const [project, meeting] = await Promise.all([getFlowProjectIdentity(projectSlug), getMeeting(projectSlug, meetingSlug)]);
   if (!project || !meeting) notFound();
-  return <div className="mx-auto max-w-[1100px] px-4 py-6 md:px-6">
+  return <div className="min-w-0 w-full px-4 py-6 md:px-6">
     <Link href={meetingsHref(project.slug)} className="text-[12px] text-[var(--bi-muted)] hover:underline">← {project.title} 회의록 목록</Link>
     <header className="mt-5 mb-6">
       <h1 className="break-words text-[22px] font-bold">{meeting.title}</h1>

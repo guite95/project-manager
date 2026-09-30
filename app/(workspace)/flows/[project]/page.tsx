@@ -59,7 +59,7 @@ export default async function ProjectFlowsPage({
       <ChartSelector key={`${project.slug}/${category.slug}/${chart.slug}`} projectSlug={project.slug} projectTitle={project.title}
         categorySlug={category.slug} categoryTitle={category.title} selectedSlug={chart.slug}
         charts={category.charts.map(({ slug, title, description, erdDomain, contentKind }) => ({ slug, title, description, erdDomain, contentKind }))} />
-    <div className="mx-auto max-w-[1200px] px-4 py-5 md:px-6 md:py-6">
+    <div className="min-w-0 w-full px-4 py-5 md:px-6 md:py-6">
       <header className="mb-4 border-b border-[var(--bi-border)] pb-4">
         <h1 className="mt-0 mb-1 text-[20px] font-bold tracking-[-0.01em] text-[var(--bi-fg)]">
           {project.title}

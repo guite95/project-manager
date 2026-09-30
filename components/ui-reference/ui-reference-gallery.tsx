@@ -1,3 +1,4 @@
+import { ZesproSection } from "./zespro-section";
 import { PageHeader } from "@/components/erp/page-header";
 import { FormsSection } from "./forms-section";
 import { DatePickerSection } from "./date-picker-section";
@@ -29,6 +30,7 @@ export function UiReferenceGallery() {
       <ManagedTableSection />
       <ModalDemoSection />
       <LoadingSection />
+      <ZesproSection />
     </div>
   );
 }

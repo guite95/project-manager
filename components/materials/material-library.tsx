@@ -46,7 +46,7 @@ export function MaterialLibrary({ project, projectTitle, materials }: { project:
   }
   return <>
     <MaterialSelector project={project} projectTitle={projectTitle} materials={materials} onAdd={() => setAdding(true)} />
-    <div className="mx-auto max-w-[1400px] px-4 py-5 md:px-6">
+    <div className="min-w-0 w-full px-4 py-5 md:px-6">
     {writable && adding ? <form onSubmit={upload} className="mb-7 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 md:p-5">
       <h2 className="mb-1 text-[15px] font-semibold">자료 추가</h2>
       <p id="material-file-help" className="mb-4 text-[12px] text-[var(--bi-muted)]">PDF·HTML·PPTX 파일을 추가하면 형식에 맞게 미리보기를 제공합니다. PPTX는 PDF 미리보기도 함께 생성합니다. 파일당 최대 250MB, HTML은 UTF-8 형식입니다.</p>

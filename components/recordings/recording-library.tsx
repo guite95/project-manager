@@ -86,7 +86,7 @@ export function RecordingLibrary({ project, projectTitle, initial }: { project: 
     } catch { setError('전사본을 불러오지 못했습니다.'); }
   }
   const filtered = rows.filter(row => `${row.title} ${row.fileName} ${row.context} ${RECORDING_KINDS.find(k => k.value === row.kind)?.label}`.toLowerCase().includes(query.toLowerCase()));
-  return <div className="mx-auto max-w-[1400px] p-4 md:p-6">
+  return <div className="min-w-0 w-full p-4 md:p-6">
     <div className="mb-5 flex flex-wrap items-center gap-3">
       <div className="flex-1"><p className="text-xs text-[var(--bi-muted)]">{projectTitle}</p><h1 className="mt-1 text-lg font-semibold">녹음·전사</h1></div>
       {writable && <Button onClick={() => setAdding(true)}>녹음 올리기</Button>}

@@ -12,7 +12,7 @@ import { ProjectGroupSelect, usePersonalProjectGroups } from "./project-groups";
 export function PersonalProjectList({ personalProjects }: { personalProjects: { slug: string; title: string }[] }) {
   const preferences = usePersonalProjectGroups();
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="min-w-0 w-full">
       <PageHeader title="개인 프로젝트" description="개인 프로젝트 목록입니다." actions={<ProjectEditor scope="PERSONAL" />} />
       <section aria-label="개인 프로젝트 목록" className="px-6 py-5">
         <p className="mb-3 text-[12px] text-[var(--bi-muted)]">전체 {personalProjects.length}개</p>

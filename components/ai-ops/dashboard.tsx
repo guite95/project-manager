@@ -161,7 +161,7 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
     setSearchValidation(null); setSearchPages([]); setSearchRevision(value => value + 1); setSearchBody(JSON.stringify({ ...filters, from, to, mode: searchMode, query: query.trim(), ...(kind ? { kind } : {}) }));
   };
   const data = overview.data;
-  return <div className="mx-auto max-w-[1600px]">
+  return <div className="min-w-0 w-full">
     <PageHeader title={view === "activity" ? "AI 활동 및 대화" : "AI 사용량 통계"} description="기기별 Codex·Claude Code 사용 기록 · 한국 시간 기준" />
     <div className="space-y-5 p-4 text-[13px] md:p-6">
       <div className="flex flex-wrap items-center gap-2" aria-label="AI 기록 필터">

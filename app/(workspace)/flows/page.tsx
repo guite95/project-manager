@@ -125,7 +125,7 @@ export default async function FlowsIndexPage({
   const view = resolveFlowsView((await searchParams).view);
 
   return (
-    <div className="mx-auto max-w-[900px] px-8 py-8">
+    <div className="min-w-0 w-full px-8 py-8">
       <h1 className="mt-0 mb-2 text-[22px] font-bold tracking-[-0.01em] text-[var(--bi-fg)]">
         전체 프로젝트
       </h1>

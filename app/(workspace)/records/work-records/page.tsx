@@ -17,7 +17,7 @@ function CommitList({ commits }: { commits: WorkCommit[] }) {
 
 export default async function WorkRecordsPage() {
   const record = await loadPersonalWorkRecords();
-  return <div className="mx-auto max-w-[1200px]">
+  return <div className="min-w-0 w-full">
     <PageHeader title="작업 기록" description="Git 이력으로 정리한 프로젝트별 기여와 작업 근거입니다." />
     <div className="space-y-6 px-6 py-5">
       {!record ? <p className="text-sm text-[var(--bi-muted)]">아직 저장된 작업 기록이 없습니다.</p> : <>

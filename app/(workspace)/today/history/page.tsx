@@ -31,7 +31,7 @@ export default async function TodayHistoryPage({
   const report = summaryView ? await loadWorkSummary(date) : null;
   const flowProjects = await listFlowProjectNames();
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="min-w-0 w-full">
       <PageHeader
         description="완료 체크 기록과 Git 작업을 모아 정리한 내용을 날짜별로 봅니다."
         title="완료 이력"

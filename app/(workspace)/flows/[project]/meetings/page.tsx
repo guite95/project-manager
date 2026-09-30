@@ -15,7 +15,7 @@ export default async function MeetingsPage({ params }: Props) {
   const project = await getFlowProjectIdentity((await params).project);
   if (!project) notFound();
   const meetings = await listMeetings(project.slug);
-  return <div className="mx-auto max-w-[1100px] px-4 py-6 md:px-6">
+  return <div className="min-w-0 w-full px-4 py-6 md:px-6">
     <header className="mb-6 border-b border-[var(--bi-border)] pb-5">
       <p className="mb-2 text-[12px] text-[var(--bi-muted)]">{project.title}</p>
       <h1 className="text-[22px] font-bold">회의록</h1>

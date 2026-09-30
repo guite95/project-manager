@@ -7,7 +7,7 @@ import Link from "next/link";
 export const metadata: Metadata = { title: "설정 — 프로젝트 매니지먼트" };
 export default async function Page({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const active = (await searchParams).tab === 'projects' ? 'projects' : 'access';
-  return <div className="mx-auto max-w-[1200px]">
+  return <div className="min-w-0 w-full">
     <PageHeader title="설정" description="계정·권한과 프로젝트의 할 일 표시 여부를 관리합니다." />
     <div className="px-6 py-6">
       <nav aria-label="설정 메뉴" className="mb-6 flex gap-5 border-b border-[var(--bi-border)]">

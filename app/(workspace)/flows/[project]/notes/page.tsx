@@ -33,7 +33,7 @@ export default async function ProjectNotesPage({ params }: PageProps) {
   if (personal && (await requireActor()).role !== 'OWNER') notFound();
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="min-w-0 w-full">
       <PageHeader
         description={personal ? `${project.title} 프로젝트 개요와 직접 수행한 작업·판단·결과·근거를 정리합니다.` : `${project.title} 프로젝트를 진행하면서 놓치면 안 되는 기준과 주의사항을 관리합니다.`}
         title={isPersonalProject(project) ? "기록" : "명심할 점"}
