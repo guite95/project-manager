@@ -1,12 +1,22 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { useId, type ComponentProps, type ReactNode } from "react";
 import { DatePicker } from "./date-picker";
+import { Checkbox } from "./checkbox";
 import { cn } from "./cn";
 import { Dropdown } from "./dropdown";
 
 const inputClass =
-  "bi-control mt-1.5 h-9 w-full rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-3 text-[13px] outline-none focus:border-[var(--bi-accent)] disabled:bg-[var(--bi-sidebar-bg)] disabled:cursor-not-allowed";
+  "bi-control h-9 min-w-0 w-full rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-3 text-[13px] outline-none focus:border-[var(--bi-accent)] disabled:bg-[var(--bi-sidebar-bg)] disabled:cursor-not-allowed";
+
+/** 기존 label·인라인 편집·폼 제출 속성과 조합하는 공통 입력 요소. */
+export function TextInput({ className, ...props }: ComponentProps<"input">) {
+  return <input {...props} className={cn(inputClass, className)} />;
+}
+
+export function TextArea({ className, ...props }: ComponentProps<"textarea">) {
+  return <textarea {...props} className={cn("bi-control min-w-0 w-full rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-3 py-2 text-[13px] leading-7 outline-none focus:border-[var(--bi-accent)] disabled:bg-[var(--bi-sidebar-bg)] disabled:cursor-not-allowed", className)} />;
+}
 
 export function FieldLabel({
   label,
@@ -86,6 +96,7 @@ export function TextField(props: {
   placeholder?: string;
   type?: "text" | "search" | "number" | "date" | "datetime-local";
   autoFocus?: boolean;
+  maxLength?: number;
   /** type="date" 전용. YYYY-MM-DD 이전 날짜 선택을 막는다. */
   minDate?: string;
   /** type="number" 전용. 소수 수량처럼 1 단위가 아닌 값의 스피너·검증 간격. */
@@ -111,14 +122,15 @@ export function TextField(props: {
   }
   return (
     <FieldLabel error={props.error} errorId={errorId} label={props.label}>
-      <input
+      <TextInput
         aria-invalid={Boolean(props.error) || undefined}
         aria-describedby={props.error ? errorId : undefined}
         autoFocus={props.autoFocus}
-        className={inputClass}
+        className="mt-1.5"
         data-autofocus={props.autoFocus ? "true" : undefined}
         disabled={props.disabled}
         inputMode={props.inputMode}
+        maxLength={props.maxLength}
         onChange={(event) => props.onChange(event.target.value)}
         placeholder={props.placeholder}
         required={props.required}
@@ -172,53 +184,5 @@ export function CheckboxField(props: {
   onChange: (checked: boolean) => void;
   disabled?: boolean;
 }) {
-  return (
-    <label
-      className={cn(
-        "group inline-flex items-center gap-2 text-[12px]",
-        props.disabled
-          ? "cursor-not-allowed text-[var(--bi-muted)]"
-          : "cursor-pointer"
-      )}
-    >
-      <span className="relative inline-flex h-4 w-4 shrink-0">
-        <input
-          checked={props.checked}
-          className="peer absolute inset-0 h-full w-full cursor-[inherit] opacity-0"
-          disabled={props.disabled}
-          onChange={(event) => props.onChange(event.target.checked)}
-          type="checkbox"
-        />
-        <span
-          aria-hidden="true"
-          className={cn(
-            "pointer-events-none flex h-4 w-4 items-center justify-center rounded-[3px] border transition-colors",
-            "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-1 peer-focus-visible:outline-[var(--bi-accent)]",
-            props.checked
-              ? "border-[var(--bi-accent)] bg-[var(--bi-accent)]"
-              : "border-[var(--bi-border)] bg-[var(--bi-bg)] group-hover:border-[var(--bi-accent)]",
-            props.disabled && "opacity-45"
-          )}
-        >
-          <svg
-            className={cn(
-              "text-white transition-opacity",
-              props.checked ? "opacity-100" : "opacity-0"
-            )}
-            fill="none"
-            height="10"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.5"
-            viewBox="0 0 24 24"
-            width="10"
-          >
-            <path d="M20 6 9 17l-5-5" />
-          </svg>
-        </span>
-      </span>
-      {props.label}
-    </label>
-  );
+  return <Checkbox {...props} />;
 }

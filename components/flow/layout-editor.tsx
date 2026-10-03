@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Background, Controls, PanOnScrollMode, ReactFlow, ReactFlowProvider, useNodesState, type Edge, type Node } from '@xyflow/react';
@@ -35,6 +36,7 @@ function EditorCanvas({ initialNodes, edges, onNodeDragStop, onEdgeClick, onPane
 export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
   chart: FlowChart; projectSlug: string; onClose: () => void; onSaved: (chart: FlowChart) => void;
 }) {
+  const { confirm } = useConfirm();
   const [base, setBase] = useState<{ chart: FlowChart; revision: number; categorySlug: string }>();
   const [layout, setLayout] = useState<FlowLayout>({ nodes: {}, edges: {} });
   const [selected, setSelected] = useState('');
@@ -89,7 +91,7 @@ export function LayoutEditor({ chart, projectSlug, onClose, onSaved }: {
       <strong className="mr-auto text-sm">{chart.title} · 배치 편집</strong>
       <Button size="sm" variant="secondary" disabled={!base || saving} onClick={() => change({ nodes: {}, edges: {} })}>자동 배치로 초기화</Button>
       <Button size="sm" variant="secondary" disabled={!base} onClick={download}>JSON 다운로드</Button>
-      <Button size="sm" variant="secondary" disabled={saving} onClick={() => { if (!dirty || window.confirm('저장하지 않은 배치 변경을 취소할까요?')) onClose(); }}>취소</Button>
+      <Button size="sm" variant="secondary" disabled={saving} onClick={async () => { if (!dirty || await confirm({ message: '저장하지 않은 배치 변경을 취소할까요?', tone: 'danger', confirmLabel: '변경 버리기' })) onClose(); }}>취소</Button>
       <Button size="sm" disabled={!base || saving || !dirty} onClick={save}>{saving ? '저장 중…' : '저장'}</Button>
     </div>
     <div className="flex flex-wrap items-center gap-3 border-b px-3 py-2 text-xs">

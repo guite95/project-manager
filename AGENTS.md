@@ -29,6 +29,7 @@
 ## Verification and documentation
 
 - UI·디자인 변경 시 `docs/ui-design.md`의 공통 기준과 적용 범위를 먼저 참고한다. 기존 네이비 컨셉, 메뉴 구조, 사이드바를 제외한 전체 본문 폭을 유지하며 공통 토큰·컴포넌트로 일관되게 적용한다.
+- `/flows?view=components`의 UI 컴포넌트 레퍼런스에 대응 요소가 있으면 반드시 해당 공통 컴포넌트를 재사용한다. 구현은 `components/erp`, 추가 컴포넌트는 `components/erp/zespro`에 있다. 기본 `<select>`는 금지하며 `Dropdown`/`SelectField`를 사용한다. 입력·체크박스·날짜·버튼·표·탭·모달·확인창도 화면마다 별도로 만들지 않는다. 필요한 기능이 부족하면 공통 컴포넌트를 확장하고 레퍼런스 예시와 `docs/ui-design.md`를 함께 갱신한다. 네이티브 태그의 제한적 사용 기준과 검증 명령은 해당 문서를 따른다.
 
 - Career MCP self-hosted OAuth uses Better Auth with existing active OWNER identity, no second password/social signup. `career_oauth_*` is isolated provider state; `access_user.oauth_epoch` and its security-change trigger revoke grants. Apply `20260929160000_career_better_auth` before the new Prisma client, separately from deployment. Preserve exact endpoint allowlists, browser-bound one-time consent, PKCE, encrypted keys and per-request/per-tool epoch checks. `CAREER_OAUTH_SECRET` uses the protected runtime generation; no public DCR or account endpoints. See `docs/career-oauth.md`.
 

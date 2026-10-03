@@ -20,6 +20,38 @@
                        목록 / 작업 영역 (남은 전체 폭)
 ```
 
+## 레퍼런스 컴포넌트 재사용 (필수)
+
+[UI 컴포넌트 레퍼런스](https://project.dev-uk.shop/flows?view=components)에 대응하는 요소가 있으면 **반드시 그 공통 컴포넌트를 사용한다**. 단순히 비슷하게 스타일을 복사하는 것으로 대체하지 않는다. 예시는 `components/ui-reference`, 구현은 `components/erp`, 추가 공용 요소는 `components/erp/zespro`에 있다.
+
+| 화면 요소 | 사용할 컴포넌트 |
+| --- | --- |
+| 선택 목록·드롭다운 | `Dropdown`, 라벨이 있는 폼에서는 `SelectField`. 검색 기능은 기본으로 유지한다. |
+| 단일 행 입력 | `TextField`. 기존 라벨·인라인 편집·HTML 폼 속성이 필요하면 같은 입력 기반인 `TextInput`과 조합한다. |
+| 여러 줄 입력 | `TextArea`와 `FieldLabel` 또는 연결된 기존 라벨 |
+| 체크박스 | `Checkbox`, 폼에서는 `CheckboxField` |
+| 날짜·기간 | `DatePicker`, `DateField`, `DateRangeFilter` |
+| 실행 버튼·아이콘 버튼 | `Button`. 이동 링크는 링크 의미를 유지하면서 `buttonClassName`을 사용한다. |
+| 검색·필터 | `ListToolbar`, `FilterBar`, `SegmentedFilter`, `FilterPanel`, `FilterChips` |
+| 표 | 열 정의 기반 `DataTable`, 기존 `thead`·`tbody`·`colgroup`을 조합할 때 `DataGridTable` |
+| 폼 배치·하단 동작 | `FormGrid`, `FormActions`, `FieldGrid` |
+| 보기 전환 탭 | `Tabs`. 탭 ID와 패널 ID를 연결하고 방향키·Home·End 탐색을 유지한다. |
+| 모달 | `DetailModal`, `FormModal`, `SplitModal` |
+| 삭제·취소 확인, 알림 | `useConfirm()`의 `confirm`/`alert`. 워크스페이스 레이아웃에 `ConfirmDialogProvider`가 있다. |
+| 상태·로딩 | `Badge`, `StatusBadge`, 레퍼런스의 로딩 컴포넌트 |
+
+일반 컴포넌트는 `@/components/erp/<파일>`에서 가져오고, 추가 공용 요소는 `@/components/erp/zespro`의 공개 export를 사용한다. `zespro/support.ts`는 공통 컴포넌트 내부 연결용이다.
+
+앱 화면에 기본 `<select>`를 추가하지 않는다. 일반 `<input>`, `<textarea>`, `<table>`, `<dialog>`를 새로 작성하는 대신 위 컴포넌트를 사용한다. 라벨, `name`, 필수값, 오류 안내, 저장 중 비활성화, 폼 제출, 키보드 포커스와 기존 이벤트 처리를 유지한다. 포털로 열린 선택 목록도 저장 중에는 비활성화되어야 하며 모달의 포커스 영역 안에 표시한다. 날짜가 일부만 알려진 지원 정보나 앞자리 0이 있는 등록번호는 텍스트로 유지한다.
+
+기본 HTML은 공통 컴포넌트 내부 구현과 대응 요소가 없는 파일 업로드·숨김 폼 값 등에 사용한다. 브라우저가 처리하는 `beforeunload`와 동기적으로 이동을 막는 기존 화면 이탈 확인은 저장하지 않은 내용 보호를 유지한다. 일반 삭제·취소 확인에 `window.confirm`을 새로 사용하지 않는다. 드래그 정렬 탭, 탐색 트리, 캔버스처럼 전용 동작이 필요한 부분은 동일한 동작을 지원하는 공통 요소가 있는지 먼저 확인한다. 기본 컨셉과 동작을 유지할 수 있도록 공통 요소에 필요한 기능을 추가하고, 새 조합 예시도 레퍼런스에 등록한다.
+
+`lib/ui-reference/component-reuse.test.mjs`는 기본 선택 태그와 공통 부품 밖의 일반 폼·표·모달 태그가 다시 추가되는 것을 검사한다.
+
+```sh
+node --experimental-strip-types --test lib/ui-reference/component-reuse.test.mjs
+```
+
 ## 적용 범위와 검토
 
 `ui-ux-pro-max`의 Data-Dense Dashboard 지침 중 정보 밀도, 행 강조, 접근성을 적용한다. 자동 추천에 포함된 홍보용 구성과 새 색상·서체 제안은 기존 컨셉 유지 요청에 맞지 않아 적용하지 않는다. `frontend-design`에 따라 반복적인 Workspace 장식 라벨을 제거하고, 실제 페이지 제목과 조작부를 강조한다.

@@ -179,6 +179,8 @@ PC와 모바일 모두 프로젝트 메뉴는 처음에 전체가 접혀 있고,
 상세 필터 패널과 칩·관리형 테이블·상세 모달·로딩 상태의 11개 섹션을 옮겼다.
 
 예시는 `components/ui-reference`, 재사용 부품은 `components/erp`에 있다.
+대응 요소가 있으면 해당 공통 컴포넌트를 반드시 재사용한다. 기본 `<select>` 대신
+`Dropdown`/`SelectField`를 사용하며, 요소별 선택 기준과 예외는 [UI 디자인 기준](docs/ui-design.md)을 따른다.
 원본의 `--demo-*` 색상·모션 토큰은 이 앱의 `--bi-*` 토큰에 대응시켰다.
 FocusAI 서버/API에 연결하지 않으며, 폼·필터·모달은 화면 상태만 변경하고
 컬럼 표시·순서·너비는 공유 DB의 `ui:reference-columns`에 저장한다.

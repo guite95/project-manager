@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IssuePool } from "@/components/today-board/issue-pool";
 import { TodayList } from "@/components/today-board/today-list";
@@ -41,6 +42,7 @@ import {
 
 type TaskProject = { slug: string; title: string; scope?: string; showInTasks?: boolean };
 export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { flowProjects: TaskProject[]; showPersonalIssues?: boolean }) {
+  const { confirm } = useConfirm();
   const [projects, setProjects] = useState(flowProjects);
   const [projectError, setProjectError] = useState<string | null>(null);
   useEffect(() => { setProjects(flowProjects); }, [flowProjects]);
@@ -220,12 +222,12 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
     );
   };
 
-  const handleRemoveProject = (group: IssueGroup) => {
+  const handleRemoveProject = async (group: IssueGroup) => {
     if (!group.slug) return;
     const moved = group.issues.length
       ? ` 이슈 ${group.issues.length}건은 미분류로 옮겨집니다.`
       : "";
-    if (!window.confirm(`“${group.title}” 프로젝트를 삭제할까요?${moved}`)) {
+    if (!await confirm({ message: `“${group.title}” 프로젝트를 삭제할까요?${moved}`, tone: "danger", confirmLabel: "삭제" })) {
       return;
     }
     const slug = group.slug;
@@ -234,8 +236,8 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
     void sync(() => deleteProjectRequest(slug));
   };
 
-  const handleRemove = (issue: Issue) => {
-    if (!window.confirm(`“${issue.title}” 이슈를 삭제할까요?`)) return;
+  const handleRemove = async (issue: Issue) => {
+    if (!await confirm({ message: `“${issue.title}” 이슈를 삭제할까요?`, tone: "danger", confirmLabel: "삭제" })) return;
     setBoard((current) => (current ? removeIssue(current, issue.id) : current));
     setAnnouncement(`${issue.title} 이슈를 삭제했습니다.`);
     void sync(() => deleteIssueRequest(issue.id));

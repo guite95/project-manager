@@ -1,10 +1,12 @@
 "use client";
 
+import { TextInput } from '@/components/erp/form-field';
 import Link from "next/link";
 import { isPersonalProject } from "@/lib/personal-projects";
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/erp/button";
+import { Checkbox } from "@/components/erp/checkbox";
 import { Dropdown } from "@/components/erp/dropdown";
 import { Feedback, Field, postAccess } from "./form";
 
@@ -50,7 +52,7 @@ function UserEditor({ user, data, pending, save }: { user: User; data: AccessDat
     {editable && <div id={editorId} hidden={!editing}>{editing && <form className="mt-4 space-y-4" onSubmit={async event => { event.preventDefault(); if (await save({ action: "updateUser", id: user.id, role, active, memberships })) setEditing(false); }}>
       <div className="flex flex-wrap items-center gap-4">
         {canChangeRole ? <Dropdown ariaLabel={`${user.username} 계정 역할`} value={role} onChange={value => setRole(value as Role)} options={ownerOptions} disabled={pending} className="w-40" /> : <span className="text-[12px]">계정 역할: {roleLabels[role]}</span>}
-        <label className="flex items-center gap-2 text-[12px]"><input type="checkbox" checked={active} disabled={pending} onChange={event => setActive(event.target.checked)} />활성 계정</label>
+        <Checkbox label="활성 계정" checked={active} disabled={pending} onChange={setActive} />
       </div>
       <p className="text-[12px] text-[var(--bi-muted)]">{role === "ADMIN" ? "관리자는 회사 프로젝트 전체를 관리하며, 개인 프로젝트는 별도로 권한을 지정합니다." : "프로젝트별로 접근 불가, 열람, 편집 권한을 지정하세요."} 권한 변경은 재로그인 없이 다음 요청부터 적용됩니다. 화면의 메뉴와 버튼은 새로고침하면 갱신됩니다. 계정을 비활성화하면 기존 세션이 종료됩니다.</p>
       <div className="grid gap-3 sm:grid-cols-2">{data.projects.filter(project => role === "MEMBER" || isPersonalProject(project)).map(project => <div key={project.slug} className="space-y-1"><span className="text-[12px]">{isPersonalProject(project) ? "[개인] " : "[회사] "}{project.title}</span><Dropdown ariaLabel={`${user.username} ${project.title} 권한`} value={memberships.find(item => item.projectSlug === project.slug)?.role ?? ""} options={permissionOptions} disabled={pending} onChange={value => setMemberships(current => [...current.filter(item => item.projectSlug !== project.slug), ...(value ? [{ projectSlug: project.slug, role: value as Membership["role"] }] : [])])} /></div>)}</div>
@@ -127,7 +129,7 @@ export function AccessManager() {
   return <div className="space-y-6">
     <div className="flex flex-wrap justify-between gap-3 text-[13px]"><p>{data.actor.name || data.actor.username || "최초 등록"} · {roleLabels[data.actor.role]}</p>{!data.actor.bootstrap && <Link href="/account" className="text-[var(--bi-accent)]">내 비밀번호 변경</Link>}</div>
     <Feedback error={error} message={message} />
-    {createdLink && <div className="space-y-2 rounded border border-[var(--bi-accent)] p-4"><p className="text-[13px] font-semibold">{createdLink.label}</p><p className="text-[12px] text-[var(--bi-muted)]">이 링크는 생성 직후에만 표시됩니다. 복사하여 직접 전달하세요.</p><input aria-label={createdLink.label} className="w-full rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] p-2 text-[12px]" readOnly value={createdLink.url} onFocus={event => event.target.select()} /><Button variant="secondary" onClick={() => { void copyLink(); }}>링크 복사</Button></div>}
+    {createdLink && <div className="space-y-2 rounded border border-[var(--bi-accent)] p-4"><p className="text-[13px] font-semibold">{createdLink.label}</p><p className="text-[12px] text-[var(--bi-muted)]">이 링크는 생성 직후에만 표시됩니다. 복사하여 직접 전달하세요.</p><TextInput aria-label={createdLink.label} readOnly value={createdLink.url} onFocus={event => event.target.select()} /><Button variant="secondary" onClick={() => { void copyLink(); }}>링크 복사</Button></div>}
     {data.actor.bootstrap ? <Section title="최초 소유자 등록"><p className="text-[12px] text-[var(--bi-muted)]">소유자 등록 후 기존 공통 비밀번호 로그인은 종료됩니다.</p>{identityForm}</Section> : <>
       <Section title="계정 발급"><p className="text-[12px] text-[var(--bi-muted)]">아이디와 초기 비밀번호를 정해 계정을 바로 생성합니다. 생성 후 아래에서 프로젝트 권한을 지정하고 로그인 정보를 전달하세요. 사용자는 내 계정에서 비밀번호를 변경할 수 있습니다.</p>{identityForm}</Section>
       <Section title="계정 및 프로젝트 권한"><p className="text-[12px] text-[var(--bi-muted)]">계정별 권한 편집 버튼으로 역할, 활성 상태와 프로젝트 권한을 언제든지 변경할 수 있습니다.</p>{data.users.length ? data.users.map(user => <UserEditor key={`${user.id}:${JSON.stringify(user)}`} user={user} data={data} pending={pending} save={save} />) : <p className="text-[12px] text-[var(--bi-muted)]">등록된 계정이 없습니다.</p>}</Section>

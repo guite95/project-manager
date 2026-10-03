@@ -1,6 +1,6 @@
 "use client";
 
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { cx } from "../lib/class-names";
 
 export type FilterBarProps = {
@@ -56,10 +56,6 @@ export function FilterSeparator({ children = "→" }: { children?: ReactNode }) 
   return <span className="pds-filter-separator">{children}</span>;
 }
 
-export function FilterDateInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} type="date" className={cx("pds-filter-date", className)} />;
-}
-
 export function FilterMeta({ children }: { children: ReactNode }) {
   return <span className="pds-filter-meta">{children}</span>;
 }
@@ -77,32 +73,5 @@ export function FilterSearchInput({ icon, width = 260, className, style, ...prop
       {icon ? <span className="pds-filter-search__icon">{icon}</span> : null}
       <input {...props} type={props.type ?? "search"} className={cx("pds-filter-search__input", icon ? "has-icon" : null)} />
     </span>
-  );
-}
-
-export type FilterSelectOption = {
-  value: string;
-  label: string;
-  disabled?: boolean;
-};
-
-export type FilterSelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
-  /** 옵션 목록 — 생략하면 children의 <option>을 그대로 쓴다 */
-  options?: readonly FilterSelectOption[];
-  width?: number | string;
-};
-
-/** 필터 행의 콤팩트 셀렉트(상태·기간·계좌 등 짧은 선택지). 화면마다 인라인 style로 만들던 select를 대체한다. */
-export function FilterSelect({ options, width, className, style, children, ...props }: FilterSelectProps) {
-  return (
-    <select {...props} className={cx("pds-filter-select", className)} style={width !== undefined ? { width, ...style } : style}>
-      {options
-        ? options.map((option) => (
-            <option key={option.value} value={option.value} disabled={option.disabled}>
-              {option.label}
-            </option>
-          ))
-        : children}
-    </select>
   );
 }

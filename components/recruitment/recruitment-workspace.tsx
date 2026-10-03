@@ -1,10 +1,12 @@
 'use client';
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/erp/button';
+import { Dropdown } from '@/components/erp/dropdown';
+import { SelectField, TextInput, TextArea } from '@/components/erp/form-field';
 import { recruitmentText, type RecruitmentDocument, type RecruitmentKind, type RecruitmentScope, type RecruitmentSummary } from '@/lib/recruitment';
 
-const field = 'bi-control w-full rounded border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-3 py-2 text-sm focus:outline-2 focus:outline-[var(--bi-accent)]';
 const scopeLabels = { COMPANY: '회사', PERSONAL: '개인·팀', GENERAL: '공통' };
 const date = (value: string) => new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul' }).format(new Date(value));
 async function responseJson<T>(response: Response): Promise<T> {
@@ -14,6 +16,7 @@ async function responseJson<T>(response: Response): Promise<T> {
 }
 
 export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
+  const { confirm } = useConfirm();
   const experience = kind === 'EXPERIENCE';
   const portfolio = kind === 'PORTFOLIO';
   const projectLabel = portfolio ? '대상·용도' : experience ? '프로젝트' : '지원 회사';
@@ -110,8 +113,8 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
     try { await navigator.clipboard.writeText(recruitmentText(current)); setNotice('내용과 근거를 복사했습니다.'); }
     catch { setError('복사하지 못했습니다. 편집 화면에서 내용을 선택해 복사해 주세요.'); }
   }
-  function cancel() {
-    if (dirty && !window.confirm('작성 중인 변경 내용을 버릴까요?')) return;
+  async function cancel() {
+    if (dirty && !await confirm({ message: '작성 중인 변경 내용을 버릴까요?', tone: 'danger', confirmLabel: '변경 버리기' })) return;
     setEditing(false); setDraft(null); setError('');
     if (!document) setSelectedId(null);
   }
@@ -126,8 +129,8 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
     <div className="grid items-start gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
       <aside className="min-w-0 rounded-[var(--bi-radius-panel)] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]" aria-label={portfolio ? '포트폴리오 목록' : experience ? '경험 목록' : '자기소개서 목록'}>
         <div className="space-y-3 border-b border-[var(--bi-border)] bg-[var(--bi-table-header)] p-3">
-          <input aria-label="제목·요약·태그 검색" placeholder="제목·요약·태그 검색" className={field} value={query} onChange={event => setQuery(event.target.value)} />
-          <select aria-label={`${projectLabel} 필터`} className={field} value={project} onChange={event => setProject(event.target.value)}><option value="">{`전체 ${projectLabel}`}</option>{projects.map(value => <option key={value} value={value}>{value}</option>)}</select>
+          <TextInput aria-label="제목·요약·태그 검색" placeholder="제목·요약·태그 검색" value={query} onChange={event => setQuery(event.target.value)} />
+          <Dropdown ariaLabel={`${projectLabel} 필터`} value={project} onChange={setProject} options={[{ value: '', label: `전체 ${projectLabel}` }, ...projects.map(value => ({ value, label: value }))]} />
           <p className="text-xs text-[var(--bi-muted)]">{filtered.length}개{editing ? ' · 편집을 마치면 다른 문서를 열 수 있습니다.' : ''}</p>
         </div>
         <div className="max-h-[40vh] overflow-y-auto lg:max-h-[70vh]">
@@ -143,17 +146,17 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
             <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={copy}>내용 복사</Button>{editing ? <><Button variant="secondary" disabled={saving} onClick={cancel}>취소</Button><Button loading={saving} onClick={save}>저장</Button></> : <Button onClick={() => { setDraft(structuredClone(current)); setEditing(true); setNotice(''); }}>편집</Button>}</div>
           </div>
           {editing && draft ? <fieldset disabled={saving} className="min-w-0 space-y-5">
-            <label className="block text-xs font-semibold">제목<input className={`${field} mt-1`} maxLength={200} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></label>
-            <div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-semibold">{projectLabel}<input className={`${field} mt-1`} maxLength={200} value={draft.project} onChange={event => setDraft({ ...draft, project: event.target.value })} /></label><label className="block text-xs font-semibold">구분<select className={`${field} mt-1`} value={draft.scope} onChange={event => setDraft({ ...draft, scope: event.target.value as RecruitmentScope })}>{Object.entries(scopeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
-            <label className="block text-xs font-semibold">요약<textarea className={`${field} mt-1`} rows={3} maxLength={2000} value={draft.summary} onChange={event => setDraft({ ...draft, summary: event.target.value })} /></label>
-            <label className="block text-xs font-semibold">태그 (쉼표로 구분)<input className={`${field} mt-1`} value={draft.tags.join(',')} onChange={event => setDraft({ ...draft, tags: event.target.value.split(',') })} /></label>
+            <label className="block text-xs font-semibold">제목<TextInput className="mt-1" maxLength={200} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} /></label>
+            <div className="grid gap-4 sm:grid-cols-2"><label className="block text-xs font-semibold">{projectLabel}<TextInput className="mt-1" maxLength={200} value={draft.project} onChange={event => setDraft({ ...draft, project: event.target.value })} /></label><SelectField label="구분" value={draft.scope} disabled={saving} onChange={scope => setDraft({ ...draft, scope: scope as RecruitmentScope })} options={Object.entries(scopeLabels).map(([value, label]) => ({ value, label }))} /></div>
+            <label className="block text-xs font-semibold">요약<TextArea className="mt-1" rows={3} maxLength={2000} value={draft.summary} onChange={event => setDraft({ ...draft, summary: event.target.value })} /></label>
+            <label className="block text-xs font-semibold">태그 (쉼표로 구분)<TextInput className="mt-1" value={draft.tags.join(',')} onChange={event => setDraft({ ...draft, tags: event.target.value.split(',') })} /></label>
             {draft.sections.map((section, index) => <div key={index} className="space-y-2 border-t border-[var(--bi-border)] pt-4">
-              <label className="block text-xs font-semibold">항목 제목<input className={`${field} mt-1`} maxLength={100} value={section.title} onChange={event => setDraft({ ...draft, sections: draft.sections.map((value, i) => i === index ? { ...value, title: event.target.value } : value) })} /></label>
-              <label className="block text-xs font-semibold">내용<textarea className={`${field} mt-1 min-h-32 leading-7`} rows={Math.min(16, Math.max(4, section.body.split('\n').length + 2))} maxLength={80000} value={section.body} onChange={event => setDraft({ ...draft, sections: draft.sections.map((value, i) => i === index ? { ...value, body: event.target.value } : value) })} /></label>
-              <Button variant="ghost" disabled={draft.sections.length <= 1} onClick={() => { if (!section.body || window.confirm('이 항목의 내용을 제거할까요? 저장 전까지는 취소할 수 있습니다.')) setDraft({ ...draft, sections: draft.sections.filter((_, i) => i !== index) }); }}>항목 제거</Button>
+              <label className="block text-xs font-semibold">항목 제목<TextInput className="mt-1" maxLength={100} value={section.title} onChange={event => setDraft({ ...draft, sections: draft.sections.map((value, i) => i === index ? { ...value, title: event.target.value } : value) })} /></label>
+              <label className="block text-xs font-semibold">내용<TextArea className="mt-1 min-h-32" rows={Math.min(16, Math.max(4, section.body.split('\n').length + 2))} maxLength={80000} value={section.body} onChange={event => setDraft({ ...draft, sections: draft.sections.map((value, i) => i === index ? { ...value, body: event.target.value } : value) })} /></label>
+              <Button variant="ghost" disabled={draft.sections.length <= 1} onClick={async () => { if (!section.body || await confirm({ message: '이 항목의 내용을 제거할까요? 저장 전까지는 취소할 수 있습니다.', tone: 'danger', confirmLabel: '제거' })) setDraft({ ...draft, sections: draft.sections.filter((_, i) => i !== index) }); }}>항목 제거</Button>
             </div>)}
             <Button variant="secondary" disabled={draft.sections.length >= 30} onClick={() => setDraft({ ...draft, sections: [...draft.sections, { title: '추가 내용', body: '' }] })}>항목 추가</Button>
-            <label className="block text-xs font-semibold">출처 링크 (한 줄에 하나)<textarea className={`${field} mt-1`} rows={3} value={draft.sourceUrls.join('\n')} onChange={event => setDraft({ ...draft, sourceUrls: event.target.value.split('\n') })} /></label>
+            <label className="block text-xs font-semibold">출처 링크 (한 줄에 하나)<TextArea className="mt-1" rows={3} value={draft.sourceUrls.join('\n')} onChange={event => setDraft({ ...draft, sourceUrls: event.target.value.split('\n') })} /></label>
           </fieldset> : <article>
             <p className="text-xs text-[var(--bi-muted)]">{scopeLabels[current.scope]}{current.project && ` · ${current.project}`}</p>
             <h2 className="mt-2 text-xl font-semibold break-words">{current.title}</h2><p className="mt-3 whitespace-pre-wrap text-sm leading-7">{current.summary}</p>

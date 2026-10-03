@@ -1,12 +1,13 @@
 'use client';
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/erp/button';
+import { SelectField, TextInput } from '@/components/erp/form-field';
 import { JobCollectionControl } from './job-collection-control';
 import { buttonClassName } from '@/components/erp/button-styles';
 import { jobSources, jobStatuses, type JobDetail, type JobPage, type JobSummary } from '@/lib/recruitment-jobs';
 
-const fieldClass = 'min-h-11 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 text-sm text-[var(--bi-fg)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]';
 const dateFormat = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' });
 function date(value: string | null) {
   return value && Number.isFinite(Date.parse(value)) ? dateFormat.format(new Date(value)) : '미확인';
@@ -18,6 +19,7 @@ async function responseJson<T>(response: Response): Promise<T> {
 }
 
 export function RecruitmentJobs() {
+  const { confirm } = useConfirm();
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
   const [source, setSource] = useState('');
@@ -96,7 +98,8 @@ export function RecruitmentJobs() {
   }, [selectedId, refresh]);
 
   async function remove(job: JobSummary) {
-    if (mutating.current || !window.confirm(`“${job.title}” 공고를 삭제할까요?\n\n같은 사이트의 동일한 원문 주소에 속한 공고도 함께 삭제됩니다. 다시 수집돼도 표시하지 않으며, 삭제는 되돌릴 수 없습니다.`)) return;
+    if (mutating.current) return;
+    if (!await confirm({ message: `“${job.title}” 공고를 삭제할까요?\n\n같은 사이트의 동일한 원문 주소에 속한 공고도 함께 삭제됩니다. 다시 수집돼도 표시하지 않으며, 삭제는 되돌릴 수 없습니다.`, tone: "danger", confirmLabel: "삭제" }) || mutating.current) return;
     mutating.current = true;
     ++listVersion.current;
     setDeleting(job.id);
@@ -124,20 +127,12 @@ export function RecruitmentJobs() {
     <p className="text-xs leading-5 text-[var(--bi-muted)]">삭제한 공고는 같은 사이트의 원문 주소를 기준으로 계속 제외합니다. 다른 사이트에 올라온 공고는 별도 항목입니다.</p>
     <form className="flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); setPage(1); setQuery(search.trim()); }}>
       <label className="grid min-w-48 flex-1 gap-1.5 text-xs font-medium">공고 검색
-        <input type="search" maxLength={150} value={search} onChange={event => setSearch(event.target.value)} placeholder="공고명, 회사, 지역" className={fieldClass} />
+        <TextInput type="search" maxLength={150} value={search} onChange={event => setSearch(event.target.value)} placeholder="공고명, 회사, 지역" />
       </label>
-      <label className="grid gap-1.5 text-xs font-medium">채용 사이트
-        <select value={source} onChange={event => { setSource(event.target.value); setPage(1); }} className={fieldClass}>
-          <option value="">전체 사이트</option>{Object.entries(jobSources).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-        </select>
-      </label>
-      <label className="grid gap-1.5 text-xs font-medium">모집 상태
-        <select value={status} onChange={event => { setStatus(event.target.value); setPage(1); }} className={fieldClass}>
-          <option value="">전체 상태</option>{Object.entries(jobStatuses).map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-        </select>
-      </label>
-      <Button type="submit" className="min-h-11" disabled={!!deleting}>검색</Button>
-      <Button variant="secondary" className="min-h-11" disabled={loading || !!deleting} onClick={() => setRefresh(value => value + 1)}>새로고침</Button>
+      <div className="min-w-40"><SelectField label="채용 사이트" value={source} onChange={value => { setSource(value); setPage(1); }} options={[{ value: '', label: '전체 사이트' }, ...Object.entries(jobSources).map(([value, label]) => ({ value, label }))]} /></div>
+      <div className="min-w-36"><SelectField label="모집 상태" value={status} onChange={value => { setStatus(value); setPage(1); }} options={[{ value: '', label: '전체 상태' }, ...Object.entries(jobStatuses).map(([value, label]) => ({ value, label }))]} /></div>
+      <Button type="submit" disabled={!!deleting}>검색</Button>
+      <Button variant="secondary" disabled={loading || !!deleting} onClick={() => setRefresh(value => value + 1)}>새로고침</Button>
     </form>
     {(error || deleteError) && <p role="alert" className="text-sm text-[var(--bi-error)]">{deleteError || error}</p>}
     {notice && <p role="status" className="text-sm text-[var(--bi-accent)]">{notice}</p>}
@@ -168,9 +163,9 @@ export function RecruitmentJobs() {
           </li>)}
         </ul>
         {data && data.total > 0 && <nav aria-label="공고 페이지" className="mt-4 flex items-center justify-center gap-3">
-          <Button variant="secondary" className="min-h-11" disabled={loading || !!deleting || page <= 1} onClick={() => setPage(value => value - 1)}>이전</Button>
+          <Button variant="secondary" disabled={loading || !!deleting || page <= 1} onClick={() => setPage(value => value - 1)}>이전</Button>
           <span className="text-xs">{page} / {pages}</span>
-          <Button variant="secondary" className="min-h-11" disabled={loading || !!deleting || page >= pages} onClick={() => setPage(value => value + 1)}>다음</Button>
+          <Button variant="secondary" disabled={loading || !!deleting || page >= pages} onClick={() => setPage(value => value + 1)}>다음</Button>
         </nav>}
       </section>
       <section ref={detailPanel} tabIndex={-1} id="recruitment-job-detail" aria-label="선택한 공고 본문" aria-busy={detailLoading} hidden={!selectedId} className="order-first min-w-0 self-start rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] xl:sticky xl:top-4 xl:order-last">

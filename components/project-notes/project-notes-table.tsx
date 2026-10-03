@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
+import { DataGridTable } from '@/components/erp/zespro';
 import { useAccess } from "@/components/access/context";
 
 import { useCallback, useEffect, useState } from "react";
@@ -83,6 +85,7 @@ function formatUpdatedAt(value: string): string {
 }
 
 export function ProjectNotesTable({ projectSlug, personal = false }: { projectSlug: string; personal?: boolean }) {
+  const { confirm } = useConfirm();
   const { canWrite, canDelete } = useAccess();
   const writable = canWrite(projectSlug);
   const deletable = canDelete(projectSlug);
@@ -163,8 +166,8 @@ export function ProjectNotesTable({ projectSlug, personal = false }: { projectSl
     }
   };
 
-  const removeNote = (note: ProjectNote) => {
-    if (!deletable || !window.confirm(`“${noteLabel(note)}” 항목을 삭제할까요?`)) return;
+  const removeNote = async (note: ProjectNote) => {
+    if (!deletable || !await confirm({ message: `“${noteLabel(note)}” 항목을 삭제할까요?`, tone: "danger", confirmLabel: "삭제" })) return;
     if (editingId === note.id) setEditingId(null);
     setNotes((current) => current.filter((item) => item.id !== note.id));
     void sync(() => deleteNoteRequest(note.id));
@@ -225,7 +228,7 @@ export function ProjectNotesTable({ projectSlug, personal = false }: { projectSl
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[784px] table-fixed border-collapse text-[12px]">
+        <DataGridTable className="w-full min-w-[784px] table-fixed border-collapse text-[12px]">
           <caption className="sr-only">{personal ? "프로젝트 기록" : "프로젝트 진행 시 명심할 점"}</caption>
           <colgroup>
             <col className="w-[64px]" />
@@ -428,7 +431,7 @@ export function ProjectNotesTable({ projectSlug, personal = false }: { projectSl
               ))
             )}
           </tbody>
-        </table>
+        </DataGridTable>
       </div>
 
       <p aria-live="polite" className="sr-only">

@@ -23,7 +23,7 @@ export type CheckboxProps = NativeProps & {
 /**
  * 프로젝트 공통 체크박스. 디자인 시스템(0.1.25)에는 독립 체크박스가 없고 `CheckTile`은
  * 폼 타일 전용이라, 표 셀·툴바에서 쓰는 단일 박스를 여기서 한 번만 정의한다.
- * 네이티브 `input`을 그대로 두고(키보드·폼·스크린리더 유지) 박스만 DESIGN.md 규격으로 그린다:
+ * 네이티브 `input`을 그대로 두고(키보드·폼·스크린리더 유지) 박스만 docs/ui-design.md 규격으로 그린다:
  * 16px, radius 3px, 1px 경계, 체크 시 accent 채움, 그림자 없음.
  */
 export function Checkbox({
@@ -68,7 +68,7 @@ export function Checkbox({
           "grid h-4 w-4 shrink-0 place-items-center rounded-[3px] border transition-colors duration-[var(--bi-motion-fast)]",
           visualChecked
             ? "border-[var(--bi-accent)] bg-[var(--bi-accent)] text-white"
-            : "border-[var(--bi-border)] bg-[var(--bi-background)] text-transparent group-hover/checkbox:border-[var(--bi-muted)]",
+            : "border-[var(--bi-border)] bg-[var(--bi-card-bg)] text-transparent group-hover/checkbox:border-[var(--bi-muted)]",
           disabled &&
             (visualChecked
               ? "border-[var(--bi-sidebar-active)] bg-[var(--bi-sidebar-active)] text-[var(--bi-muted)]"

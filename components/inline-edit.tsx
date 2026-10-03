@@ -1,5 +1,6 @@
 "use client";
 
+import { TextInput } from '@/components/erp/form-field';
 import { useEffect, useRef, type ReactNode } from "react";
 import { HiOutlinePencil } from "react-icons/hi";
 import { Button } from "@/components/erp/button";
@@ -95,7 +96,7 @@ export function InlineEdit({
   };
 
   return (
-    <input
+    <TextInput
       aria-label={label}
       className={inputClassName}
       defaultValue={value}

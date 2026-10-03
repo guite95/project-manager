@@ -1,5 +1,7 @@
 "use client";
 
+import { DataGridTable } from '@/components/erp/zespro';
+import { TextInput } from '@/components/erp/form-field';
 import { Dropdown } from "@/components/erp/dropdown";
 import { Button } from "@/components/erp/button";
 
@@ -43,13 +45,12 @@ export function ErdViewer({ domain, snapshot: tnsSchema, initialLayout }: { doma
     ? chart.nodes.some(n => n.id === m.name)
     : `${m.name} ${m.table} ${domainOf(m.name).title}`.toLowerCase().includes(query.trim().toLowerCase()));
   const relations = model ? tnsSchema.relations.filter(r => r.source === model.name || r.target === model.name) : [];
-  const inputClass = 'rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 py-1.5 text-[12px] text-[var(--bi-fg)]';
   return (
     <>
       <div className="mt-4 flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-[11px] text-[var(--bi-muted)]">
           전체 테이블 검색
-          <input className={inputClass} value={query} onChange={e => setQuery(e.target.value)} placeholder="테이블명 또는 업무 영역" type="search" />
+          <TextInput value={query} onChange={e => setQuery(e.target.value)} placeholder="테이블명 또는 업무 영역" type="search" />
         </label>
         <div className="flex min-w-0 flex-col gap-1 text-[11px] text-[var(--bi-muted)]">
           <span>테이블 선택 · 연결 및 전체 컬럼 보기</span>
@@ -81,25 +82,25 @@ export function ErdViewer({ domain, snapshot: tnsSchema, initialLayout }: { doma
           <p className="mb-2 text-[var(--bi-muted)]">PK: {model.primaryKey.join(' + ') || '없음'}<br />
             고유 제약: {model.uniqueKeys.map(key => `(${key.join(' + ')})`).join(', ') || '없음'}</p>
           <div className="max-h-[420px] overflow-auto rounded border border-[var(--bi-border)]">
-            <table className="w-full border-collapse text-left">
+            <DataGridTable className="w-full border-collapse text-left">
               <thead className="sticky top-0 bg-[var(--bi-sidebar-bg)]"><tr>{['키', '컬럼명', '자료형', 'NULL'].map(label => <th key={label} className="px-3 py-2 font-semibold">{label}</th>)}</tr></thead>
               <tbody>{model.fields.map(field => <tr key={field.name} className="border-t border-[var(--bi-border)]">
                 <td className="px-3 py-1.5 text-[var(--bi-accent)]">{fieldKeys(tnsSchema, model, field).join(' · ') || '—'}</td>
                 <td className="px-3 py-1.5 font-mono">{field.column}{field.column !== field.name ? <span className="ml-2 text-[var(--bi-muted)]">({field.name})</span> : null}</td>
                 <td className="px-3 py-1.5">{field.type}</td><td className="px-3 py-1.5">{field.optional ? '허용' : '불가'}</td>
               </tr>)}</tbody>
-            </table>
+            </DataGridTable>
           </div>
           <h4 className="mt-4 mb-2 font-semibold">연결 관계 · {relations.length}개</h4>
           <div className="overflow-x-auto rounded border border-[var(--bi-border)]">
-            <table className="w-full border-collapse whitespace-nowrap text-left">
+            <DataGridTable className="w-full border-collapse whitespace-nowrap text-left">
               <thead className="bg-[var(--bi-sidebar-bg)]"><tr>{['FK를 가진 테이블 · 컬럼', '참조 테이블 · 컬럼', '관계'].map(label => <th key={label} className="px-3 py-2 font-semibold">{label}</th>)}</tr></thead>
               <tbody>{relations.map(r => <tr key={r.id} className="border-t border-[var(--bi-border)]">
                 <td className="px-3 py-1.5"><button className="text-[var(--bi-accent)] underline" onClick={() => selectTable(r.source)}>{r.source}</button> · {r.fields.join(', ')}</td>
                 <td className="px-3 py-1.5"><button className="text-[var(--bi-accent)] underline" onClick={() => selectTable(r.target)}>{r.target}</button> · {r.references.join(', ')}</td>
                 <td className="px-3 py-1.5">{r.unique ? '1:1' : 'N:1'} · {r.optional ? '선택' : '필수'}</td>
               </tr>)}</tbody>
-            </table>
+            </DataGridTable>
             {!relations.length ? <p className="p-3 text-[var(--bi-muted)]">선언된 FK 관계가 없습니다.</p> : null}
           </div>
         </section>

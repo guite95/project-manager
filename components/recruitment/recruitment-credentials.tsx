@@ -1,10 +1,12 @@
 'use client';
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/erp/button';
+import { SelectField, TextArea, TextInput } from '@/components/erp/form-field';
 import { credentialFields, credentialKinds, credentialText, type CredentialField, type CredentialKind, type RecruitmentCredential, type RecruitmentCredentials } from '@/lib/recruitment-credentials';
 
-const fieldClass = 'mt-1 w-full rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 py-2 text-sm';
+const fieldClass = 'mt-1';
 const fields = Object.entries(credentialFields) as [CredentialField, string][];
 async function readResponse(response: Response): Promise<RecruitmentCredentials> {
   const data = await response.json();
@@ -13,6 +15,7 @@ async function readResponse(response: Response): Promise<RecruitmentCredentials>
 }
 
 export function RecruitmentCredentialsPanel() {
+  const { confirm } = useConfirm();
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState<RecruitmentCredentials | null>(null);
   const [draft, setDraft] = useState<RecruitmentCredentials | null>(null);
@@ -71,12 +74,12 @@ export function RecruitmentCredentialsPanel() {
     const item: RecruitmentCredential = { id: crypto.randomUUID(), kind: 'CERTIFICATE', name: '', issuer: '', acquiredOn: '', identifier: '', grade: '', expiresOn: '', notes: '' };
     setDraft({ ...draft, items: [...draft.items, item] });
   }
-  function cancel() {
-    if (dirty && !window.confirm('저장하지 않은 지원용 정보 변경을 버릴까요?')) return;
+  async function cancel() {
+    if (dirty && !await confirm({ message: '저장하지 않은 지원용 정보 변경을 버릴까요?', tone: 'danger', confirmLabel: '변경 버리기' })) return;
     setDraft(null); setError('');
   }
-  function toggle() {
-    if (open && dirty && !window.confirm('저장하지 않은 지원용 정보 변경을 버리고 닫을까요?')) return;
+  async function toggle() {
+    if (open && dirty && !await confirm({ message: '저장하지 않은 지원용 정보 변경을 버리고 닫을까요?', tone: 'danger', confirmLabel: '닫기' })) return;
     setOpen(!open); setDraft(null); setSaved(null); setError(''); setNotice('');
   }
   async function save() {
@@ -115,16 +118,16 @@ export function RecruitmentCredentialsPanel() {
               <h3 className="text-sm font-semibold">{credentialKinds[item.kind]}{item.name && ` · ${item.name}`}</h3>
               <Button variant="secondary" size="sm" disabled={!item.name.trim()} onClick={() => copy(credentialText(item), '항목 전체를')}>항목 전체 복사</Button>
             </div>
-            {editing && <label className="mb-3 block text-xs font-semibold">종류<select className={fieldClass} value={item.kind} onChange={event => update(item.id, { kind: event.target.value as CredentialKind })}>{Object.entries(credentialKinds).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
+            {editing && <div className="mb-3"><SelectField label="종류" value={item.kind} disabled={saving} onChange={kind => update(item.id, { kind: kind as CredentialKind })} options={Object.entries(credentialKinds).map(([value, label]) => ({ value, label }))} /></div>}
             <div className="space-y-3">
               {fields.map(([key, label]) => <div key={key} className="flex items-start gap-2">
                 {editing ? <label className="min-w-0 flex-1 text-xs font-semibold">{label}
-                  {key === 'notes' ? <textarea className={fieldClass} maxLength={4000} rows={3} value={item[key]} onChange={event => update(item.id, { [key]: event.target.value })} /> : <input className={fieldClass} maxLength={200} placeholder={key === 'acquiredOn' || key === 'expiresOn' ? 'YYYY / YYYY-MM / YYYY-MM-DD' : undefined} value={item[key]} onChange={event => update(item.id, { [key]: event.target.value })} />}
+                  {key === 'notes' ? <TextArea className={fieldClass} maxLength={4000} rows={3} value={item[key]} onChange={event => update(item.id, { [key]: event.target.value })} /> : <TextInput className={fieldClass} maxLength={200} placeholder={key === 'acquiredOn' || key === 'expiresOn' ? 'YYYY / YYYY-MM / YYYY-MM-DD' : undefined} value={item[key]} onChange={event => update(item.id, { [key]: event.target.value })} />}
                 </label> : <div className="min-w-0 flex-1"><p className="text-xs text-[var(--bi-muted)]">{label}</p><p className="mt-1 select-text whitespace-pre-wrap break-words text-sm leading-6">{item[key] || '미입력'}</p></div>}
                 <Button variant="ghost" size="sm" className={editing ? 'mt-5' : ''} aria-label={`${item.name || '새 항목'} ${label} 복사`} disabled={!item[key]} onClick={() => copy(item[key], `${label}을`)}>복사</Button>
               </div>)}
             </div>
-            {editing && <Button variant="ghost" className="mt-4" onClick={() => { if (window.confirm('이 항목을 제거할까요? 저장 전에는 취소할 수 있습니다.')) setDraft(value => value ? { ...value, items: value.items.filter(row => row.id !== item.id) } : value); }}>항목 제거</Button>}
+            {editing && <Button variant="ghost" className="mt-4" onClick={async () => { if (await confirm({ message: '이 항목을 제거할까요? 저장 전에는 취소할 수 있습니다.', tone: 'danger', confirmLabel: '제거' })) setDraft(value => value ? { ...value, items: value.items.filter(row => row.id !== item.id) } : value); }}>항목 제거</Button>}
           </section>)}
         </fieldset>
         {editing && <Button className="mt-4" variant="secondary" disabled={saving || current.items.length >= 100} onClick={add}>항목 추가</Button>}

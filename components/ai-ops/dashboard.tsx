@@ -1,5 +1,7 @@
 "use client";
 
+import { DataGridTable } from '@/components/erp/zespro';
+import { TextInput } from '@/components/erp/form-field';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/erp/button";
@@ -99,10 +101,10 @@ function UsageTable({ title, rows }: { title: string; rows: (AiTokens & { label:
   return <section className={panel} aria-label={title}>
     <h2 className="text-sm font-semibold">{title}</h2>
     {!rows.length ? <p className={`mt-4 ${muted}`}>선택한 조건의 사용량 기록이 없습니다.</p> : <div className="mt-3 overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-xs"><caption className="sr-only">{title}. 막대 길이는 전체 토큰에 비례합니다. 값이 없는 항목은 미제공으로 표시합니다.</caption>
+      <DataGridTable className="w-full min-w-[760px] text-left text-xs"><caption className="sr-only">{title}. 막대 길이는 전체 토큰에 비례합니다. 값이 없는 항목은 미제공으로 표시합니다.</caption>
         <thead><tr className="border-b border-[var(--bi-border)]"><th scope="col" className="p-2">구분</th>{tokenFields.map(([key, label]) => <th scope="col" className="p-2 text-right" key={key}>{label}</th>)}<th scope="col" className="p-2 text-right">기록 / 일부 미제공</th></tr></thead>
         <tbody>{rows.map(row => <tr key={row.label} className="border-b border-[var(--bi-border)] last:border-0"><th scope="row" className="max-w-56 break-words p-2 font-normal"><span>{row.label}</span><div aria-hidden className="mt-1 h-1 rounded bg-[var(--bi-sidebar-bg)]"><div className="h-1 rounded bg-[var(--bi-accent)]" style={{ width: `${100 * (row.totalTokens ?? 0) / max}%` }} /></div></th>{tokenFields.map(([key]) => <td className="p-2 text-right tabular-nums" key={key}>{number(row[key])}</td>)}<td className="p-2 text-right tabular-nums">{number(row.records)} / {number(row.missingRecords)}</td></tr>)}</tbody>
-      </table>
+      </DataGridTable>
     </div>}
   </section>;
 }
@@ -186,7 +188,7 @@ export function AiOpsDashboard({ view }: { view: "activity" | "usage" }) {
           <section className={panel} aria-label="대화 본문 검색">
             <h2 className="font-semibold">프롬프트·응답 검색</h2>
             <form className="mt-3 flex flex-wrap gap-2" onSubmit={event => { event.preventDefault(); runSearch(); }}>
-              <label className="min-w-40 flex-1"><span className="sr-only">검색어</span><input type="search" value={query} onChange={event => setQuery(event.target.value)} maxLength={200} placeholder="대화 내용 검색" className="h-[30px] w-full rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] px-2 outline-[var(--bi-accent)]" /></label>
+              <label className="min-w-40 flex-1"><span className="sr-only">검색어</span><TextInput type="search" value={query} onChange={event => setQuery(event.target.value)} maxLength={200} placeholder="대화 내용 검색" /></label>
               <Dropdown className="w-36" ariaLabel="검색 방식" value={searchMode} onChange={setSearchMode} options={[{ value: "hybrid", label: "의미 + 키워드" }, { value: "keyword", label: "키워드" }, { value: "literal", label: "부분 문자열" }]} />
               <Dropdown className="w-36" ariaLabel="본문 검색 대상" value={kind} onChange={setKind} options={[{ value: "", label: "프롬프트 및 응답" }, { value: "USER", label: "프롬프트" }, { value: "ASSISTANT", label: "응답" }]} />
               <Button type="submit" disabled={search.loading}>검색</Button>

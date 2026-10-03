@@ -1,5 +1,6 @@
 "use client";
 
+import { TextInput } from '@/components/erp/form-field';
 import { useEffect, useId, useState } from "react";
 import {
   HiOutlineArrowLeft,
@@ -528,9 +529,9 @@ function ProjectIssues({
             submit();
           }}
         >
-          <input
+          <TextInput
             aria-label={`${group.title} 이슈 추가`}
-            className="bi-control h-9 min-w-0 flex-1 rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)] hover:border-[var(--bi-border-strong)] focus:border-[var(--bi-accent)]"
+            className="flex-1"
             maxLength={200}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="새 이슈"

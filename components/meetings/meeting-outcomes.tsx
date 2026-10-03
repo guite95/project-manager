@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { FlowChart } from '@/components/flow/types';
 import { Button } from '@/components/erp/button';
-import { DateField, TextField } from '@/components/erp/form-field';
+import { DateField, TextField, TextArea } from '@/components/erp/form-field';
 import { editMeetingOutcomes, type MeetingOutcomes as Outcomes } from '@/lib/meeting-edit';
 import { MeetingOutcomesView } from './meeting-detail';
 import { useAccess } from '@/components/access/context';
 
-const inputClass = 'mt-1 min-h-20 w-full rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-3 text-[13px] outline-[var(--bi-accent)]';
+const inputClass = 'mt-1 min-h-20';
 
 export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: {
   projectSlug: string; initialChart: FlowChart; initialRevision: number;
@@ -98,7 +98,7 @@ export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: 
               <label htmlFor={`decision-${i}`} className="text-[12px]">결정 사항 {i + 1}</label>
               <Button variant="ghost" aria-label={`결정 사항 ${i + 1} 삭제`} onClick={() => setDraft({ ...draft, decisions: draft.decisions.filter((_, index) => index !== i) })}>삭제</Button>
             </div>
-            <textarea id={`decision-${i}`} required className={inputClass} value={decision}
+            <TextArea id={`decision-${i}`} required className={inputClass} value={decision}
               onChange={e => setDraft({ ...draft, decisions: draft.decisions.map((value, index) => index === i ? e.target.value : value) })} />
           </div>)}</div>
           {!draft.decisions.length ? <p className="mb-3 text-[12px] text-[var(--bi-muted)]">등록된 결정 사항이 없습니다.</p> : null}
@@ -113,7 +113,7 @@ export function MeetingOutcomes({ projectSlug, initialChart, initialRevision }: 
                 <label htmlFor={`task-${i}`} className="text-[12px] font-medium">태스크 {i + 1}</label>
                 <Button variant="ghost" aria-label={`태스크 ${i + 1} 삭제`} onClick={() => setDraft({ ...draft, actionItems: draft.actionItems.filter((_, index) => index !== i) })}>삭제</Button>
               </div>
-              <textarea id={`task-${i}`} required className={inputClass} value={item.task} onChange={e => update({ task: e.target.value })} />
+              <TextArea id={`task-${i}`} required className={inputClass} value={item.task} onChange={e => update({ task: e.target.value })} />
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <TextField label={`태스크 ${i + 1} 담당자`} value={item.owner ?? ''} placeholder="미지정" onChange={owner => update({ owner: owner || null })} />
                 <DateField label={`태스크 ${i + 1} 기한`} value={item.dueDate ?? ''} placeholder="미정" clearable onChange={dueDate => update({ dueDate: dueDate || null })} />

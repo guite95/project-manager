@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAccess } from '@/components/access/context';
 import { Button } from '@/components/erp/button';
 import { Dropdown } from '@/components/erp/dropdown';
-import { TextField } from '@/components/erp/form-field';
+import { TextField, TextArea } from '@/components/erp/form-field';
 import { MAX_RECORDING_BYTES, RECORDING_KINDS, RECORDING_STATUS, type RecordingSummary } from '@/lib/recordings';
 
 const field = 'block w-full rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] p-2 text-[13px]';
@@ -109,7 +109,7 @@ export function RecordingLibrary({ project, projectTitle, initial }: { project: 
         <div><p className="mb-1 text-xs text-[var(--bi-muted)]">녹음 종류</p><Dropdown value={kind} onChange={setKind} options={RECORDING_KINDS} ariaLabel="녹음 종류" disabled={busy} /></div>
       </div>
       <label className="block space-y-2 text-xs">녹음 상황 설명 · 선택
-        <textarea className={field} value={context} onChange={event => setContext(event.target.value)} disabled={busy} maxLength={1000} rows={3} placeholder="예: 고객과 전화로 진행한 장애 상담. 풀링, 티앤에스 등의 고유명사가 나옵니다." />
+        <TextArea className="block" value={context} onChange={event => setContext(event.target.value)} disabled={busy} maxLength={1000} rows={3} placeholder="예: 고객과 전화로 진행한 장애 상담. 풀링, 티앤에스 등의 고유명사가 나옵니다." />
       </label>
       <p className="text-xs text-[var(--bi-muted)]">종류와 설명은 전사 시 참고 정보로 전달됩니다. 들리지 않은 내용을 보충하는 근거로 사용하지 않습니다.</p>
       <div className="flex justify-end gap-2"><Button variant="secondary" disabled={busy} onClick={() => setAdding(false)}>취소</Button><Button type="submit" loading={busy} disabled={!file || !kind || !title.trim() || !!retrying}>올리고 전사하기</Button></div>

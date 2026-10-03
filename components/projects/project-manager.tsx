@@ -1,8 +1,11 @@
 'use client';
 
+import { DataGridTable } from '@/components/erp/zespro';
+import { TextInput } from '@/components/erp/form-field';
 import { useEffect, useRef, useState } from 'react';
 import { useAccess } from '@/components/access/context';
 import { Button } from '@/components/erp/button';
+import { Checkbox } from '@/components/erp/checkbox';
 import { Dropdown } from '@/components/erp/dropdown';
 import { ProjectEditor } from './project-editor';
 import type { ManagedProject } from '@/lib/project-registry';
@@ -68,25 +71,25 @@ export function ProjectManager() {
       <div className="flex flex-wrap gap-2"><ProjectEditor scope="COMPANY" addLabel="회사 프로젝트 추가" onSaved={refresh} />{role === 'OWNER' && <ProjectEditor scope="PERSONAL" addLabel="개인 프로젝트 추가" onSaved={refresh} />}</div>
     </div>
     <div className="flex flex-wrap items-center gap-3">
-      <input aria-label="프로젝트 이름 검색" placeholder="프로젝트 이름 검색" value={query} onChange={event => setQuery(event.target.value)} className="h-9 min-w-0 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 text-xs" />
+      <TextInput aria-label="프로젝트 이름 검색" placeholder="프로젝트 이름 검색" value={query} onChange={event => setQuery(event.target.value)} />
       {role === 'OWNER' && <div className="w-32"><Dropdown ariaLabel="프로젝트 구분" value={scope} onChange={setScope} options={[{ value: 'ALL', label: '전체' }, { value: 'COMPANY', label: '회사' }, { value: 'PERSONAL', label: '개인' }]} /></div>}
       <Button variant="secondary" disabled={pending !== null} onClick={refresh}>다시 불러오기</Button>
     </div>
     {error || loadError ? <p role="alert" className="text-sm text-[var(--bi-error)]">{error || loadError}</p> : null}
     <p role="status" className="text-xs text-[var(--bi-muted)]">{pending ? '표시 설정을 저장하는 중입니다.' : notice}</p>
     <div className="overflow-x-auto rounded border border-[var(--bi-border)]">
-      <table className="w-full min-w-[580px] border-collapse text-left text-xs">
+      <DataGridTable className="w-full min-w-[580px] border-collapse text-left text-xs">
         <thead className="bg-[var(--bi-bg)] text-[var(--bi-muted)]"><tr>{['프로젝트', '구분', '개인 분류', '할 일에 표시', '관리'].map(title => <th scope="col" key={title} className="border-b border-[var(--bi-border)] px-4 py-3 font-medium">{title}</th>)}</tr></thead>
         <tbody className="divide-y divide-[var(--bi-border)] bg-[var(--bi-card-bg)]">
           {!ready || !rows.length ? <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--bi-muted)]">{!ready ? loadError ? '목록을 다시 불러와 주세요.' : '프로젝트를 불러오는 중입니다.' : '표시할 프로젝트가 없습니다.'}</td></tr> : rows.map(project => <tr key={project.slug}>
             <th scope="row" className="px-4 py-3 font-medium">{project.title}</th>
             <td className="px-4 py-3">{project.scope === 'PERSONAL' ? '개인' : '회사'}</td>
             <td className="px-4 py-3">{project.scope !== 'PERSONAL' ? '—' : project.personalGroup === 'PORTFOLIO' ? '포폴용' : '토이'}</td>
-            <td className="px-4 py-3"><label className="inline-flex min-h-9 cursor-pointer items-center gap-2"><input type="checkbox" aria-label={`${project.title} 할 일에 표시`} checked={project.showInTasks} disabled={pending !== null} onChange={event => void toggle(project, event.target.checked)} className="h-4 w-4 accent-[var(--bi-accent)]" /><span>{project.showInTasks ? '표시' : '숨김'}</span></label></td>
+            <td className="px-4 py-3"><div className="inline-flex min-h-9 items-center gap-2"><Checkbox ariaLabel={`${project.title} 할 일에 표시`} checked={project.showInTasks} disabled={pending !== null} onChange={checked => void toggle(project, checked)} /><span>{project.showInTasks ? '표시' : '숨김'}</span></div></td>
             <td className="px-4 py-3"><ProjectEditor scope={project.scope} slug={project.slug} onSaved={refresh} /></td>
           </tr>)}
         </tbody>
-      </table>
+      </DataGridTable>
     </div>
   </section>;
 }

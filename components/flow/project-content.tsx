@@ -1,5 +1,7 @@
 "use client";
 
+import { DataGridTable } from '@/components/erp/zespro';
+import { TextInput } from '@/components/erp/form-field';
 import { Dropdown } from "@/components/erp/dropdown";
 import { Button } from "@/components/erp/button";
 
@@ -65,7 +67,7 @@ function ImportedErd({ chart, content }: { chart: FlowChart; content: Extract<Pr
     <p className="mb-3 text-[12px]">테이블 {content.tables.length}개 · FK 관계 {content.relations.length}개 · 테이블을 선택하면 전체 컬럼과 관계를 확인할 수 있습니다.</p>
     <ProcessFlow chart={chart} onEntitySelect={setSelected} />
     <div className="my-4 flex flex-wrap gap-2">
-      <input aria-label="테이블 검색" placeholder="테이블·모듈 검색" value={query} onChange={e => setQuery(e.target.value)} className="min-h-10 rounded border border-[var(--bi-border)] px-3 text-[12px]" />
+      <TextInput aria-label="테이블 검색" placeholder="테이블·모듈 검색" value={query} onChange={e => setQuery(e.target.value)} />
       <Dropdown ariaLabel="테이블 선택" searchable value={selected} onChange={setSelected}
         options={[...(!tables.some(t => t.name === selected) && table ? [{ value: table.name, label: `${table.koLabel} · ${table.name}` }] : []),
           ...tables.map(t => ({ value: t.name, label: `${t.module} · ${t.koLabel} · ${t.name}` }))]} />
@@ -74,13 +76,13 @@ function ImportedErd({ chart, content }: { chart: FlowChart; content: Extract<Pr
     {table ? <div className="rounded border border-[var(--bi-border)] p-4">
       <h3 className="font-bold">{table.koLabel} · {table.name}</h3>
       <p className="my-2 text-[12px]">{table.koDesc}</p>
-      <div className="overflow-x-auto"><table className="w-full text-left text-[12px]">
+      <div className="overflow-x-auto"><DataGridTable className="w-full text-left text-[12px]">
         <thead><tr>{["키", "컬럼", "설명", "타입", "NULL"].map(t => <th key={t} className="p-2">{t}</th>)}</tr></thead>
         <tbody>{table.columns.map(column => <tr key={column.name} className="border-t border-[var(--bi-border)]">
           <td className="p-2">{[column.isPk ? "PK" : "", column.isFk ? "FK" : ""].filter(Boolean).join(" · ")}</td>
           <td className="p-2 font-mono">{column.name}</td><td className="p-2">{column.label}</td><td className="p-2">{column.type}</td><td className="p-2">{column.nullable ? "허용" : "불가"}</td>
         </tr>)}</tbody>
-      </table></div>
+      </DataGridTable></div>
       <h4 className="mt-4 mb-2 text-[13px] font-bold">연결 관계 · {relations.length}개</h4>
       <ul className="space-y-2 text-[12px]">{relations.map((r, i) => <li key={i} className="break-all">
         <button className="underline" onClick={() => setSelected(r.from)}>{r.from}</button>.{r.fromColumn} → <button className="underline" onClick={() => setSelected(r.to)}>{r.to}</button>.{r.toColumn}

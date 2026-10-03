@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
 import { useAccess } from "@/components/access/context";
 
 import { useRef, useState, useTransition } from 'react';
@@ -10,6 +11,7 @@ import { materialsHref } from '@/lib/materials';
 export function MaterialDeleteButton({ project, slug, title, returnToList = false }: {
   project: string; slug: string; title: string; returnToList?: boolean;
 }) {
+  const { confirm } = useConfirm();
   const { canDelete } = useAccess();
   const deletable = canDelete(project);
   const router = useRouter();
@@ -18,7 +20,8 @@ export function MaterialDeleteButton({ project, slug, title, returnToList = fals
   const [refreshing, startTransition] = useTransition();
   const [error, setError] = useState('');
   async function remove() {
-    if (!deletable || submitting.current || refreshing || !window.confirm(`“${title}” 자료를 삭제할까요? 삭제한 자료는 복구할 수 없습니다.`)) return;
+    if (!deletable || submitting.current || refreshing) return;
+    if (!await confirm({ message: `“${title}” 자료를 삭제할까요? 삭제한 자료는 복구할 수 없습니다.`, tone: "danger", confirmLabel: "삭제" }) || submitting.current) return;
     submitting.current = true; setBusy(true); setError('');
     try {
       const response = await fetch(`/api/flows/${encodeURIComponent(project)}/materials/${encodeURIComponent(slug)}`, { method: 'DELETE' });

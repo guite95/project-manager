@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useRef, type ReactNode } from "react";
 import { cx } from "../lib/class-names";
 
 export type TabItem<T extends string = string> = {
@@ -12,6 +12,8 @@ export type TabItem<T extends string = string> = {
   /** "end"면 이 항목부터 오른쪽 끝으로 밀어낸다 */
   align?: "start" | "end";
   disabled?: boolean;
+  id?: string;
+  panelId?: string;
 };
 
 export type TabsProps<T extends string> = {
@@ -44,6 +46,9 @@ export function Tabs<T extends string>({
   itemClassName,
   ariaLabel,
 }: TabsProps<T>) {
+  const buttons = useRef(new Map<T, HTMLButtonElement>());
+  const enabled = items.filter(item => !item.disabled);
+  const focusKey = enabled.some(item => item.key === value) ? value : enabled[0]?.key;
   let insertedEndSpacer = false;
 
   return (
@@ -68,11 +73,25 @@ export function Tabs<T extends string>({
           <Fragment key={item.key}>
             {shouldInsertSpacer ? <span className="pds-tabs__spacer" /> : null}
             <button
+              ref={element => { if (element) buttons.current.set(item.key, element); else buttons.current.delete(item.key); }}
               type="button"
               role="tab"
+              id={item.id}
+              aria-controls={item.panelId}
               aria-selected={active}
+              tabIndex={item.key === focusKey ? 0 : -1}
               disabled={item.disabled}
               onClick={() => onChange(item.key)}
+              onKeyDown={event => {
+                if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key) || !enabled.length) return;
+                event.preventDefault();
+                const index = enabled.findIndex(tab => tab.key === item.key);
+                const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? enabled.length - 1
+                  : (index + (event.key === 'ArrowLeft' ? -1 : 1) + enabled.length) % enabled.length;
+                const next = enabled[nextIndex];
+                onChange(next.key);
+                buttons.current.get(next.key)?.focus();
+              }}
               className={cx("pds-tabs__tab", active && "is-active", item.disabled && "is-disabled", itemClassName)}
             >
               {item.icon ? <span className="pds-tabs__icon">{item.icon}</span> : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import { TextInput } from '@/components/erp/form-field';
 import { useState } from "react";
 import { HiOutlineTableCells, HiOutlineViewColumns } from "react-icons/hi2";
 import { Button } from "@/components/erp/button";
@@ -78,7 +79,7 @@ function Samples() {
           <p>로그인 폼을 넣을 수 있는 영역입니다.</p>
         </SplitLoginLayout>
       </div>
-      <FormModal open={form} onClose={() => setForm(false)} onSubmit={() => { setForm(false); setMessage("예시 폼 제출 완료"); }} title="예시 입력"><label className="flex flex-col gap-2">작업명<input className="border border-[var(--bi-border)] p-2" data-autofocus defaultValue="자료 검토" /></label></FormModal>
+      <FormModal open={form} onClose={() => setForm(false)} onSubmit={() => { setForm(false); setMessage("예시 폼 제출 완료"); }} title="예시 입력"><label className="flex flex-col gap-2">작업명<TextInput data-autofocus defaultValue="자료 검토" /></label></FormModal>
       <SplitModal open={split} onClose={() => setSplit(false)} ariaLabel="샘플 작업 상세" profile={{ title: "샘플 작업" }} facts={[{ label: "담당", value: "샘플 담당자" }]} tabs={tabs} tab={tab} onTabChange={setTab} tabsAriaLabel="작업 상세"><SplitModalSection title={tab === "overview" ? "개요" : "이력"}><FieldGrid items={[{ label: "내용", value: tab === "overview" ? "자료를 검토합니다." : "작업이 등록되었습니다." }]} /></SplitModalSection></SplitModal>
     </DetailSection>
   );

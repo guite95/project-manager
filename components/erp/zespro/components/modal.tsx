@@ -143,6 +143,6 @@ export function Modal({
         {children}
       </div>
     </div>,
-    document.body
+    document.fullscreenElement ?? document.body
   );
 }

@@ -1,9 +1,10 @@
 "use client";
 
+import { TextInput } from '@/components/erp/form-field';
 import type { InputHTMLAttributes } from "react";
 
 export function Field({ label, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string }) {
-  return <label className="flex min-w-0 flex-col gap-1.5 text-[12px] font-medium">{label}<input {...props} className="h-9 min-w-0 rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] px-3 text-[13px] outline-none focus:border-[var(--bi-accent)] disabled:opacity-50" /></label>;
+  return <label className="flex min-w-0 flex-col gap-1.5 text-[12px] font-medium">{label}<TextInput {...props} className="disabled:opacity-50" /></label>;
 }
 
 export async function postAccess(url: string, body: unknown): Promise<{ path?: string }> {

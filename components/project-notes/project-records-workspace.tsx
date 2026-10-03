@@ -1,11 +1,13 @@
 'use client';
 
+import { useConfirm } from '@/components/erp/confirm-dialog';
+import { TextArea, TextInput } from '@/components/erp/form-field';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/erp/button';
 import { emptyProjectRecords, overviewFields, workFields, type ProjectRecords, type ProjectWork } from '@/lib/project-records';
 import type { ProjectNote } from '@/lib/project-notes';
 
-const field = 'mt-2 w-full rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 py-2 text-sm font-normal focus:outline-2 focus:outline-[var(--bi-accent)]';
+const field = 'mt-2 font-normal';
 const card = 'min-w-0 rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 md:p-5';
 async function readResponse<T>(response: Response): Promise<T> {
   const body = await response.json();
@@ -17,6 +19,7 @@ function Text({ value }: { value: string }) {
 }
 
 export function ProjectRecordsWorkspace({ projectSlug }: { projectSlug: string }) {
+  const { confirm } = useConfirm();
   const [document, setDocument] = useState<ProjectRecords | null>(null);
   const [draft, setDraft] = useState<ProjectRecords | null>(null);
   const [legacyNotes, setLegacyNotes] = useState<ProjectNote[]>([]);
@@ -85,12 +88,12 @@ export function ProjectRecordsWorkspace({ projectSlug }: { projectSlug: string }
   function updateWork(key: keyof ProjectWork, value: string) {
     setDraft(previous => previous ? { ...previous, works: previous.works.map(item => item.id === selected ? { ...item, [key]: value } : item) } : previous);
   }
-  function cancel() {
-    if (dirty && !window.confirm('작성 중인 변경 사항을 취소할까요?')) return;
+  async function cancel() {
+    if (dirty && !await confirm({ message: '작성 중인 변경 사항을 취소할까요?', confirmLabel: '변경 버리기', tone: 'danger' })) return;
     setDraft(null); editingRef.current = false; setError(''); setRefresh(value => value + 1);
   }
-  function removeWork() {
-    if (!draft || !work || !window.confirm(`‘${work.title || '새 작업'}’을 삭제할까요? 저장하면 반영됩니다.`)) return;
+  async function removeWork() {
+    if (!draft || !work || !await confirm({ message: `‘${work.title || '새 작업'}’을 삭제할까요? 저장하면 반영됩니다.`, tone: 'danger', confirmLabel: '삭제' })) return;
     setDraft({ ...draft, works: draft.works.filter(item => item.id !== selected) }); setSelected(null);
   }
   async function save() {
@@ -127,7 +130,7 @@ export function ProjectRecordsWorkspace({ projectSlug }: { projectSlug: string }
         <h2 id="project-overview-title" className="text-base font-semibold">프로젝트 개요</h2>
         <fieldset disabled={saving} className="mt-4 grid min-w-0 gap-5 sm:grid-cols-2">
           {overviewFields.map(({ key, title, hint }) => <div key={key} className="min-w-0">
-            {draft ? <label className="block text-xs font-semibold">{title}<textarea className={field} rows={key === 'period' || key === 'participants' ? 2 : 4} maxLength={20_000} placeholder={hint} value={draft.overview[key]} onChange={event => setDraft({ ...draft, overview: { ...draft.overview, [key]: event.target.value } })} /></label> : <><h3 className="text-xs font-semibold text-[var(--bi-muted)]">{title}</h3><Text value={current.overview[key]} /></>}
+            {draft ? <label className="block text-xs font-semibold">{title}<TextArea className={field} rows={key === 'period' || key === 'participants' ? 2 : 4} maxLength={20_000} placeholder={hint} value={draft.overview[key]} onChange={event => setDraft({ ...draft, overview: { ...draft.overview, [key]: event.target.value } })} /></label> : <><h3 className="text-xs font-semibold text-[var(--bi-muted)]">{title}</h3><Text value={current.overview[key]} /></>}
           </div>)}
         </fieldset>
       </section>
@@ -141,9 +144,9 @@ export function ProjectRecordsWorkspace({ projectSlug }: { projectSlug: string }
         <section aria-label="작업 상세" className={card}>
           {!work ? <p className="py-10 text-center text-sm text-[var(--bi-muted)]">작업을 선택하거나 새 작업을 추가하세요.</p> : <fieldset disabled={saving} className="min-w-0 space-y-6">
             {draft && <div className="flex justify-end"><Button variant="danger-ghost" disabled={saving} onClick={removeWork}>작업 삭제</Button></div>}
-            {draft ? <div className="space-y-4"><label className="block text-xs font-semibold">작업 제목<input className={field} maxLength={200} value={work.title} onChange={event => updateWork('title', event.target.value)} placeholder="예: 대용량 업로드 실패 원인 분석과 개선" /></label><label className="block text-xs font-semibold">요약<textarea className={field} rows={2} maxLength={2000} value={work.summary} onChange={event => updateWork('summary', event.target.value)} placeholder="맡은 작업과 결과를 짧게 정리하세요." /></label></div> : <div><h3 className="break-words text-lg font-semibold">{work.title}</h3>{work.summary && <Text value={work.summary} />}</div>}
+            {draft ? <div className="space-y-4"><label className="block text-xs font-semibold">작업 제목<TextInput className={field} maxLength={200} value={work.title} onChange={event => updateWork('title', event.target.value)} placeholder="예: 대용량 업로드 실패 원인 분석과 개선" /></label><label className="block text-xs font-semibold">요약<TextArea className={field} rows={2} maxLength={2000} value={work.summary} onChange={event => updateWork('summary', event.target.value)} placeholder="맡은 작업과 결과를 짧게 정리하세요." /></label></div> : <div><h3 className="break-words text-lg font-semibold">{work.title}</h3>{work.summary && <Text value={work.summary} />}</div>}
             {workFields.map(({ key, title, hint }) => <div key={key} className="border-t border-[var(--bi-border)] pt-4">
-              {draft ? <label className="block text-sm font-semibold">{title}<textarea className={field} rows={6} maxLength={20_000} value={work[key]} onChange={event => updateWork(key, event.target.value)} placeholder={hint} /></label> : <><h4 className="text-sm font-semibold">{title}</h4><Text value={work[key]} /></>}
+              {draft ? <label className="block text-sm font-semibold">{title}<TextArea className={field} rows={6} maxLength={20_000} value={work[key]} onChange={event => updateWork(key, event.target.value)} placeholder={hint} /></label> : <><h4 className="text-sm font-semibold">{title}</h4><Text value={work[key]} /></>}
             </div>)}
           </fieldset>}
         </section>

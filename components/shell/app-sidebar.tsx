@@ -1,5 +1,6 @@
 "use client";
 
+import { TextInput } from '@/components/erp/form-field';
 import Link from "next/link";
 import { usePersonalProjectGroups } from "@/components/personal/project-groups";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -335,12 +336,12 @@ export function AppSidebar({
   return (
     <nav aria-label="프로젝트 상세 메뉴" className={inline ? "flex flex-col" : "flex min-h-0 flex-1 flex-col overflow-hidden"}>
       <div className="shrink-0 border-b border-[var(--bi-border)] p-3">
-        <label className="flex items-center gap-2 rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-2.5 focus-within:border-[var(--bi-accent)] focus-within:outline-2 focus-within:outline-[var(--bi-accent)]">
-          <HiOutlineSearch size={14} aria-hidden className="shrink-0 text-[var(--bi-muted)]" />
+        <label className="relative block">
+          <HiOutlineSearch size={14} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--bi-muted)]" />
           <span className="sr-only">프로젝트·구조도 검색</span>
-          <input type="search" value={query} onChange={e => setQuery(e.target.value)}
+          <TextInput type="search" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="프로젝트·구조도 검색"
-            className="h-11 min-w-0 w-full bg-transparent text-base outline-none placeholder:text-[var(--bi-muted)] focus-visible:outline-none md:h-9 md:text-[12px]" />
+            className="pl-9" />
         </label>
       </div>
       <div className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>

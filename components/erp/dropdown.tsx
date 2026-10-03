@@ -57,6 +57,9 @@ export function Dropdown({ value, onChange, options, ariaLabel, searchable = tru
     setOpen(true);
   };
   const choose = (option: DropdownOption) => { close(true); onChange(option.value); };
+  // 모달 안에서는 같은 포커스 영역과 쌓임 맥락에 팝오버를 둔다.
+  const portalRoot = typeof document === "undefined" ? null
+    : triggerRef.current?.closest('dialog[open], [role="dialog"]') ?? document.fullscreenElement ?? document.body;
   const handleMenuKeyDown = (event: KeyboardEvent) => {
     if (event.nativeEvent.isComposing) return;
     if (event.key === 'Tab' && open) { close(true); return; }
@@ -85,7 +88,7 @@ export function Dropdown({ value, onChange, options, ariaLabel, searchable = tru
       <span className={cn("min-w-0 flex-1 truncate", !selected && "text-[var(--bi-muted)]")}>{selected?.label ?? "선택"}</span>
       <HiChevronDown aria-hidden className={cn("shrink-0 transition-transform", open && "rotate-180")} size={14} />
     </button>
-    {open && !disabled && position ? createPortal(<div ref={panelRef} data-erp-popover data-erp-dropdown
+    {open && !disabled && position && portalRoot ? createPortal(<div ref={panelRef} data-erp-popover data-erp-dropdown
       className="fixed z-[100] overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] shadow-[var(--bi-shadow-overlay)]"
       style={{ ...position, width: panelWidth, maxWidth: 'calc(100vw - 16px)' }} onKeyDown={handleMenuKeyDown}>
       {searchable ? <label className="flex items-center gap-1.5 border-b border-[var(--bi-border)] px-2">
@@ -105,6 +108,6 @@ export function Dropdown({ value, onChange, options, ariaLabel, searchable = tru
           {option.description ? <span className="mt-1 block text-[11px] font-normal text-[var(--bi-muted)]">{option.description}</span> : null}
         </button>) : <p className="px-2 py-3 text-center text-[11px] text-[var(--bi-muted)]">일치하는 항목 없음</p>}
       </div>
-    </div>, document.fullscreenElement ?? document.body) : null}
+    </div>, portalRoot) : null}
   </div>;
 }

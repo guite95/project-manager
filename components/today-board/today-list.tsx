@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Checkbox } from "@/components/erp/checkbox";
 import { HiOutlineArrowRight } from "react-icons/hi";
 import { Badge } from "@/components/erp/badge";
 import { Button } from "@/components/erp/button";
@@ -124,12 +125,12 @@ export function TodayList({
                 className="flex flex-wrap items-center gap-2 border-b border-[var(--bi-border)] px-3 py-3 last:border-b-0 hover:bg-[var(--bi-surface-subtle)] sm:flex-nowrap"
                 key={item.id}
               >
-                <input
+                <Checkbox
+                  ariaLabel={item.title}
                   checked={item.done}
-                  className="h-4 w-4 shrink-0 accent-[var(--bi-accent)]"
+                  className="shrink-0"
                   id={`today-item-${item.id}`}
                   onChange={() => onToggle(item)}
-                  type="checkbox"
                 />
                 <InlineEdit
                   editing={editingId === item.id}

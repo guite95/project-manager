@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HiOutlineClipboardCopy } from "react-icons/hi";
 import { Dropdown } from "@/components/erp/dropdown";
 import { Button } from "@/components/erp/button";
+import { DatePicker } from "@/components/erp/date-picker";
 import {
   formatWorkSummary,
   groupWorkSummary,
@@ -41,6 +42,8 @@ export function WorkSummaryHistory({
   dates: string[];
   companyProjectKeys: string[];
 }) {
+  const [selectedDate, setSelectedDate] = useState(date);
+  useEffect(() => setSelectedDate(date), [date]);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">(
     "idle",
   );
@@ -66,20 +69,9 @@ export function WorkSummaryHistory({
           className="flex flex-wrap items-center gap-2"
         >
           <input type="hidden" name="view" value="summary" />
-          <label
-            htmlFor="summary-date"
-            className="text-xs text-[var(--bi-muted)]"
-          >
-            날짜
-          </label>
-          <input
-            id="summary-date"
-            name="date"
-            type="date"
-            defaultValue={date}
-            required
-            className="rounded border border-[var(--bi-border)] bg-[var(--bi-bg)] px-2 py-1 text-xs"
-          />
+          <span className="text-xs text-[var(--bi-muted)]">날짜</span>
+          <input type="hidden" name="date" value={selectedDate} />
+          <DatePicker ariaLabel="작업 요약 조회 날짜" value={selectedDate} onChange={setSelectedDate} clearable={false} />
           <Button variant="secondary" size="sm" type="submit">
             조회
           </Button>

@@ -8,6 +8,9 @@ import {
   DateField,
   SelectField,
   TextField,
+  FieldLabel,
+  TextInput,
+  TextArea,
 } from "@/components/erp/form-field";
 import { FormActions, FormGrid } from "@/components/erp/form-layout";
 
@@ -37,6 +40,7 @@ export function FormsSection() {
   const [requiredDate, setRequiredDate] = useState("");
   const [checked, setChecked] = useState(INITIAL.checked);
   const [message, setMessage] = useState("");
+  const [notes, setNotes] = useState("");
 
   return (
     <DetailSection title="4. 입력과 폼">
@@ -85,6 +89,16 @@ export function FormsSection() {
           />
         </div>
         <div className="mt-4">
+          <FieldLabel label="기존 라벨과 조합하는 입력">
+            <TextInput className="mt-1.5" value={text} onChange={event => setText(event.target.value)} placeholder="TextField와 같은 공통 입력 요소" />
+          </FieldLabel>
+        </div>
+        <div className="mt-4">
+          <FieldLabel label="여러 줄 입력">
+            <TextArea className="mt-1.5" rows={3} value={notes} onChange={event => setNotes(event.target.value)} />
+          </FieldLabel>
+        </div>
+        <div className="mt-4">
           <CheckboxField
             checked={checked}
             label="체크박스"
@@ -106,6 +120,7 @@ export function FormsSection() {
               setDate("");
               setRequiredDate("");
               setMessage("초기값으로 되돌렸습니다.");
+              setNotes("");
             }}
             variant="secondary"
           >
