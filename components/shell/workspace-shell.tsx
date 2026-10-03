@@ -164,6 +164,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         </> : id === "records" ? <>
           <Link href="/records/work-records" aria-current={pathname === "/records/work-records" ? "page" : undefined} className="bi-nav-link">작업 기록</Link>
         </> : id === "recruitment" ? <>
+          <Link href="/recruitment/jobs" aria-current={pathname === "/recruitment/jobs" ? "page" : undefined} className="bi-nav-link">채용공고</Link>
           <Link href="/recruitment/experiences" aria-current={pathname === "/recruitment/experiences" ? "page" : undefined} className="bi-nav-link">경험정리</Link>
           <Link href="/recruitment/cover-letters" aria-current={pathname === "/recruitment/cover-letters" ? "page" : undefined} className="bi-nav-link">자기소개서</Link>
           <Link href="/portfolio" aria-current={portfolioActive ? "page" : undefined} className="bi-nav-link">포트폴리오</Link>

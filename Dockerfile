@@ -51,6 +51,10 @@ COPY --from=builder /app/scripts/sql/ai-ops-vector.sql ./scripts/sql/ai-ops-vect
 COPY --from=builder /app/lib ./lib
 COPY --from=builder /app/scripts/recordings-worker.mjs ./scripts/recordings-worker.mjs
 
+# 채용 워커는 같은 이미지에서 별도 프로세스로 실행한다. 이미지 빌드가 수집을 활성화하지 않는다.
+COPY --from=builder /app/scripts/jobs-worker.mjs ./scripts/jobs-worker.mjs
+COPY --from=builder /app/config/jobs-worker.example.json ./config/jobs-worker.example.json
+
 # 패키지가 설치되어 있어도 LibreOffice가 시작되지 않는 조합을 이미지 빌드에서 차단한다.
 RUN PPTX_REAL_CONVERTER=1 node --experimental-strip-types --test lib/server/presentation-converter.integration.test.mjs
 

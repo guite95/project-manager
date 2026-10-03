@@ -21,7 +21,8 @@
     "flow:install": "node scripts/install-flow-tools.mjs",
     "ai:agent": "node scripts/ai-ops-agent.mjs",
     "ai:search": "node --env-file-if-exists=.env scripts/ai-ops-search.mjs",
-    "recordings:worker": "node --experimental-strip-types --env-file-if-exists=.env scripts/recordings-worker.mjs"
+    "recordings:worker": "node --experimental-strip-types --env-file-if-exists=.env scripts/recordings-worker.mjs",
+    "jobs:worker": "node --env-file-if-exists=.env scripts/jobs-worker.mjs"
   },
   "dependencies": {
     "@better-auth/oauth-provider": "1.7.6",

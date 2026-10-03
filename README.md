@@ -71,6 +71,11 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 
 배포는 `docs/deploy.md` 를 본다.
 
+매일 한국 시간 20시에 공개 채용 공고를 모으는 CLI 워커는 [채용 공고 수집](docs/job-collector.md)을 본다.
+`pnpm jobs:worker inspect --config config/jobs-worker.example.json`으로 설정을 확인할 수 있다.
+저장된 공고는 채용 → 채용공고에서 검색·조회·삭제한다. 삭제한 원문 URL은 재수집에서도 영구 제외한다.
+채용공고의 **지금 수집** 버튼은 수동 실행 요청을 저장한다. `watch --apply` 워커가 요청을 처리하며 오후 8시 예약은 유지한다.
+
 일반 Chat용 자기소개서 품질 평가·Jev MCP와 플러그인 후보는 [구현 및 연결 준비](docs/career-quality-runtime.md)를 본다. 기본 비활성이며 OAuth·Vault 설정, 배포와 플러그인 게시는 별도 작업이다.
 
 ## 라우트
@@ -90,6 +95,7 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 | `/flows/common/notes` | 명심할 점 — 4단계 우선순위와 서버 자동 저장. 공통 프로젝트에만 있다 |
 | `/personal` | 개인 프로젝트 목록 — 프로젝트별 자료·기록·회의록 |
 | `/records/work-records` | Git 기반 프로젝트별 기여 요약·기간·대표 근거·최근 커밋 |
+| `/recruitment/jobs` | OWNER 전용 수집 공고 목록·검색·상세·삭제 및 재수집 제외 |
 | `/portfolio` | 채용 하위의 포트폴리오 기본 화면 — 편집 기능은 추후 추가 |
 | `/guide` | 플로우차트 작성 가이드 (MDX) |
 
