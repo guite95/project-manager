@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {fail, identify, parseInput, slice, type EvaluationInput} from './core.ts';
+import {fail, identify, parseInput, slice, VERSIONS, type EvaluationInput} from './core.ts';
 import type {EvaluationResult} from './evaluator.ts';
 const id=z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
 export const rewriteSchema=z.strictObject({sessionId:id,basedOnEvaluationId:id,expectedDraftVersion:z.number().int().positive(),expectedDraftHash:z.string().regex(/^sha256:[a-f0-9]{64}$/),replacements:z.array(z.strictObject({questionId:id,paragraphId:id.nullable(),expectedText:z.string().max(80000),replacementText:z.string().min(1).max(80000),findingIds:z.array(id).min(1).max(100)})).min(1).max(50)});
@@ -59,7 +59,8 @@ export function compareCandidate(previous:EvaluationResult,candidate:EvaluationR
   const result=structuredClone(candidate);
   const reject=(reason:string)=>{if(!['ERROR','INCOMPLETE','NEEDS_INPUT'].includes(result.status))result.status='REVIEW';result.stopReason=reason;result.rewriteTargets=[];return {accepted:false,result};};
   if(['ERROR','INCOMPLETE','NEEDS_INPUT','REVIEW'].includes(result.status))return {accepted:false,result};
-  if(previous.identity.contextHash!==result.identity.contextHash||JSON.stringify(previous.identity.resolvedModels)!==JSON.stringify(result.identity.resolvedModels)||result.identity.resolvedModels.length!==1)return reject('COMPARISON_CONTEXT_CHANGED');
+  const versionChanged=(Object.keys(VERSIONS) as (keyof typeof VERSIONS)[]).some(key=>previous.identity[key]!==result.identity[key]);
+  if(versionChanged||previous.identity.contextHash!==result.identity.contextHash||JSON.stringify(previous.identity.resolvedModels)!==JSON.stringify(result.identity.resolvedModels)||result.identity.resolvedModels.length!==1)return reject('COMPARISON_CONTEXT_CHANGED');
   const key=(row:{target:unknown},id:string)=>JSON.stringify([row.target,id]);
   const oldGates=new Map(previous.gates.filter(g=>!g.target.paragraphId).map(g=>[key(g,g.gateId),g]));
   if(result.gates.filter(g=>!g.target.paragraphId).some(g=>g.status==='FAIL'&&oldGates.get(key(g,g.gateId))?.status!=='FAIL'))return reject('NEW_GATE_FAILURE');

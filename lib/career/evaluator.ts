@@ -1,5 +1,5 @@
 import {CareerError, auditText, identify, parseInput, slice, target, matchLogic, type EvaluationInput, type Target, type Match} from './core.ts';
-import {MAX_REQUEST_BYTES, parseDecisions, readDecisionReceipt, requestBytes, type DecisionProvider, type DecisionQuestion} from './jev.ts';
+import {MAX_REQUEST_BYTES, parseDecisions, readDecisionReceipt, requestBytes, type DecisionProvider, type DecisionQuestion, type DecisionRequest} from './jev.ts';
 import {RUBRIC, GUARDS, GATE_CRITERIA, EVIDENCE_CRITERIA, SYSTEM_INSTRUCTIONS} from './rubric.ts';
 
 type Metric={metricId:string;target:Target;status:'SCORED'|'NOT_APPLICABLE'|'UNKNOWN'|'ERROR';score:number|null;confidence:number|null;probabilities:Record<string,number>|null;reasonCode:string|null};
@@ -53,27 +53,45 @@ export async function evaluate(value:unknown,options:Options):Promise<Evaluation
     c.question={...c.question,type:'choice',criteria:{MET:'확인된 경험 자료가 요구 행동이나 지원 조건을 직접 충족한다.',PARTIAL:'요구 행동/조건 중 일부만 자료로 확인된다.',NOT_MET:'확인된 사실이 명시적 최소 조건 미달이나 요건과의 충돌을 증명한다.',UNKNOWN:'요건을 판단할 경험 자료가 없거나 충돌한다.'}};matchChecks.push(c);
   }
   if(x.styleReferenceSourceIds.length) checks.push(makeCheck('metric','voice_alignment',target(),'STYLE_REFERENCE와 원고의 어조/표현 습관 부합을 참고 진단한다. 사실의 출처로 사용하지 않는다.',['전혀 다름','큰 차이','일부 유사','대체로 유사','일관됨']));
-  const state={...evidence,jd:x.jd,questions:x.questions,answers:x.answers,styleReferences:x.sources.filter(s=>x.styleReferenceSourceIds.includes(s.id)),editScope:x.editScope};
+  const needsEvidence=(batch:Check[])=>batch.some(c=>c.name==='G2'||c.kind==='metric'&&c.name==='Q5');
+  const wholeState=(batch:Check[])=>{
+    const questionIds=new Set(batch.map(c=>c.target.questionId));
+    const questions=x.questions.filter(q=>questionIds.has(q.id));
+    const allAnswers=batch.some(c=>c.target.questionId===null);
+    const requirementIds=new Set(questions.flatMap(q=>q.relevantRequirementIds));
+    // Scope context to the checks, never truncate an answer or an evidence source.
+    // G3 still sees every answer, including contradictions across questions.
+    return {
+      questions,answers:allAnswers?x.answers:x.answers.filter(a=>questionIds.has(a.questionId)),
+      ...(needsEvidence(batch)?evidence:{}),
+      ...(batch.some(c=>c.name==='Q2')?{jd:{completeness:x.jd.completeness,requirements:x.jd.requirements.filter(req=>requirementIds.has(req.id))}}:{}),
+      ...(batch.some(c=>c.name==='G5')?{editScope:x.editScope}:{}),
+      ...(batch.some(c=>c.name==='voice_alignment')?{styleReferences:x.sources.filter(s=>x.styleReferenceSourceIds.includes(s.id))}:{}),
+    };
+  };
   let failed=false,limited=false;
   const reportProgress=async()=>{
     r.coverage.missingCheckIds=r.coverage.plannedCheckIds.filter(id=>!r.coverage.completedCheckIds.includes(id));
     await options.onProgress?.(structuredClone(r));
   };
-  const run=async(plan:Check[],requestState:unknown,registerPlan=true)=>{
+  const run=async(plan:Check[],getState:(batch:Check[])=>unknown,registerPlan=true)=>{
     if(registerPlan){r.coverage.plannedCheckIds.push(...plan.map(c=>c.id));await reportProgress();}
     let pending=[...plan];
     while(pending.length && !failed && !limited) {
       const batch:Check[]=[];
+      let request:DecisionRequest|undefined;
       while(pending.length && batch.length<16) {
         const candidate=[...batch,pending[0]], questions=Object.fromEntries(candidate.map(c=>[c.id,c.question]));
-        if(requestBytes({state:requestState,questions})>MAX_REQUEST_BYTES)break;
+        const candidateRequest={state:getState(candidate),questions};
+        if(requestBytes(candidateRequest)>MAX_REQUEST_BYTES)break;
+        request=candidateRequest;
         batch.push(pending.shift()!);
       }
-      if(!batch.length || r.counters.providerAttempts>=12) {limited=true;r.stopReason=!batch.length?'INPUT_LIMIT':'CALL_LIMIT';break;}
-      const questions=Object.fromEntries(batch.map(c=>[c.id,c.question]));
+      if(!request || r.counters.providerAttempts>=12) {limited=true;r.stopReason=!request?'INPUT_LIMIT':'CALL_LIMIT';break;}
+      const {questions}=request;
       try {
         await options.beforeAttempt?.(); r.counters.providerAttempts++;
-        const raw=await options.provider({state:requestState,questions});
+        const raw=await options.provider(request);
         const receipt=readDecisionReceipt(raw);
         if(receipt)r.requests.push({checkIds:batch.map(c=>c.id),requestId:receipt.id,model:receipt.model,usage:receipt.usage});
         const result=parseDecisions(raw,questions);
@@ -91,7 +109,7 @@ export async function evaluate(value:unknown,options:Options):Promise<Evaluation
   };
   if(facts.length){
     const check=makeCheck('evidence','evidence',target(),'facts와 sources 원문 인용이 경험 주장 대조의 근거로 사용 가능한지 확인한다. 원고의 진위나 품질을 평가하지 않는다. 동일 사건과 시점의 기록이 충돌하고 유효한 쪽이 확인되지 않으면 출처 충돌이다.');
-    await run([check],evidence);
+    await run([check],()=>evidence);
   }
   if(evidenceStatus!=='AVAILABLE'){
     for(let i=checks.length-1;i>=0;i--)if(checks[i].name==='G2')checks.splice(i,1);
@@ -99,31 +117,45 @@ export async function evaluate(value:unknown,options:Options):Promise<Evaluation
     for(const req of x.jd.requirements)r.requirementMatches.push({requirementId:req.id,status:'UNKNOWN',factIds:[],confidence:null});
   }
   // Register all remaining work even if a preceding call failed or hit a limit.
-  await run(evidenceStatus==='AVAILABLE'?matchChecks:[],{...evidence,requirements:x.jd.requirements});
-  await run(checks,state);
+  await run(evidenceStatus==='AVAILABLE'?matchChecks:[],batch=>{
+    const requirementIds=new Set(batch.map(c=>c.name));
+    return {...evidence,requirements:x.jd.requirements.filter(req=>requirementIds.has(req.id))};
+  });
+  await run(checks,wholeState);
   // Diagnose confidently failing concepts with the original target and adjacent paragraphs.
   if(!failed&&!limited) {
-    const partialPlans:{checks:Check[];state:unknown}[]=[];
+    const partialPlans:{checks:Check[];getState:(batch:Check[])=>unknown}[]=[];
     for(const a of x.answers) {
       const bad=r.metrics.filter(m=>m.target.questionId===a.questionId&&m.status==='SCORED'&&m.score!<2.8&&m.confidence!>=0.7);
       const badGates=r.gates.filter(g=>(g.target.questionId===a.questionId||g.gateId==='G3')&&g.status==='FAIL'&&g.confidence!>=0.7);
       for(const p of a.paragraphs) {
         const partial:Check[]=[];
         for(const m of bad) {const rubric=RUBRIC.find(q=>q.id===m.metricId)!;partial.push(makeCheck('metric',m.metricId,target(a.questionId,p.id,p.start,p.end),`문항 ${a.questionId}의 문단 ${p.id}가 ${rubric.name} 미달에 기여하는지 진단. 앞뒤 문단과 전체 문항 원문을 함께 읽고 문단 자체에 모든 요소를 요구하지 않는다.`,rubric.anchors));}
-        for(const g of badGates) partial.push(makeCheck('gate',g.gateId,target(a.questionId,p.id,p.start,p.end),`문항 ${a.questionId} 문단 ${p.id}를 인접 문단 및 전체 맥락으로 확인. ${GUARDS[g.gateId]}`));
+        for(const g of badGates) partial.push(makeCheck('gate',g.gateId,target(a.questionId,p.id,p.start,p.end),`문항 ${a.questionId} 문단 ${p.id}를 인접 문단 및 전체 맥락으로 확인. ${GUARDS[g.gateId]}${g.gateId==='G3'?' state.answer는 현재 문항 전체 원문, state.otherAnswersForContradiction은 나머지 문항 전체 원문이다. focus는 현재 원문의 문단 ID와 코드포인트 start/end 범위를 가리키며 원문을 생략한 것이 아니다.':''}`));
         if(partial.length) {
           const index=a.paragraphs.indexOf(p),q=x.questions.find(q=>q.id===a.questionId)!;
-          const segment=(i:number)=>{const paragraph=a.paragraphs[i];return paragraph?{...paragraph,text:slice(a.text,paragraph.start,paragraph.end)}:null;};
+          const segment=(i:number,includeText=true)=>{const paragraph=a.paragraphs[i];return paragraph?{...paragraph,...(includeText?{text:slice(a.text,paragraph.start,paragraph.end)}:{})}:null;};
           const focus={current:segment(index),previous:segment(index-1),next:segment(index+1)};
           const requirementIds=new Set([...q.relevantRequirementIds,...p.requirementIds]);
           const requirements=x.jd.requirements.filter(req=>requirementIds.has(req.id));
-          partialPlans.push({checks:partial,state:{question:q,answer:a,focus,paragraphOutline:a.paragraphs.map(({id,role})=>({id,role})),...evidence,jd:{completeness:x.jd.completeness,requirements},editScope:x.editScope,...(badGates.some(g=>g.gateId==='G3')?{wholeDraftForContradiction:{answers:x.answers}}:{} )}});
+          partialPlans.push({checks:partial,getState:batch=>{
+            const contradiction=batch.some(c=>c.name==='G3');
+            // 모순 진단에는 각 문항 원문을 한 번만 넣고 문단 범위는 색인으로 전달한다.
+            return {
+              question:q,answer:a,focus:contradiction?{current:segment(index,false),previous:segment(index-1,false),next:segment(index+1,false)}:focus,
+              paragraphOutline:a.paragraphs.map(({id,role})=>({id,role})),
+              ...(needsEvidence(batch)?evidence:{}),
+              ...(batch.some(c=>c.name==='Q2')?{jd:{completeness:x.jd.completeness,requirements}}:{}),
+              ...(batch.some(c=>c.name==='G5')?{editScope:x.editScope}:{}),
+              ...(contradiction?{otherAnswersForContradiction:x.answers.filter(other=>other.questionId!==a.questionId)}:{}),
+            };
+          }});
         }
       }
     }
     r.coverage.plannedCheckIds.push(...partialPlans.flatMap(plan=>plan.checks.map(c=>c.id)));
     await reportProgress();
-    for(const plan of partialPlans){if(failed||limited)break;await run(plan.checks,plan.state,false);}
+    for(const plan of partialPlans){if(failed||limited)break;await run(plan.checks,plan.getState,false);}
   }
   r.coverage.missingCheckIds=r.coverage.plannedCheckIds.filter(id=>!r.coverage.completedCheckIds.includes(id));
   r.gates.push({gateId:'G6',target:target(),status:r.coverage.missingCheckIds.length?'UNKNOWN':'PASS',origin:'DETERMINISTIC',confidence:null,reasonCode:r.coverage.missingCheckIds.length?'CHECKS_MISSING':null});
