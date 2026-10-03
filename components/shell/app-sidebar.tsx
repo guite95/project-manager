@@ -29,10 +29,6 @@ import { recordingsHref } from "@/lib/recordings";
 
 import { isPersonalProject, personalProjectGroup, personalProjectGroups, type PersonalProjectGroup } from "@/lib/personal-projects";
 
-const ROW = "mx-2 flex min-h-10 md:min-h-9 items-center gap-2 rounded-[3px] px-2 text-[12px] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]";
-const linkCls = (active: boolean) => `${ROW} ${active
-  ? "bg-[var(--bi-accent)] font-semibold text-white"
-  : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
 
 export function AppSidebar({
   flowProjects,
@@ -215,13 +211,13 @@ export function AppSidebar({
           <>
             {showMaterials ? <Link href={materialsHref(project.slug)} aria-label={`${project.title} 자료`}
               aria-current={projectActive && active?.view === "materials" ? "page" : undefined}
-              className={linkCls(projectActive && active?.view === "materials")}>자료</Link> : null}
+              className="bi-nav-link">자료</Link> : null}
             {showMeetings ? <Link href={meetingsHref(project.slug)} aria-label={`${project.title} 회의록`}
               aria-current={projectActive && active?.view === "meetings" ? "page" : undefined}
-              className={linkCls(projectActive && active?.view === "meetings")}>회의록</Link> : null}
+              className="bi-nav-link">회의록</Link> : null}
             {showRecordings ? <Link href={recordingsHref(project.slug)} aria-label={`${project.title} 녹음·전사`}
               aria-current={projectActive && active?.view === "recordings" ? "page" : undefined}
-              className={linkCls(projectActive && active?.view === "recordings")}>녹음·전사</Link> : null}
+              className="bi-nav-link">녹음·전사</Link> : null}
             {showNotes && !isPersonalProject(project) ? (
               <Link
                 aria-label={`${project.title} ${isPersonalProject(project) ? "기록" : "명심할 점"}`}
@@ -230,7 +226,7 @@ export function AppSidebar({
                     ? "page"
                     : undefined
                 }
-                className={linkCls(projectActive && active?.view === "notes")}
+                className="bi-nav-link"
                 href={projectNotesHref(project.slug)}
               >
                 <span
@@ -252,7 +248,7 @@ export function AppSidebar({
                   <Link
                     href={chartHref(project.slug, category.slug, destination.slug)}
                     aria-current={categoryActive ? "page" : undefined}
-                    className={linkCls(categoryActive)}
+                    className="bi-nav-link"
                     title={category.title}
                   >
                     <span className="min-w-0 flex-1 truncate">{category.title}</span>
@@ -279,7 +275,7 @@ export function AppSidebar({
                     ? "page"
                     : undefined
                 }
-                className={linkCls(projectActive && active?.view === "notes")}
+                className="bi-nav-link"
                 href={projectNotesHref(project.slug)}
               >
                 <span
@@ -320,7 +316,7 @@ export function AppSidebar({
                 href={externalLink.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={linkCls(false)}
+                className="bi-nav-link"
               >
                 <span className="truncate">{externalLink.title}</span>
                 <HiOutlineExternalLink
@@ -339,17 +335,17 @@ export function AppSidebar({
   return (
     <nav aria-label="프로젝트 상세 메뉴" className={inline ? "flex flex-col" : "flex min-h-0 flex-1 flex-col overflow-hidden"}>
       <div className="shrink-0 border-b border-[var(--bi-border)] p-3">
-        <label className="flex items-center gap-2 rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2.5 focus-within:border-[var(--bi-accent)]">
+        <label className="flex items-center gap-2 rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-2.5 focus-within:border-[var(--bi-accent)] focus-within:outline-2 focus-within:outline-[var(--bi-accent)]">
           <HiOutlineSearch size={14} aria-hidden className="shrink-0 text-[var(--bi-muted)]" />
           <span className="sr-only">프로젝트·구조도 검색</span>
           <input type="search" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="프로젝트·구조도 검색"
-            className="h-9 min-w-0 w-full bg-transparent text-[12px] outline-none placeholder:text-[var(--bi-muted)]" />
+            className="h-11 min-w-0 w-full bg-transparent text-base outline-none placeholder:text-[var(--bi-muted)] focus-visible:outline-none md:h-9 md:text-[12px]" />
         </label>
       </div>
       <div className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
         {!personal && !searching && showOverview ? <Link href={overviewHref} aria-current={pathname === overviewHref && searchParams.get("view") !== "components" ? "page" : undefined}
-          className={linkCls(pathname === overviewHref && searchParams.get("view") !== "components")}>전체 프로젝트</Link> : null}
+          className="bi-nav-link">전체 프로젝트</Link> : null}
       {searching &&
       visibleProjects.length === 0 &&
       visibleExternalProjects.length === 0 ? (

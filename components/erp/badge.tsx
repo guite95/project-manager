@@ -17,7 +17,7 @@ const VARIANTS: Record<BadgeVariant, string> = {
   // warning 원색(#F5A623)은 흰 배경 텍스트 대비가 부족해 stock-warn 톤을 글자색으로 쓴다.
   warning: "bg-[var(--bi-warning)]/15 text-[var(--bi-stock-warn)]",
   error: "bg-[var(--bi-error)]/10 text-[var(--bi-error)]",
-  neutral: "bg-[#f2f2f2] text-[var(--bi-muted)]",
+  neutral: "bg-[var(--bi-table-header)] text-[var(--bi-muted)]",
   ai: "bg-[var(--bi-ai-light)] text-[var(--bi-ai)]",
   demand: "bg-[var(--bi-demand-light)] text-[var(--bi-demand)]",
   stockWarn: "bg-[var(--bi-stock-warn-light)] text-[var(--bi-stock-warn)]",
@@ -40,7 +40,7 @@ export function Badge({
     <span
       title={title}
       className={cn(
-        "inline-flex items-center rounded-[3px] px-1.5 py-0.5 text-[11px] font-semibold",
+        "inline-flex max-w-full items-center rounded-[3px] px-2 py-0.5 text-[11px] leading-5 font-medium",
         VARIANTS[variant],
       )}
     >

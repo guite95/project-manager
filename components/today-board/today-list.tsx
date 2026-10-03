@@ -57,19 +57,19 @@ export function TodayList({
       aria-labelledby="today-list-heading"
       className="flex min-w-0 flex-col gap-3 lg:min-h-0"
     >
-      <div className="flex min-h-[26px] shrink-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex min-h-9 shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <h3
-            className="text-[13px] font-semibold text-[var(--bi-fg)]"
+          <h2
+            className="text-[14px] font-semibold text-[var(--bi-fg)]"
             id="today-list-heading"
           >
             오늘의 할 일
-          </h3>
+          </h2>
           {onTogglePersonalIssues && (
             <Button
               aria-checked={personalIssuesVisible}
               aria-label="개인 이슈 표시"
-              className="w-[42px] shrink-0"
+              className="min-w-[44px] shrink-0"
               onClick={onTogglePersonalIssues}
               role="switch"
               size="sm"
@@ -80,14 +80,14 @@ export function TodayList({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="text-[11px] text-[var(--bi-muted)]">
+          <span className="text-[12px] text-[var(--bi-muted)]">
             {formatBoardDate(date)} · {doneCount}/{items.length} 완료
           </span>
         </div>
       </div>
 
       <div
-        className={`rounded-[4px] border transition lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${
+        className={`rounded-[var(--bi-radius-panel)] border transition-colors duration-[var(--bi-motion-fast)] lg:min-h-0 lg:flex-1 lg:overflow-y-auto ${
           dragOver
             ? "border-dashed border-[var(--bi-accent)] bg-[var(--bi-accent-light)]"
             : "border-[var(--bi-border)] bg-[var(--bi-card-bg)]"
@@ -112,28 +112,28 @@ export function TodayList({
         }}
       >
         {items.length === 0 ? (
-          <p className="m-0 px-3 py-10 text-center text-[11px] text-[var(--bi-muted)]">
+          <p className="m-0 mx-auto max-w-[38ch] px-4 py-12 text-center leading-6 text-[12px] text-[var(--bi-muted)]">
             {onTogglePersonalIssues && !personalIssuesVisible
               ? "표시할 프로젝트 이슈가 없습니다."
-              : "오른쪽 이슈를 끌어다 놓으세요."}
+              : "이슈 목록에서 오늘 할 일을 옮겨보세요. 화살표 버튼이나 드래그로 추가할 수 있습니다."}
           </p>
         ) : (
           <ul className="m-0 list-none p-0">
             {items.map((item) => (
               <li
-                className="flex items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0"
+                className="flex flex-wrap items-center gap-2 border-b border-[var(--bi-border)] px-3 py-3 last:border-b-0 hover:bg-[var(--bi-surface-subtle)] sm:flex-nowrap"
                 key={item.id}
               >
                 <input
                   checked={item.done}
-                  className="h-3.5 w-3.5 shrink-0 accent-[var(--bi-accent)]"
+                  className="h-4 w-4 shrink-0 accent-[var(--bi-accent)]"
                   id={`today-item-${item.id}`}
                   onChange={() => onToggle(item)}
                   type="checkbox"
                 />
                 <InlineEdit
                   editing={editingId === item.id}
-                  inputClassName="min-w-0 flex-1 rounded-[3px] border border-[var(--bi-accent)] bg-[var(--bi-bg)] px-1.5 py-0.5 text-[12px] text-[var(--bi-fg)] outline-none"
+                  inputClassName="bi-control min-w-0 flex-1 rounded-[3px] border border-[var(--bi-accent)] bg-[var(--bi-bg)] px-1.5 py-0.5 text-[13px] text-[var(--bi-fg)] outline-none"
                   label="이슈 제목"
                   onCancel={() => setEditingId(null)}
                   onCommit={(next) => {
@@ -144,7 +144,7 @@ export function TodayList({
                 >
                   <Tooltip className="flex-1" content={item.title}>
                     <label
-                      className={`min-w-0 flex-1 truncate text-[12px] ${
+                      className={`min-w-0 flex-1 truncate text-[13px] ${
                         item.done
                           ? "text-[var(--bi-muted)] line-through"
                           : "text-[var(--bi-fg)]"
@@ -155,7 +155,7 @@ export function TodayList({
                     </label>
                   </Tooltip>
                 </InlineEdit>
-                <span className="shrink-0">
+                <span className="order-last ml-6 min-w-0 basis-full sm:order-none sm:ml-0 sm:max-w-[30%] sm:basis-auto">
                   <Badge variant="neutral">
                     {projectTitles[item.projectSlug] ?? UNGROUPED_TITLE}
                   </Badge>

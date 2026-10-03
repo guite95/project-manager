@@ -29,12 +29,11 @@
 .pds *,
 .pds *::before,
 .pds *::after { box-sizing: border-box; }
-.pds button,
-.pds input,
-.pds select,
-.pds textarea { font: inherit; }
-.pds button { color: inherit; }
-.pds a { color: inherit; text-decoration: none; }
+@layer base {
+  :where(.pds button, .pds input, .pds select, .pds textarea) { font: inherit; }
+  :where(.pds button) { color: inherit; }
+  :where(.pds a) { color: inherit; text-decoration: none; }
+}
 
 .pds-sr-only {
   position: absolute !important;
@@ -552,6 +551,17 @@
 .pds-filter-bar--bordered { border-bottom: 1px solid var(--pds-border); }
 .pds-filter-bar--wrap { flex-wrap: wrap; overflow: visible; }
 .pds-filter-bar__trailing { flex-shrink: 0; margin-left: auto; }
+
+/* 앱 목록 툴바는 너비가 부족하면 검색과 동작을 다음 줄에 배치한다. */
+.bi-list-toolbar { flex-wrap: wrap; gap: 12px; padding: 12px 24px; overflow: visible; }
+.bi-list-toolbar .pds-filter-bar__trailing { min-width: 0; max-width: 100%; flex-shrink: 1; }
+@media (max-width: 767px) {
+  .bi-list-toolbar { padding: 12px 16px; }
+  .bi-list-toolbar .pds-filter-bar__trailing { width: 100%; margin-left: 0; }
+  .bi-list-toolbar-actions { gap: 8px; }
+  .bi-list-toolbar .pds-filter-search { flex: 1 1 200px; }
+  .pds .pds-filter-search__input { min-height: 44px; font-size: 16px; }
+}
 .pds-filter-button {
   flex-shrink: 0;
   height: 28px;
@@ -623,7 +633,7 @@
   background: white;
   font-size: 12px;
 }
-.pds-data-grid__row:hover { background: var(--pds-active-bg); }
+.pds-data-grid__row:hover { background: var(--bi-surface-subtle); }
 .pds-data-grid-footer {
   display: flex;
   flex-shrink: 0;
@@ -1039,8 +1049,8 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 14px;
+  min-height: 36px;
+  padding: 6px 14px;
   border: 1px solid transparent;
   border-radius: 4px;
   font-size: 14px;
@@ -1049,16 +1059,16 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
   cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
 }
-.pds-button--small { height: 28px; padding: 0 10px; font-size: 12px; }
-.pds-button--large { height: 38px; padding: 0 18px; font-size: 15px; }
-.pds-button--icon-only { width: 32px; padding: 0; }
-.pds-button--icon-only.pds-button--small { width: 28px; }
-.pds-button--icon-only.pds-button--large { width: 38px; }
+.pds-button--small { min-height: 32px; padding: 0 10px; font-size: 12px; }
+.pds-button--large { min-height: 40px; padding: 0 18px; font-size: 15px; }
+.pds-button--icon-only { width: 36px; padding: 0; }
+.pds-button--icon-only.pds-button--small { width: 32px; }
+.pds-button--icon-only.pds-button--large { width: 40px; }
 .pds-button--block { width: 100%; }
 .pds-button__icon { display: inline-flex; align-items: center; }
 .pds-button.pds-button--primary { background: var(--pds-accent); border-color: var(--pds-accent); color: #fff; }
 .pds-button.pds-button--primary:hover:not(:disabled) { filter: brightness(1.08); }
-.pds-button.pds-button--secondary { background: var(--pds-card-bg); border-color: var(--pds-border); color: var(--pds-fg); }
+.pds-button.pds-button--secondary { background: var(--pds-card-bg); border-color: var(--bi-control-border); color: var(--pds-fg); }
 .pds-button.pds-button--secondary:hover:not(:disabled) { border-color: var(--pds-border-strong); background: var(--pds-subtle-bg); }
 .pds-button.pds-button--ghost { background: transparent; border-color: transparent; color: var(--pds-muted); }
 .pds-button.pds-button--ghost:hover:not(:disabled) { background: var(--pds-subtle-bg); color: var(--pds-fg); }
@@ -1207,7 +1217,7 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
 .pds-page-header__stat-value--error { color: var(--pds-error); }
 
 /* ── Filter search input ────────────────────────────────────────────── */
-.pds-filter-search { position: relative; display: inline-flex; align-items: center; }
+.pds-filter-search { position: relative; display: inline-flex; min-width: 0; max-width: 100%; align-items: center; }
 .pds-filter-search__icon {
   position: absolute;
   left: 8px;
@@ -1218,9 +1228,9 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
 }
 .pds-filter-search__input {
   width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--pds-border);
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--bi-control-border);
   border-radius: 3px;
   outline: 0;
   font-size: 14px;
@@ -1270,7 +1280,8 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
   max-width: calc(100vw - 32px);
   flex-direction: column;
   border-color: var(--pds-border-strong);
-  border-radius: 4px;
+  border-radius: var(--bi-radius-panel);
+  box-shadow: var(--bi-shadow-overlay);
 }
 /* 패널에 높이를 고정한 모달(className으로 h-*)에서 푸터가 바닥에 붙도록 form이 남은 높이를 채운다. 자동 높이 모달에는 영향 없다 */
 .pds-form-modal__form { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; }
@@ -1286,7 +1297,7 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
 }
 .pds-form-modal__heading { min-width: 0; }
 .pds-form-modal__heading h2 { margin: 0; color: var(--pds-fg); font-size: 17px; font-weight: 700; }
-.pds-form-modal__heading p { margin: 4px 0 0; color: var(--pds-muted); font-size: 11px; line-height: 1.5; }
+.pds-form-modal__heading p { margin: 4px 0 0; color: var(--pds-muted); font-size: 12px; line-height: 1.5; }
 .pds-form-modal__close {
   width: 28px;
   height: 28px;
@@ -1310,6 +1321,7 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  flex-wrap: wrap;
   padding: 12px 17px;
   border-top: 1px solid var(--pds-border);
   background: var(--pds-subtle-bg);
@@ -1983,3 +1995,9 @@ button.pds-data-grid__header-cell:hover { color: var(--pds-fg); }
 
 /* Keep the reference preview within the gallery. */
 .pds-split-login.zespro-login-preview { height: 320px; min-height: 0; }
+
+@media (max-width: 767px) {
+  .pds-button { min-height: 44px; }
+  .pds-button--icon-only { min-width: 44px; }
+  .pds-form-modal__close { width: 44px; height: 44px; }
+}

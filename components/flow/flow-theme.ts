@@ -13,7 +13,7 @@ import type { NodeKind } from "./types";
 /** = --bi-accent */
 export const EDGE_ACCENT = "#1b2a4a";
 /** = --bi-success */
-export const EDGE_SUCCESS = "#10b981";
+export const EDGE_SUCCESS = "#116b49";
 /** = --bi-edge-muted */
 export const EDGE_MUTED = "#c4c4c4";
 /** = --bi-bg (엣지 라벨 배경) */
@@ -21,7 +21,7 @@ export const EDGE_LABEL_BG = "#ffffff";
 
 /** kind 별 선 색. `FlowEdgeDef.tone` 으로 엣지 색을 지정할 때 쓴다. */
 export const KIND_LINE_HEX: Record<NodeKind, string> = {
-  intake: "#d4d4d4", // --bi-border-strong
+  intake: "#b8c4d3", // --bi-border-strong
   core: EDGE_ACCENT,
   future: EDGE_ACCENT,
   master: EDGE_MUTED,

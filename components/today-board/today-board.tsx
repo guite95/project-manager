@@ -299,8 +299,8 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
   };
 
   return (
-    <div className="flex flex-col px-6 py-5 lg:min-h-0 lg:flex-1">
-      <div className="grid grid-cols-1 items-start gap-5 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch">
+    <div className="flex flex-col bg-[var(--bi-canvas)] px-4 py-5 sm:px-6 lg:min-h-0 lg:flex-1">
+      <div className="grid grid-cols-1 items-start gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch">
         <TodayList
           date={today}
           items={filterTodayItems(board.today, projects, includePersonalIssues)}

@@ -8,7 +8,7 @@ export function EmptyState({
   return (
     <tr>
       <td
-        className="border-b border-[var(--bi-border)] px-4 py-10 text-center text-[12px] text-[var(--bi-muted)]"
+        className="border-b border-[var(--bi-border)] bg-[var(--bi-surface-subtle)] px-4 py-12 text-center text-[13px] leading-relaxed text-[var(--bi-muted)]"
         colSpan={colSpan}
       >
         {message}

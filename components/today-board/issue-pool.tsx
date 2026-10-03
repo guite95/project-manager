@@ -62,12 +62,12 @@ export function IssuePool({
       aria-labelledby="issue-pool-heading"
       className="flex min-w-0 flex-col gap-3 lg:min-h-0 lg:flex-1"
     >
-      <h3 className="sr-only" id="issue-pool-heading">
+      <h2 className="sr-only" id="issue-pool-heading">
         이슈 목록
-      </h3>
+      </h2>
       <div
         aria-label="이슈 구분"
-        className="flex h-[26px] shrink-0 items-stretch gap-5"
+        className="flex min-h-9 shrink-0 items-stretch gap-5"
         onKeyDown={(event) => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
             return;
@@ -197,7 +197,7 @@ function IssueGroupTabs({
 
   if (!selectedGroup || !selectedKey) {
     return (
-      <p className="rounded-[4px] border border-[var(--bi-border)] px-3 py-8 text-center text-[11px] text-[var(--bi-muted)]">
+      <p className="rounded-[var(--bi-radius-panel)] border border-[var(--bi-border)] px-4 py-12 text-center text-[13px] text-[var(--bi-muted)]">
         표시할 프로젝트가 없습니다.
       </p>
     );
@@ -439,16 +439,16 @@ function ProjectIssues({
         ) : null}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--bi-radius-panel)] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
       <ul className="m-0 min-h-0 flex-1 list-none overflow-y-auto p-0">
         {group.issues.length === 0 ? (
-          <li className="px-3 py-8 text-center text-[11px] text-[var(--bi-muted)]">
+          <li className="px-4 py-12 text-center text-[13px] text-[var(--bi-muted)]">
             쌓인 이슈가 없습니다.
           </li>
         ) : (
           group.issues.map((issue) => (
             <li
-              className={`flex items-center gap-2 border-b border-[var(--bi-border)] px-3 py-2 last:border-b-0 data-[grabbable=true]:cursor-grab data-[grabbable=true]:active:cursor-grabbing ${
+              className={`flex items-center gap-2 border-b border-[var(--bi-border)] px-3 py-3 last:border-b-0 data-[grabbable=true]:cursor-grab data-[grabbable=true]:active:cursor-grabbing ${
                 selectedIds.has(issue.id)
                   ? "bg-blue-100 hover:bg-blue-200"
                   : "hover:bg-blue-50"
@@ -472,7 +472,7 @@ function ProjectIssues({
             >
               <InlineEdit
                 editing={editingId === issue.id}
-                inputClassName="min-w-0 flex-1 rounded-[3px] border border-[var(--bi-accent)] bg-[var(--bi-bg)] px-1.5 py-0.5 text-[12px] text-[var(--bi-fg)] outline-none"
+                inputClassName="bi-control min-w-0 flex-1 rounded-[3px] border border-[var(--bi-accent)] bg-[var(--bi-bg)] px-1.5 py-0.5 text-[13px] text-[var(--bi-fg)] outline-none"
                 label="이슈 제목"
                 onCancel={() => setEditingId(null)}
                 onCommit={(next) => {
@@ -485,7 +485,7 @@ function ProjectIssues({
                   <button
                     aria-label={`${issue.title} 선택`}
                     aria-pressed={selectedIds.has(issue.id)}
-                    className="min-w-0 flex-1 cursor-pointer truncate rounded-[3px] text-left text-[12px] text-[var(--bi-fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)]"
+                    className="min-w-0 flex-1 cursor-pointer truncate rounded-[3px] text-left text-[13px] text-[var(--bi-fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bi-accent)]"
                     onClick={() => toggleSelected(issue.id)}
                     type="button"
                   >
@@ -530,7 +530,7 @@ function ProjectIssues({
         >
           <input
             aria-label={`${group.title} 이슈 추가`}
-            className="h-[30px] min-w-0 flex-1 rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)] hover:border-[var(--bi-border-strong)] focus:border-[var(--bi-accent)]"
+            className="bi-control h-9 min-w-0 flex-1 rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-2 text-[12px] text-[var(--bi-fg)] outline-none placeholder:text-[var(--bi-muted)] hover:border-[var(--bi-border-strong)] focus:border-[var(--bi-accent)]"
             maxLength={200}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="새 이슈"

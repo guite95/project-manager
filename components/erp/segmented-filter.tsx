@@ -22,9 +22,7 @@ export type SegmentedFilterProps = {
   clearable?: boolean;
 };
 
-// 목록 상단 세그먼트 토글. 옅은 트랙(--bi-table-header) 안에 pill 버튼을 놓고
-// 트랙 높이(25 + 2*2 + 경계 2 = 31px)는 FilterBar 표준 44px(패딩 12 + 경계 1) 안에 맞춘다.
-// 활성 항목만 흰 배경 + 1px 경계로 올린다. DESIGN.md: 그림자 없음, radius 0~4px.
+// 목록 필터는 공통 입력창과 높이를 맞추고, 좁은 화면에서는 항목을 줄바꿈한다.
 export function SegmentedFilter({
   items,
   value,
@@ -35,7 +33,7 @@ export function SegmentedFilter({
   return (
     <div
       aria-label={ariaLabel}
-      className="inline-flex shrink-0 items-center gap-px rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-table-header)] p-[2px]"
+      className="inline-flex max-w-full flex-wrap items-center gap-px rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-table-header)] p-[2px]"
       role="group"
     >
       {items.map((item) => {
@@ -45,11 +43,10 @@ export function SegmentedFilter({
           <button
             aria-pressed={active}
             className={[
-              "inline-flex h-[25px] items-center gap-[5px] whitespace-nowrap rounded-[3px] border px-[9px] text-[12px] transition-colors duration-[var(--bi-motion-fast)]",
-              // .pds button { color: inherit } 리셋이 unlayered라 utilities를 덮으므로 글자색은 !로 강제한다
+              "inline-flex min-h-11 items-center md:min-h-[30px] gap-[5px] whitespace-nowrap rounded-[3px] border px-[9px] text-[12px] transition-colors duration-[var(--bi-motion-fast)]",
               active
-                ? "border-[var(--bi-border)] bg-white font-extrabold text-[var(--bi-fg)]!"
-                : "border-transparent bg-transparent font-semibold text-[var(--bi-muted)]! hover:text-[var(--bi-fg)]!",
+                ? "border-[var(--bi-border)] bg-[var(--bi-card-bg)] font-semibold text-[var(--bi-accent)]"
+                : "border-transparent bg-transparent font-medium text-[var(--bi-muted)] hover:text-[var(--bi-fg)]",
               item.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
             ].join(" ")}
             disabled={item.disabled}

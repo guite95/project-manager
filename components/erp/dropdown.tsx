@@ -76,30 +76,30 @@ export function Dropdown({ value, onChange, options, ariaLabel, searchable = tru
       if (!rootRef.current?.contains(target) && !panelRef.current?.contains(target)) close();
     }}>
     <button ref={triggerRef} aria-controls={open ? listboxId : undefined} aria-expanded={open && !disabled}
-      aria-haspopup="listbox" aria-label={ariaLabel} autoFocus={autoFocus} disabled={disabled} type="button"
-      className={cn("flex h-[30px] w-full min-w-0 items-center justify-between gap-2 rounded-[4px] border bg-[var(--bi-bg)] px-2 text-left text-[12px] outline-none",
+      aria-haspopup="listbox" aria-invalid={error || undefined} aria-label={ariaLabel} autoFocus={autoFocus} disabled={disabled} type="button"
+      className={cn("bi-control flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[4px] border bg-[var(--bi-card-bg)] px-3 text-left text-[13px] outline-none",
         "focus-visible:border-[var(--bi-accent)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--bi-accent)]",
-        error ? "border-[var(--bi-error)]" : "border-[var(--bi-border)]",
+        error ? "border-[var(--bi-error)]" : "border-[var(--bi-control-border)]",
         disabled && "cursor-not-allowed bg-[var(--bi-sidebar-bg)] opacity-45", triggerClassName)}
       onClick={() => open ? close() : openMenu()} onKeyDown={handleMenuKeyDown}>
       <span className={cn("min-w-0 flex-1 truncate", !selected && "text-[var(--bi-muted)]")}>{selected?.label ?? "선택"}</span>
       <HiChevronDown aria-hidden className={cn("shrink-0 transition-transform", open && "rotate-180")} size={14} />
     </button>
     {open && !disabled && position ? createPortal(<div ref={panelRef} data-erp-popover data-erp-dropdown
-      className="fixed z-[100] overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] shadow-lg"
+      className="fixed z-[100] overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] shadow-[var(--bi-shadow-overlay)]"
       style={{ ...position, width: panelWidth, maxWidth: 'calc(100vw - 16px)' }} onKeyDown={handleMenuKeyDown}>
       {searchable ? <label className="flex items-center gap-1.5 border-b border-[var(--bi-border)] px-2">
         <HiOutlineSearch aria-hidden className="shrink-0 text-[var(--bi-muted)]" size={13} />
         <span className="sr-only">{ariaLabel} 검색</span>
         <input ref={searchRef} role="combobox" aria-expanded={true} aria-autocomplete="list" aria-controls={listboxId}
           aria-activedescendant={visibleOptions[activeIndex] ? `${listboxId}-${activeIndex}` : undefined}
-          className="h-9 min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-[var(--bi-muted)]"
+          className="bi-control h-9 min-w-0 flex-1 bg-transparent text-[12px] outline-none placeholder:text-[var(--bi-muted)]"
           value={query} placeholder={searchPlaceholder} onChange={event => { setQuery(event.target.value); setActiveIndex(0); }} />
       </label> : null}
       <div className="max-h-[min(16rem,50dvh)] overflow-y-auto py-1" id={listboxId} role="listbox" aria-label={ariaLabel}>
         {visibleOptions.length ? visibleOptions.map((option, index) => <button key={option.value} type="button" role="option"
           id={`${listboxId}-${index}`} data-option-index={index} tabIndex={-1} aria-selected={option.value === value}
-          className={cn("block w-full px-3 py-2 text-left text-[12px]", index === activeIndex && "bg-[var(--bi-table-header)]", option.value === value && "font-semibold text-[var(--bi-accent)]")}
+          className={cn("block min-h-11 w-full px-3 py-2 text-left text-[13px] md:min-h-9", index === activeIndex && "bg-[var(--bi-table-header)]", option.value === value && "font-semibold text-[var(--bi-accent)]")}
           onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(option)}>
           <span className="block break-words">{option.label}</span>
           {option.description ? <span className="mt-1 block text-[11px] font-normal text-[var(--bi-muted)]">{option.description}</span> : null}

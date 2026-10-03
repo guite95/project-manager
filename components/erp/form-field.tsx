@@ -1,30 +1,32 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { DatePicker } from "./date-picker";
 import { cn } from "./cn";
 import { Dropdown } from "./dropdown";
 
 const inputClass =
-  "mt-1 h-[30px] w-full rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-bg)] px-2 text-[12px] outline-none focus:border-[var(--bi-accent)] disabled:bg-[var(--bi-sidebar-bg)]";
+  "bi-control mt-1.5 h-9 w-full rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-3 text-[13px] outline-none focus:border-[var(--bi-accent)] disabled:bg-[var(--bi-sidebar-bg)] disabled:cursor-not-allowed";
 
 export function FieldLabel({
   label,
   children,
   error,
+  errorId,
 }: {
   label: string;
   children: ReactNode;
   error?: string;
+  errorId?: string;
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-medium tracking-[0.02em] text-[var(--bi-muted)]">
+      <span className="text-[12px] font-medium text-[var(--bi-fg)]">
         {label}
       </span>
       {children}
       {error ? (
-        <p className="mt-1 text-[11px] text-[var(--bi-error)]">{error}</p>
+        <p id={errorId} className="mt-1 text-[12px] text-[var(--bi-error)]">{error}</p>
       ) : null}
     </label>
   );
@@ -37,9 +39,9 @@ export function FieldLabel({
 function DateFieldLabel({ label, children, error }: { label: string; children: ReactNode; error?: string }) {
   return (
     <div className="block">
-      <span className="text-[11px] font-medium tracking-[0.02em] text-[var(--bi-muted)]">{label}</span>
+      <span className="text-[12px] font-medium text-[var(--bi-fg)]">{label}</span>
       <div className="mt-1">{children}</div>
-      {error ? <p className="mt-1 text-[11px] text-[var(--bi-error)]">{error}</p> : null}
+      {error ? <p className="mt-1 text-[12px] text-[var(--bi-error)]">{error}</p> : null}
     </div>
   );
 }
@@ -91,6 +93,7 @@ export function TextField(props: {
   /** 모바일 키패드 힌트. 금액처럼 text 입력으로 숫자를 받을 때 numeric을 준다. */
   inputMode?: "numeric" | "decimal";
 }) {
+  const errorId = useId();
   // 날짜는 브라우저별 native date input 대신 공통 DatePicker 로 통일한다.
   if (props.type === "date") {
     return (
@@ -107,8 +110,10 @@ export function TextField(props: {
     );
   }
   return (
-    <FieldLabel error={props.error} label={props.label}>
+    <FieldLabel error={props.error} errorId={errorId} label={props.label}>
       <input
+        aria-invalid={Boolean(props.error) || undefined}
+        aria-describedby={props.error ? errorId : undefined}
         autoFocus={props.autoFocus}
         className={inputClass}
         data-autofocus={props.autoFocus ? "true" : undefined}
@@ -140,7 +145,7 @@ export function SelectField(props: {
     : props.options;
   return (
     <div className="block">
-      <span className="text-[11px] font-medium tracking-[0.02em] text-[var(--bi-muted)]">
+      <span className="text-[12px] font-medium text-[var(--bi-fg)]">
         {props.label}
       </span>
       <div className="mt-1">
@@ -155,7 +160,7 @@ export function SelectField(props: {
         />
       </div>
       {props.error ? (
-        <p className="mt-1 text-[11px] text-[var(--bi-error)]">{props.error}</p>
+        <p className="mt-1 text-[12px] text-[var(--bi-error)]">{props.error}</p>
       ) : null}
     </div>
   );

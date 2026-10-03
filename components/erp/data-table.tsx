@@ -39,7 +39,7 @@ export function DataTable<Row>({
 
   return (
     <table
-      className={`w-full border-collapse text-[12px] ${fixed ? "table-fixed" : ""}`}
+      className={`w-full border-collapse text-[13px] ${fixed ? "table-fixed" : ""}`}
       style={minWidth ? { minWidth } : undefined}
     >
       <caption className="sr-only">{caption}</caption>
@@ -54,7 +54,7 @@ export function DataTable<Row>({
         <tr>
           {columns.map((column) => (
             <th
-              className={`relative overflow-hidden border-b border-[var(--bi-border)] px-4 py-3 text-[11px] font-semibold ${
+              className={`relative overflow-hidden border-b border-[var(--bi-border)] px-4 py-3 text-[12px] font-medium ${
                 column.align === "right" ? "text-right" : "text-left"
               }`}
               key={column.key}
@@ -91,7 +91,7 @@ export function DataTable<Row>({
         ) : (
           rows.map((row) => (
             <tr
-              className="transition-colors hover:bg-[var(--bi-table-header)]"
+              className="bg-[var(--bi-card-bg)] transition-colors duration-[var(--bi-motion-fast)] hover:bg-[var(--bi-surface-subtle)] focus-within:bg-[var(--bi-surface-subtle)]"
               key={rowKey(row)}
             >
               {columns.map((column) => (

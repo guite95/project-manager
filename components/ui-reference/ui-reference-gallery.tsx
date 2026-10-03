@@ -16,6 +16,7 @@ export function UiReferenceGallery() {
   return (
     <div className="border border-[var(--bi-border)] bg-[var(--bi-card-bg)]">
       <PageHeader
+        level={2}
         description="FocusAI의 입력폼, 날짜·기간 선택, 필터, 테이블, 상세 모달과 로딩 상태를 직접 확인할 수 있습니다."
         title="UI 컴포넌트 레퍼런스"
       />

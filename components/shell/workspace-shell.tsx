@@ -30,21 +30,21 @@ const utilitySections = [
 const allSections = [...sections, ...utilitySections];
 type Section = WorkspaceSectionId;
 type WorkspaceAccount = { name: string; username: string; role: string };
-const panelLink = (active: boolean) => `mx-2 flex min-h-10 items-center md:min-h-9 rounded-[3px] px-3 text-[12px] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${active
-  ? "bg-[var(--bi-accent)] font-semibold text-white"
-  : "text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] hover:text-[var(--bi-fg)]"}`;
 
 function SidebarAccount({ account }: { account: WorkspaceAccount }) {
   const displayName = account.name || account.username || "로그인 계정";
   return <footer className="shrink-0 border-t border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 py-3">
-    <div className="min-w-0">
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] bg-[var(--bi-accent-light)] text-[var(--bi-accent)]"><HiOutlineUser size={18} /></span>
+      <div className="min-w-0">
       <p className="m-0 truncate text-[12px] font-semibold" title={displayName}>{displayName}</p>
-      <p className="mt-0.5 mb-0 truncate text-[10px] text-[var(--bi-muted)]" title={account.username ? `@${account.username} · ${workspaceRoleLabel(account.role)}` : workspaceRoleLabel(account.role)}>
+      <p className="mt-0.5 mb-0 truncate text-[11px] text-[var(--bi-muted)]" title={account.username ? `@${account.username} · ${workspaceRoleLabel(account.role)}` : workspaceRoleLabel(account.role)}>
         {account.username ? `@${account.username} · ` : ""}{workspaceRoleLabel(account.role)}
       </p>
+      </div>
     </div>
     <div className="mt-2 flex items-center gap-2 text-[11px]">
-      <Link href="/account" className="flex h-[30px] flex-1 items-center justify-center rounded-[4px] border border-[var(--bi-border)] px-3 text-xs font-semibold hover:bg-[var(--bi-table-header)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">내 계정</Link>
+      <Link href="/account" className="bi-button flex min-h-9 flex-1 items-center justify-center rounded-[4px] border border-[var(--bi-control-border)] px-3 text-xs font-semibold hover:bg-[var(--bi-table-header)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">내 계정</Link>
       <LogoutButton className="flex-1" />
     </div>
   </footer>;
@@ -156,32 +156,33 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
     return (
       <nav aria-label={`${title} 상세 메뉴`} className={inline ? "py-2" : "min-h-0 flex-1 overflow-y-auto py-2"}>
         {id === "today" ? <>
-          <Link href="/today" aria-current={pathname === "/today" ? "page" : undefined} className={panelLink(pathname === "/today")}>오늘의 할 일</Link>
-          <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className={panelLink(pathname === "/today/history")}>완료 이력</Link>
+          <Link href="/today" aria-current={pathname === "/today" ? "page" : undefined} className="bi-nav-link">오늘의 할 일</Link>
+          <Link href="/today/history" aria-current={pathname === "/today/history" ? "page" : undefined} className="bi-nav-link">완료 이력</Link>
         </> : id === "ai-ops" ? <>
-          <Link href="/ai-ops/activity" aria-current={pathname === "/ai-ops/activity" ? "page" : undefined} className={panelLink(pathname === "/ai-ops/activity")}>활동 및 대화</Link>
-          <Link href="/ai-ops/usage" aria-current={pathname === "/ai-ops/usage" ? "page" : undefined} className={panelLink(pathname === "/ai-ops/usage")}>사용량 통계</Link>
+          <Link href="/ai-ops/activity" aria-current={pathname === "/ai-ops/activity" ? "page" : undefined} className="bi-nav-link">활동 및 대화</Link>
+          <Link href="/ai-ops/usage" aria-current={pathname === "/ai-ops/usage" ? "page" : undefined} className="bi-nav-link">사용량 통계</Link>
         </> : id === "records" ? <>
-          <Link href="/records/work-records" aria-current={pathname === "/records/work-records" ? "page" : undefined} className={panelLink(pathname === "/records/work-records")}>작업 기록</Link>
+          <Link href="/records/work-records" aria-current={pathname === "/records/work-records" ? "page" : undefined} className="bi-nav-link">작업 기록</Link>
         </> : id === "recruitment" ? <>
-          <Link href="/recruitment/experiences" aria-current={pathname === "/recruitment/experiences" ? "page" : undefined} className={panelLink(pathname === "/recruitment/experiences")}>경험정리</Link>
-          <Link href="/recruitment/cover-letters" aria-current={pathname === "/recruitment/cover-letters" ? "page" : undefined} className={panelLink(pathname === "/recruitment/cover-letters")}>자기소개서</Link>
-          <Link href="/portfolio" aria-current={portfolioActive ? "page" : undefined} className={panelLink(portfolioActive)}>포트폴리오</Link>
-        </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className={panelLink(pathname === menuSection.href)}>{id === "guide" ? "JSON 작성 가이드" : menuSection.title}</Link>}
+          <Link href="/recruitment/experiences" aria-current={pathname === "/recruitment/experiences" ? "page" : undefined} className="bi-nav-link">경험정리</Link>
+          <Link href="/recruitment/cover-letters" aria-current={pathname === "/recruitment/cover-letters" ? "page" : undefined} className="bi-nav-link">자기소개서</Link>
+          <Link href="/portfolio" aria-current={portfolioActive ? "page" : undefined} className="bi-nav-link">포트폴리오</Link>
+        </> : <Link href={menuSection.href} aria-current={pathname === menuSection.href ? "page" : undefined} className="bi-nav-link">{id === "guide" ? "JSON 작성 가이드" : menuSection.title}</Link>}
       </nav>
     );
   };
   const renderRailLink = (item: (typeof allSections)[number]) => (
     <Link key={item.id} href={workspaceSectionHref(item.id, account.role, navigationProjects)} title={item.title} aria-current={currentSection === item.id ? "true" : undefined}
-      className={`flex min-h-[60px] flex-col items-center justify-center gap-0.5 border-l-[3px] px-1 py-1.5 text-center text-[10px] leading-[1.35] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
+      className={`flex min-h-[64px] flex-col items-center justify-center gap-1 border-l-[3px] px-1 py-2 text-center text-[11px] leading-[1.35] transition-colors duration-[var(--bi-motion-fast)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
         ? "border-[var(--bi-rail-indicator)] bg-[var(--bi-rail-active)] font-semibold text-white"
         : "border-transparent hover:bg-[var(--bi-rail-active)] hover:text-white"}`}>
-      <item.icon size={18} aria-hidden /><span className="max-w-10 whitespace-pre-line break-keep">{item.railTitle}</span>
+      <item.icon size={20} aria-hidden /><span className="max-w-10 whitespace-pre-line break-keep">{item.railTitle}</span>
     </Link>
   );
   return (
     <PersonalProjectGroupsProvider initial={initialPersonalProjectGroups} readOnly={!canCustomizeNavigation}>
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-[var(--bi-bg)] text-[var(--bi-fg)] md:flex-row">
+      <a href="#workspace-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded focus:bg-[var(--bi-accent)] focus:px-4 focus:py-3 focus:text-white">본문으로 바로 가기</a>
       <header inert={mobileOpen} className="flex h-12 shrink-0 items-center gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3 md:hidden">
         <button ref={menuButton} type="button" aria-expanded={mobileOpen} aria-controls="workspace-panel"
           onClick={() => { setMobileSection(null); setMobileOpen(true); }}
@@ -253,8 +254,8 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         </nav> : <>
           <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[var(--bi-border)] px-4">
             <div className="min-w-0 flex-1">
-              <h2 className="m-0 truncate text-[13px] font-bold">{section?.title ?? "접근 가능한 메뉴 없음"}</h2>
-              <p className="mt-1 mb-0 truncate text-[10px] text-[var(--bi-muted)]">{section?.description ?? "관리자에게 프로젝트 권한을 요청하세요."}</p>
+              <h2 className="m-0 truncate text-[14px] font-semibold">{section?.title ?? "접근 가능한 메뉴 없음"}</h2>
+              <p className="mt-0.5 mb-0 truncate text-[11px] text-[var(--bi-muted)]">{section?.description ?? "관리자에게 프로젝트 권한을 요청하세요."}</p>
             </div>
             {canCustomizeNavigation ? <button type="button" onClick={togglePanel} disabled={!prefs.ready} aria-label="사이드바 접기" title="사이드바 접기"
               className="hidden h-8 w-8 shrink-0 items-center justify-center rounded text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] md:flex">
@@ -266,7 +267,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         <SidebarAccount account={account} />
       </aside>
 
-      <main id="workspace-content" inert={mobileOpen} className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
+      <main id="workspace-content" tabIndex={-1} inert={mobileOpen} className="min-h-0 min-w-0 flex-1 overflow-y-auto focus-visible:-outline-offset-2">{children}</main>
       {prefs.error ? <p role="alert" className="fixed right-3 bottom-3 left-3 z-[60] m-0 rounded border border-[var(--bi-error)] bg-[var(--bi-card-bg)] px-3 py-2 text-[12px] text-[var(--bi-error)] md:left-auto md:max-w-sm">{prefs.error}</p> : null}
       <span role="status" className="sr-only">{prefs.saving ? "공유 설정을 저장하는 중입니다." : ""}</span>
     </div>

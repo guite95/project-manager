@@ -57,17 +57,17 @@ export function SidebarProject({
       {dragging && dragging !== slug && edge ? (
         <span aria-hidden className={`pointer-events-none absolute inset-x-2 z-10 h-0.5 bg-[var(--bi-accent)] ${edge === "before" ? "top-0" : "bottom-0"}`} />
       ) : null}
-      <div className={`group mx-2 mt-1 flex min-h-10 md:min-h-9 items-center rounded-[3px] ${collapsed ? "hover:bg-[var(--bi-sidebar-active)]" : "bg-[var(--bi-sidebar-active)]"}`}>
+      <div className={`group mx-2 mt-1 flex min-h-11 md:min-h-10 items-center rounded-[3px] ${collapsed ? "hover:bg-[var(--bi-sidebar-active)]" : "bg-[var(--bi-sidebar-active)]"}`}>
         <button
           type="button"
           aria-expanded={!collapsed}
           disabled={toggleDisabled}
           onClick={onToggle}
-          className="flex min-h-10 md:min-h-9 min-w-0 flex-1 items-center gap-1.5 rounded-[3px] pr-1 pl-2 text-[12px] font-semibold text-[var(--bi-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]"
+          className="flex min-h-11 md:min-h-10 min-w-0 flex-1 items-center gap-1.5 rounded-[3px] pr-1 pl-2 text-[13px] font-semibold text-[var(--bi-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]"
         >
           <HiChevronRight size={10} aria-hidden className={`shrink-0 transition-transform ${collapsed ? "rotate-0" : "rotate-90"}`} />
           <span className="truncate">{title}</span>
-          <span className="ml-auto font-normal text-[var(--bi-muted)]">{count}</span>
+          <span className="ml-auto min-w-5 rounded-[3px] px-1 text-center text-[11px] font-normal text-[var(--bi-muted)]">{count}</span>
         </button>
         {showMoveHandle ? <button
           type="button"
@@ -76,7 +76,7 @@ export function SidebarProject({
           aria-disabled={!movable}
           title="드래그하여 순서 변경 · ↑↓로 이동"
           draggable={movable}
-          className={`mr-1 flex h-6 w-5 shrink-0 items-center justify-center rounded-[3px] text-[var(--bi-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${movable ? "cursor-grab opacity-50 hover:opacity-100 focus:opacity-100 active:cursor-grabbing" : "cursor-not-allowed opacity-25"}`}
+          className={`mr-1 flex h-8 w-6 shrink-0 items-center justify-center rounded-[3px] text-[var(--bi-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] ${movable ? "cursor-grab opacity-50 hover:opacity-100 focus:opacity-100 active:cursor-grabbing" : "cursor-not-allowed opacity-25"}`}
           onDragStart={(event) => {
             if (!movable) {event.preventDefault(); return;}
             event.dataTransfer.setData(SIDEBAR_DRAG_TYPE, slug);
@@ -94,7 +94,7 @@ export function SidebarProject({
           <HiOutlineSelector size={14} aria-hidden />
         </button> : null}
       </div>
-      {!collapsed ? <div className="ml-3 border-l border-[var(--bi-border)] py-0.5">{children}</div> : null}
+      {!collapsed ? <div className="ml-5 border-l border-[var(--bi-border)] py-0.5">{children}</div> : null}
     </div>
   );
 }

@@ -22,24 +22,27 @@
  */
 :root {
   --bi-bg: #ffffff;
-  --bi-fg: #0a0a0a;
-  --bi-muted: #666666;
-  --bi-border: #eaeaea;
-  --bi-border-strong: #d4d4d4;
+  --bi-fg: #17263c;
+  --bi-muted: #5f6c7b;
+  --bi-border: #dce3ec;
+  --bi-border-strong: #b8c4d3;
+  --bi-control-border: #8593a5;
   --bi-accent: #1b2a4a;
   --bi-accent-light: #e8edf5;
   --bi-card-bg: #ffffff;
-  --bi-sidebar-bg: #fafafa;
-  --bi-sidebar-active: #e8e8e8;
+  --bi-sidebar-bg: #f5f7fa;
+  --bi-sidebar-active: #e8edf5;
+  --bi-surface-subtle: #f8fafc;
+  --bi-canvas: #f2f5f9;
   --bi-rail-bg: #111827;
   --bi-rail-active: #293142;
   --bi-rail-muted: #a7aebc;
   --bi-rail-indicator: #899ac5;
-  --bi-table-header: #fafafa;
-  --bi-success: #10b981;
+  --bi-table-header: #f5f7fa;
+  --bi-success: #116b49;
   --bi-warning: #f5a623;
-  --bi-error: #ee0000;
-  --bi-ai: #7c5cff;
+  --bi-error: #c6283d;
+  --bi-ai: #6845cb;
   --bi-ai-light: #f1edff;
   --bi-demand: #0f766e;
   --bi-demand-light: #e6f4f2;
@@ -48,6 +51,9 @@
   --bi-motion-fast: 120ms;
   --bi-motion-base: 180ms;
   --bi-ease: cubic-bezier(0.2, 0, 0.2, 1);
+  --bi-radius-control: 4px;
+  --bi-radius-panel: 6px;
+  --bi-shadow-overlay: 0 12px 40px rgb(27 42 74 / 16%);
   --bi-priority-urgent-bg: #fff1f2;
   --bi-priority-urgent-line: #be123c;
   --bi-priority-high-bg: #fff7ed;
@@ -93,25 +99,101 @@ body {
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  background: var(--bi-bg);
-  color: var(--bi-fg);
-}
+@layer base {
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    background: var(--bi-bg);
+    color: var(--bi-fg);
+  }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--bi-accent);
+    outline-offset: 2px;
+  }
+
+  :where(button, [role="button"]):not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 공통 컴포넌트에만 적용해 차트와 문서의 고유 레이아웃을 보존한다. */
+@layer components {
+  .bi-control {
+    transition: border-color var(--bi-motion-fast) var(--bi-ease),
+      background-color var(--bi-motion-fast) var(--bi-ease);
+  }
+
+  .bi-nav-link {
+    margin: 2px 8px;
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 8px;
+    border-left: 2px solid transparent;
+    border-radius: var(--bi-radius-control);
+    padding: 6px 10px;
+    color: var(--bi-muted);
+    font-size: 13px;
+    transition: color var(--bi-motion-fast), background-color var(--bi-motion-fast);
+  }
+
+  .bi-nav-link:hover {
+    background: var(--bi-sidebar-active);
+    color: var(--bi-fg);
+  }
+
+  .bi-nav-link[aria-current="page"] {
+    border-left-color: var(--bi-accent);
+    background: var(--bi-accent-light);
+    color: var(--bi-accent);
+    font-weight: 650;
+  }
+
+  .bi-project-link {
+    border: 1px solid var(--bi-border);
+    border-radius: var(--bi-radius-panel);
+    background: var(--bi-card-bg);
+    transition: border-color var(--bi-motion-fast), background-color var(--bi-motion-fast);
+  }
+
+  .bi-project-link:hover {
+    border-color: var(--bi-border-strong);
+    background: var(--bi-surface-subtle);
+  }
+
+}
+
+/* 상태와 모바일 접근성 기준은 개별 크기 유틸리티보다 우선한다. */
+.bi-control:enabled:hover { border-color: var(--bi-accent); }
+.bi-control:focus-visible {
+  outline: 2px solid var(--bi-accent);
+  outline-offset: 2px;
+}
+.bi-control[aria-invalid="true"] { border-color: var(--bi-error); }
+
+@media (max-width: 767px) {
+  .bi-nav-link { min-height: 44px; }
+  .bi-control { min-height: 44px; font-size: 16px; }
+  .bi-button { min-height: 44px; }
+  .bi-button-icon { min-width: 44px; }
 }
 
 ::selection {
@@ -131,5 +213,11 @@ a {
   :root {
     --bi-motion-fast: 0ms;
     --bi-motion-base: 0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

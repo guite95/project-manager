@@ -34,13 +34,13 @@ export type ListToolbarProps = {
 export function ListToolbar({ actions, children, className, meta, search, tools, wrap = false }: ListToolbarProps) {
   const trailing =
     meta !== undefined || search || tools || actions ? (
-      <div className="flex items-center gap-3">
+      <div className="bi-list-toolbar-actions flex min-w-0 flex-wrap items-center gap-3">
         {tools}
         {meta !== undefined ? <FilterMeta>{meta}</FilterMeta> : null}
         {search ? (
           <FilterSearchInput
             aria-label={search.ariaLabel ?? search.placeholder}
-            icon={<HiOutlineMagnifyingGlass size={15} />}
+            icon={<HiOutlineMagnifyingGlass aria-hidden size={15} />}
             onChange={(event) => search.onChange(event.target.value)}
             placeholder={search.placeholder}
             value={search.value}
@@ -52,7 +52,7 @@ export function ListToolbar({ actions, children, className, meta, search, tools,
     ) : undefined;
 
   return (
-    <FilterBar className={className} trailing={trailing} wrap={wrap}>
+    <FilterBar className={["bi-list-toolbar", className].filter(Boolean).join(" ")} trailing={trailing} wrap={wrap}>
       {/* 토글이 폭을 넘치면 잘라내지 않고 줄바꿈한다(마지막 칩이 검색창 뒤로 숨는 것을 막는다) */}
       <div className="flex min-w-0 flex-wrap items-center gap-x-[10px] gap-y-1.5">{children}</div>
     </FilterBar>

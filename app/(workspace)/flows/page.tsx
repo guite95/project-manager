@@ -1,4 +1,5 @@
 import { ProjectEditor } from "@/components/projects/project-editor";
+import { PageHeader } from "@/components/erp/page-header";
 import { isPersonalProject } from "@/lib/personal-projects";
 import { accessibleCatalog } from '@/lib/access/catalog';
 import { flowCategories } from "@/lib/server/flow-catalog-store";
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 const tabClassName = (active: boolean) =>
-  `border-b-2 px-3 py-2 text-[12px] font-semibold transition ${
+  `inline-flex min-h-11 items-center border-b-2 px-3 py-2 text-[13px] font-medium transition-colors ${
     active
       ? "border-[var(--bi-accent)] text-[var(--bi-accent)]"
       : "border-transparent text-[var(--bi-muted)] hover:text-[var(--bi-fg)]"
@@ -31,7 +32,7 @@ function ViewTabs({ view }: { view: FlowsView }) {
   return (
     <nav
       aria-label="전체 프로젝트 보기"
-      className="mb-6 flex border-b border-[var(--bi-border)]"
+      className="flex gap-3 border-b border-[var(--bi-border)] px-4 sm:px-6"
     >
       <Link
         aria-current={view === "projects" ? "page" : undefined}
@@ -55,31 +56,32 @@ async function ProjectsOverview() {
   const flowProjects = (await accessibleCatalog()).filter(project => !isPersonalProject(project));
   return (
     <>
-      <div className="flex justify-end"><ProjectEditor scope="COMPANY" /></div>
       {flowProjects.map((project) => (
-        <section key={project.slug} className="mt-8">
-          <div className="flex justify-end"><ProjectEditor scope="COMPANY" slug={project.slug} /></div>
-          <h2 className="mt-0 mb-1 border-t border-[var(--bi-border)] pt-6 text-[16px] font-semibold tracking-[-0.005em] text-[var(--bi-fg)]">
-            {project.title}
-          </h2>
+        <section key={project.slug} className="border-b border-[var(--bi-border)] py-6 first:pt-0 last:border-b-0">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="m-0 text-[17px] font-semibold tracking-[-0.015em] text-[var(--bi-fg)]">{project.title}</h2>
+            <ProjectEditor scope="COMPANY" slug={project.slug} />
+          </div>
           {project.intro ? (
-            <p className="m-0 mb-3 text-[12px] leading-[1.7] text-[var(--bi-muted)]">
+            <p className="m-0 mb-4 max-w-[75ch] text-[13px] leading-[1.7] text-[var(--bi-muted)]">
               <RichText text={project.intro} />
             </p>
           ) : null}
 
-          {project.slug !== "common" ? <Link href={meetingsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
+          {project.slug !== "common" ? <nav aria-label={`${project.title} 자료와 기록`} className="mb-5 grid gap-2 sm:grid-cols-3">
+          <Link href={meetingsHref(project.slug)} className="bi-project-link flex flex-col gap-1 px-4 py-3">
             <span className="text-[13px] font-semibold">회의록</span>
-            <span className="text-[12px] text-[var(--bi-muted)]">회의 내용·결정 사항·태스크과 전사본 원문</span>
-          </Link> : null}
-          {project.slug !== "common" ? <Link href={materialsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
+            <span className="text-[12px] text-[var(--bi-muted)]">회의 내용·결정 사항·태스크와 전사본</span>
+          </Link>
+          <Link href={materialsHref(project.slug)} className="bi-project-link flex flex-col gap-1 px-4 py-3">
             <span className="text-[13px] font-semibold">자료</span>
             <span className="text-[12px] text-[var(--bi-muted)]">PDF·HTML·PPTX 문서 추가와 미리보기</span>
-          </Link> : null}
-          {project.slug !== 'common' ? <Link href={recordingsHref(project.slug)} className="mt-3 flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] px-3.5 py-3 hover:border-[var(--bi-accent)]">
+          </Link>
+          <Link href={recordingsHref(project.slug)} className="bi-project-link flex flex-col gap-1 px-4 py-3">
             <span className="text-[13px] font-semibold">녹음·전사</span>
             <span className="text-[12px] text-[var(--bi-muted)]">녹음 종류 선택·자동 전사·원본과 전사본 다운로드</span>
-          </Link> : null}
+          </Link>
+          </nav> : null}
           {flowCategories(project.categories).map((category) => (
             <div key={category.slug} className="mt-3">
               <h3 className="mt-0 mb-2 text-[13px] font-semibold text-[var(--bi-fg)]">
@@ -93,7 +95,7 @@ async function ProjectsOverview() {
                   <Link
                     key={chart.slug}
                     href={chartHref(project.slug, category.slug, chart.slug)}
-                    className="group flex flex-col gap-1 rounded-[3px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-3.5 py-3 transition hover:border-[var(--bi-accent)]"
+                    className="bi-project-link group flex flex-col gap-1 px-4 py-3"
                   >
                     <span className="text-[13px] font-semibold text-[var(--bi-fg)]">
                       {chart.title}
@@ -103,7 +105,7 @@ async function ProjectsOverview() {
                         {chart.description}
                       </span>
                     ) : null}
-                    <span className="mt-1 text-[11px] text-[var(--bi-muted)]">
+                    <span className="mt-2 text-[12px] text-[var(--bi-muted)]">
                       노드 {chart.nodeCount} · 연결 {chart.edgeCount}
                     </span>
                   </Link>
@@ -125,21 +127,16 @@ export default async function FlowsIndexPage({
   const view = resolveFlowsView((await searchParams).view);
 
   return (
-    <div className="min-w-0 w-full px-8 py-8">
-      <h1 className="mt-0 mb-2 text-[22px] font-bold tracking-[-0.01em] text-[var(--bi-fg)]">
-        전체 프로젝트
-      </h1>
-      <p className="my-3 text-[13px] leading-[1.7] text-[var(--bi-fg)]">
-        프로젝트 진행 흐름과 앞으로 재사용할 공통 UI 컴포넌트를 한곳에서
-        확인합니다.
-      </p>
+    <div className="min-w-0 w-full">
+      <PageHeader title="전체 프로젝트" description="프로젝트 진행 흐름과 자료, 공통 UI 컴포넌트를 한곳에서 확인합니다." actions={view === "projects" ? <ProjectEditor scope="COMPANY" /> : undefined} />
       <ViewTabs view={view} />
-
+      <div className="px-4 py-6 sm:px-6">
       {view === "projects" ? (
         <ProjectsOverview />
       ) : (
         <UiReferenceGallery />
       )}
+      </div>
     </div>
   );
 }

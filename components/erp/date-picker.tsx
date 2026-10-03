@@ -258,10 +258,10 @@ function formatUnit(mode: DateRangeMode, value: string) {
 
 // ---- 공통 클래스 (DESIGN.md: 0~4px radius, flat, --bi-* 토큰) ----
 const triggerClass =
-  "inline-flex h-[30px] min-w-0 max-w-full items-center gap-1.5 rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-bg)] px-2 text-xs tabular-nums text-[var(--bi-fg)] outline-none focus:border-[var(--bi-accent)] disabled:bg-[var(--bi-sidebar-bg)] disabled:text-[var(--bi-muted)]";
+  "bi-control inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-3 text-[13px] tabular-nums text-[var(--bi-fg)] outline-none focus:border-[var(--bi-accent)] disabled:bg-[var(--bi-sidebar-bg)] disabled:text-[var(--bi-muted)]";
 
 const popoverClass =
-  "fixed z-50 flex flex-col overflow-hidden rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)]";
+  "fixed z-50 flex flex-col overflow-hidden rounded-[6px] border border-[var(--bi-border)] bg-[var(--bi-card-bg)] shadow-[var(--bi-shadow-overlay)]";
 
 const modeGroupClass =
   "inline-flex items-center gap-px rounded-[4px] border border-[var(--bi-border)] bg-[var(--bi-table-header)] p-px";

@@ -20,11 +20,12 @@ export function SearchInput({
     <input
       aria-label={ariaLabel}
       className={cn(
-        "h-[30px] w-64 rounded-[4px] border border-[var(--bi-border)] px-2 text-xs outline-none",
+        "bi-control h-9 w-64 max-w-full rounded-[4px] border border-[var(--bi-control-border)] bg-[var(--bi-card-bg)] px-3 text-[13px] outline-none",
         "focus:border-[var(--bi-accent)]",
         className,
       )}
       onChange={(event) => onSearchChange(event.target.value)}
+      type="search"
       placeholder={searchPlaceholder}
       value={search}
     />
@@ -50,7 +51,7 @@ export function FilterBar({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 border-b border-[var(--bi-border)] px-6 py-3",
+        "flex flex-wrap items-center gap-3 border-b border-[var(--bi-border)] bg-[var(--bi-card-bg)] px-4 py-3 sm:px-6",
         className,
       )}
     >
