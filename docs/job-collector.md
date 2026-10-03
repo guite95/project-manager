@@ -2,11 +2,14 @@
 
 첫 구현은 공개 HTML·사이트맵 수집, IT 키워드 필터, PostgreSQL 저장, 매일 한국 시간
 20시 예약 실행, CLI 조회와 채용 메뉴의 공고 목록을 제공한다. 경험 문서를 활용한 적합성 평가는 후속 범위다.
-현재 환경의 외부 네트워크 제한으로 실제 사이트 HTML 호환성과 운영 실행은 검증하지 않았다.
+운영 서버에서는 별도 상시 서비스가 예약 실행과 수동 요청을 처리한다. 웹 앱 이미지에
+스크립트가 포함되어 있어도 이 서비스를 등록하지 않으면 수동 요청은 실행 대기에 남는다.
 
 ## 수집원과 데이터 범위
 
-- 예제 설정은 직행 공개 사이트맵을 시작점으로 사용한다. API·로그인·회원 전용 경로는 요청하지 않는다.
+- 예제 설정은 직행 공개 채용 사이트맵을 먼저 읽고 전체 사이트맵을 탐색한다.
+  전체 인덱스만 먼저 읽으면 수백 개의 하위 사이트맵이 공고 본문보다 먼저 대기열에 쌓여,
+  초기 회차의 페이지 제한 안에 공고까지 도달하지 못한다. API·로그인·회원 전용 경로는 요청하지 않는다.
 - 사람인·잡코리아·원티드·직행·자소설닷컴의 도메인과 공고 URL 형식을 등록했다.
   이것은 각 사이트의 수집 완료/호환성 인증이 아니다. 직행 외 시작 URL은 설정에 명시해야 한다.
 - 잡플래닛은 무단 수집 금지 안내 때문에 수집원 목록에 넣지 않았다.
@@ -58,9 +61,47 @@ pnpm db:shared -- pnpm jobs:worker list --limit 50
 설치하거나 배포하지 않는다. Docker 이미지에는 워커 실행 스크립트와 예제 설정을 포함하되
 기본 웹 서버 시작 명령은 유지한다. 운영에서는 같은 이미지의 별도 프로세스로
 `node scripts/jobs-worker.mjs watch --config <설정.json> --apply`를 실행하며 기존 런타임의 DB Secret을 사용한다.
-현재 P-Grid security-principles 및 infrastructure-design-manual 원문 조회는 네트워크 제한으로
-실패했다. 운영 등록 전에 최신 보안/인프라 매뉴얼과 기존 OCI 런타임 실행 경로를 확인한다.
 공유 DB 최초 쓰기는 기존 키 검사·백업 후 별도 활성화 범위에서 수행한다.
+
+### OCI 상시 서비스
+
+`project-management-jobs.service`는 오후 8시까지 기다리는 동안에도 실행 중이다.
+`watch`가 30초마다 수동 요청을 처리하므로 오후 8시 전후와 관계없이 **지금 수집**을 사용할 수 있다.
+서버 부팅 때 자동 시작하며 종료되면 systemd가 다시 시작한다.
+
+```bash
+# 로컬: 설치할 파일과 해시만 확인한다. SSH/DB 접근 없음.
+python3 ops/oci-runtime/install-jobs-worker.py
+
+# 운영 활성화 범위: 기존 개인 SSH로 백업·검증 후 채용 서비스만 설치/시작한다.
+python3 ops/oci-runtime/install-jobs-worker.py --apply
+
+# 서버: 읽기 전용 상태 확인
+systemctl is-active project-management-jobs.service
+docker exec project-management-jobs node scripts/jobs-worker.mjs status
+sudo python3 /opt/project-management-jobs/current/jobs-worker-runtime.py verify
+
+# 서버: 채용 워커만 중지하고 자동 시작 해제. 기존 요청/공고/제외 기록은 보존한다.
+sudo systemctl disable --now project-management-jobs.service
+```
+
+설치기는 `recruitment:job%` 키 전체를 서버의 root 전용
+`/var/backups/project-management-jobs/<timestamp>/job-settings.json`에 저장하고 해시를 재검증한다.
+DB 비밀번호는 기존 앱 컨테이너 안에서만 읽고 백업에는 포함하지 않는다. DB 스키마 변경은 없다.
+이미 실행 중인 워커는 자동 교체하지 않는다. 설정/서비스 갱신 시 먼저 해당 서비스만 명시적으로 중지한다.
+
+실행 파일과 설정은 `/opt/project-management-jobs/releases/<sha256>`에 보관한다.
+워커는 현재 웹 앱과 동일한 immutable image digest로 별도 컨테이너를 만든다.
+설치 시 예제 설정을 고정한 `jobs-worker.json`을 읽기 전용 마운트하므로 이후 설정 변경도 설치기를 통해 반영한다.
+사용자는 1000:1000, 기존 `pm-runtime` 그룹과 private Docker 네트워크를 사용한다.
+기존 런타임 Secret과 공용 수집 설정만 읽기 전용으로 마운트하며 포트를 노출하지 않는다.
+IMDS 차단과 Vault 준비 상태를 먼저 확인하고, 권한·메모리·CPU·프로세스 수를 제한한다.
+Google 인증, migration Secret, Docker socket을 전달하지 않는다.
+
+서비스는 웹 런타임의 `PartOf`/`WantedBy` 관계로 함께 중지·시작된다.
+이후 기존 배포 절차가 웹 런타임을 교체해 시작하면, 중지된 소유 컨테이너만 새 앱 이미지로 재생성한다.
+이름만 같은 외부 컨테이너는 제거하지 않는다. 최초 등록은 기존 웹 앱과 녹음 워커를 재시작하지 않는다.
+실행 중단 시 요청과 수집 lease는 기존 만료/재개 규칙을 따른다.
 
 ## 채용공고 화면과 삭제
 
@@ -129,6 +170,7 @@ lease를 갱신하며, 저장 트랜잭션은 토큰과 만료를 다시 검사�
 ## 검증
 
 ```bash
+PYTHONDONTWRITEBYTECODE=1 python3 ops/oci-runtime/jobs-worker-runtime.test.py
 node --experimental-strip-types --env-file-if-exists=.env --test lib/job-collector/*.test.mjs lib/recruitment-jobs.test.mjs lib/server/recruitment-jobs-http.test.mjs lib/access/policy.test.mjs lib/navigation/workspace-menu.test.mjs
 pnpm typecheck
 pnpm build

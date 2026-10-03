@@ -3,7 +3,10 @@
     {
       "id": "zighang",
       "enabled": true,
-      "startUrls": ["https://zighang.com/seo/sitemap/sitemap-index.xml"]
+      "startUrls": [
+        "https://zighang.com/seo/sitemap/sitemap-recruitment-1.xml",
+        "https://zighang.com/seo/sitemap/sitemap-index.xml"
+      ]
     }
   ],
   "keywords": ["백엔드", "backend", "프론트엔드", "frontend", "풀스택", "개발자", "소프트웨어", "전산", "ERP", "데이터 엔지니어", "DevOps", "클라우드", "Spring", "Java", "TypeScript", "Python", "AX", "DX"],
