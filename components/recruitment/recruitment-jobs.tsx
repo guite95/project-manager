@@ -99,18 +99,19 @@ export function RecruitmentJobs() {
 
   async function remove(job: JobSummary) {
     if (mutating.current) return;
-    if (!await confirm({ message: `“${job.title}” 공고를 삭제할까요?\n\n같은 사이트의 동일한 원문 주소에 속한 공고도 함께 삭제됩니다. 다시 수집돼도 표시하지 않으며, 삭제는 되돌릴 수 없습니다.`, tone: "danger", confirmLabel: "삭제" }) || mutating.current) return;
+    if (!await confirm({ message: `“${job.title}” 공고를 삭제할까요?\n\n동일한 원문으로 확인된 다른 플랫폼의 공고도 함께 삭제됩니다. 다시 수집돼도 표시하지 않으며, 삭제는 되돌릴 수 없습니다.`, tone: "danger", confirmLabel: "삭제" }) || mutating.current) return;
     mutating.current = true;
     ++listVersion.current;
     setDeleting(job.id);
     setDeleteError('');
     setNotice('');
     try {
-      await responseJson(await fetch(`/api/recruitment/jobs/${job.id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
-      setData(current => current ? { ...current, items: current.items.filter(item => item.source !== job.source || item.url !== job.url) } : null);
+      const result = await responseJson<{ deletedIds?: string[] }>(await fetch(`/api/recruitment/jobs/${job.id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
+      const deletedIds = new Set([job.id, ...(result.deletedIds ?? [])]);
+      setData(current => current ? { ...current, items: current.items.filter(item => !deletedIds.has(item.id) && (item.source !== job.source || item.url !== job.url)) } : null);
       setSelectedId(null);
       setDetail(null);
-      setNotice('삭제했습니다. 같은 원문 주소의 공고는 다시 수집돼도 표시하지 않습니다.');
+      setNotice('삭제했습니다. 동일 원문으로 확인된 공고는 다른 플랫폼에서 수집돼도 표시하지 않습니다.');
     } catch (failure) {
       setDeleteError(failure instanceof Error ? failure.message : '삭제하지 못했습니다. 다시 시도해 주세요.');
     } finally {
@@ -124,7 +125,8 @@ export function RecruitmentJobs() {
   const pages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : page;
   return <div className="space-y-4 p-4 md:p-6">
     <JobCollectionControl onComplete={() => setRefresh(value => value + 1)} />
-    <p className="text-xs leading-5 text-[var(--bi-muted)]">삭제한 공고는 같은 사이트의 원문 주소를 기준으로 계속 제외합니다. 다른 사이트에 올라온 공고는 별도 항목입니다.</p>
+    <p className="text-xs leading-5 text-[var(--bi-muted)]">신입~3년 경력으로 지원 가능한 IT 공고를 표시합니다. 보안 직무·단순 사무·출장 수리·현장 복구와 경력 조건을 확인하지 못한 공고는 제외합니다.</p>
+    <p className="text-xs leading-5 text-[var(--bi-muted)]">같은 원문 주소로 확인된 공고는 플랫폼이 달라도 한 항목으로 묶고, 삭제도 함께 적용합니다. 원문 연결을 확인하지 못한 공고는 별도 항목입니다.</p>
     <form className="flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); setPage(1); setQuery(search.trim()); }}>
       <label className="grid min-w-48 flex-1 gap-1.5 text-xs font-medium">공고 검색
         <TextInput type="search" maxLength={150} value={search} onChange={event => setSearch(event.target.value)} placeholder="공고명, 회사, 지역" />
@@ -143,13 +145,14 @@ export function RecruitmentJobs() {
     <div className={`grid min-w-0 gap-4 ${selectedId ? 'xl:grid-cols-2' : ''}`}>
       <section aria-label="채용공고 목록" aria-busy={loading} className="min-w-0">
         {data?.items.length === 0 && <div className="rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-8 text-center text-sm text-[var(--bi-muted)]">
-          {query || source || status ? '검색 조건에 맞는 공고가 없습니다.' : '아직 수집된 채용공고가 없습니다.'}
+          {query || source || status ? '검색 조건에 맞는 공고가 없습니다.' : '현재 수집한 공고 중 직군·경력 조건이 확인된 공고가 없습니다.'}
         </div>}
         <ul className="space-y-3">
           {data?.items.map(job => <li key={job.id} className={`min-w-0 rounded border bg-[var(--bi-card-bg)] ${selectedId === job.id ? 'border-[var(--bi-accent)]' : 'border-[var(--bi-border)]'}`}>
             <button id={`job-${job.id}`} type="button" aria-expanded={selectedId === job.id} aria-controls="recruitment-job-detail" onClick={() => setSelectedId(job.id)} className="block w-full cursor-pointer rounded p-4 text-left hover:bg-[var(--bi-accent-light)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)]">
               <span className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--bi-muted)]"><span>{jobSources[job.source]}</span><span className="rounded bg-[var(--bi-bg)] px-2 py-1">{jobStatuses[job.status]}</span></span>
               <span className="block break-words text-sm font-semibold leading-6">{job.title}</span>
+              {!!job.duplicates?.length && <span className="mt-1 block text-xs text-[var(--bi-muted)]">동일 원문 {job.duplicates.length + 1}건을 함께 표시</span>}
               <span className="mt-1 block text-sm">{job.company || '회사 미확인'}</span>
               <span className="mt-2 block break-words text-xs leading-5 text-[var(--bi-muted)]">{job.locations.join(' · ') || '지역 미확인'} · {job.experience || '경력 미확인'}</span>
             </button>

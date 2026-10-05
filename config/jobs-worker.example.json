@@ -7,9 +7,49 @@
         "https://zighang.com/seo/sitemap/sitemap-recruitment-1.xml",
         "https://zighang.com/seo/sitemap/sitemap-index.xml"
       ]
+    },
+    {
+      "id": "jobkorea", "enabled": true,
+      "startUrls": [
+        "https://www.jobkorea.co.kr/Search/?stext=백엔드",
+        "https://www.jobkorea.co.kr/Search/?stext=프론트엔드",
+        "https://www.jobkorea.co.kr/Search/?stext=ERP",
+        "https://www.jobkorea.co.kr/Search/?stext=인프라",
+        "https://www.jobkorea.co.kr/Search/?stext=데이터",
+        "https://www.jobkorea.co.kr/Search/?stext=AI",
+        "https://www.jobkorea.co.kr/Search/?stext=QA",
+        "https://www.jobkorea.co.kr/Search/?stext=IT기획",
+        "https://www.jobkorea.co.kr/Search/?stext=기술지원",
+        "https://www.jobkorea.co.kr/Search/?stext=개발자"
+      ]
+    },
+    {
+      "id": "saramin", "enabled": true,
+      "startUrls": [
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=백엔드&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=프론트엔드&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=ERP&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=인프라&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=데이터&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=AI&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=QA&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=IT기획&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=기술지원&recruitSort=reg_dt&recruitPageCount=20",
+        "https://www.saramin.co.kr/zf_user/search/recruit?searchword=개발자&recruitSort=reg_dt&recruitPageCount=20"
+      ]
+    },
+    {
+      "id": "wanted", "enabled": true, "allowRobots403": true,
+      "startUrls": [
+        "https://www.wanted.co.kr/api/chaos/navigation/v1/results?country=all&job_group_id=518&job_sort=job.latest_order&limit=20&offset=0",
+        "https://www.wanted.co.kr/api/chaos/navigation/v1/results?country=all&job_group_id=507&job_sort=job.latest_order&limit=20&offset=0"
+      ]
+    },
+    {
+      "id": "jasoseol", "enabled": false, "disabledReason": "DEFERRED",
+      "startUrls": ["https://jasoseol.com/search?dutyGroupIds=166%2C175%2C176%2C177%2C178&excludeClosed=true"]
     }
   ],
-  "keywords": ["백엔드", "backend", "프론트엔드", "frontend", "풀스택", "개발자", "소프트웨어", "전산", "ERP", "데이터 엔지니어", "DevOps", "클라우드", "Spring", "Java", "TypeScript", "Python", "AX", "DX"],
   "maxPages": 60,
   "maxJobs": 50,
   "requestIntervalMs": 2000,
