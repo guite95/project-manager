@@ -9,6 +9,7 @@ import type { LegacyPayload } from "@/lib/import-legacy";
 import type { ProjectNote } from "@/lib/project-notes";
 import type { CustomProject, Issue, TodayBoard } from "@/lib/today-board";
 import type { UiPreferenceScope, UiPreferenceValues, UiPreferences } from "@/lib/ui-preferences";
+import type { IssueSchedule, ScheduleTask } from '@/lib/task-schedule';
 
 async function request(path: string, init?: RequestInit): Promise<Response> {
   const response = await fetch(path, {
@@ -22,7 +23,8 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
     if (response.status === 401 && typeof window !== "undefined") {
       window.location.href = "/login";
     }
-    throw new Error(`요청 실패: ${response.status}`);
+    const error = await response.json().catch(() => null);
+    throw new Error(typeof error?.message === 'string' ? error.message : `요청 실패: ${response.status}`);
   }
   return response;
 }
@@ -34,12 +36,23 @@ export async function fetchBoard(): Promise<TodayBoard> {
 export async function postIssue(
   projectSlug: string,
   title: string,
+  schedule?: IssueSchedule,
 ): Promise<Issue> {
   const response = await request("/api/issues", {
     method: "POST",
-    body: JSON.stringify({ projectSlug, title }),
+    body: JSON.stringify({ projectSlug, title, ...(schedule ? { schedule } : {}) }),
   });
   return response.json();
+}
+
+export async function fetchScheduleTasks(signal?: AbortSignal): Promise<ScheduleTask[]> {
+  return (await request('/api/board?view=gantt', { signal, cache: 'no-store' })).json();
+}
+
+export async function patchIssueSchedule(id: string, schedule: IssueSchedule): Promise<IssueSchedule> {
+  return (await request(`/api/issues/${encodeURIComponent(id)}`, {
+    method: 'PATCH', body: JSON.stringify({ schedule }),
+  })).json();
 }
 
 export async function postIssueBatch(

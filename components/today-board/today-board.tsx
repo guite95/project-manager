@@ -4,6 +4,8 @@ import { useConfirm } from '@/components/erp/confirm-dialog';
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IssuePool } from "@/components/today-board/issue-pool";
 import { TodayList } from "@/components/today-board/today-list";
+import { TaskSchedule } from '@/components/today-board/task-schedule';
+import { Tabs } from '@/components/erp/zespro';
 import {
   deleteIssueRequest,
   deleteProjectRequest,
@@ -71,6 +73,7 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
   const [includePersonalIssues, setIncludePersonalIssues] = useState(true);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const [view, setView] = useState<'list' | 'gantt'>('list');
 
   // 롤오버는 서버가 보드를 읽을 때 판정한다. 자정을 넘겨 켜둔 탭은 여기서
   // 정리되지 않고 다음에 열 때 정리된다 (타이머로 감시하지 않는다).
@@ -302,7 +305,13 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
 
   return (
     <div className="flex flex-col bg-[var(--bi-canvas)] px-4 py-5 sm:px-6 lg:min-h-0 lg:flex-1">
-      <div className="grid grid-cols-1 items-start gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch">
+      <Tabs items={[
+        { key: 'list', label: '목록', id: 'task-list-tab', panelId: 'task-list-panel' },
+        { key: 'gantt', label: '간트', id: 'task-gantt-tab', panelId: 'task-gantt-panel' },
+      ]} value={view} onChange={setView} ariaLabel="할 일 보기" className="mb-4 shrink-0" />
+      {view === 'gantt' ? <div id="task-gantt-panel" role="tabpanel" aria-labelledby="task-gantt-tab" className="min-h-0 flex-1 overflow-y-auto">
+        <TaskSchedule projects={projects} customProjects={customProjects} projectOrder={board.projectOrder} onChange={reload} />
+      </div> : <div id="task-list-panel" role="tabpanel" aria-labelledby="task-list-tab" className="grid grid-cols-1 items-start gap-6 lg:min-h-0 lg:flex-1 lg:grid-cols-2 lg:items-stretch">
         <TodayList
           date={today}
           items={filterTodayItems(board.today, projects, includePersonalIssues)}
@@ -328,7 +337,7 @@ export function TodayBoardView({ flowProjects, showPersonalIssues = true }: { fl
           onMoveProject={handleMoveProject}
           onDropIssuesToProject={handleDropIssuesToProject}
         />
-      </div>
+      </div>}
 
       <p aria-live="polite" className="sr-only">
         {announcement}

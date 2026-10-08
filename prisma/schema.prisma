@@ -25,7 +25,7 @@ model Issue {
   projectSlug String   @map("project_slug")
   title       String
   createdAt   DateTime @map("created_at")
-  /// "pool" | "today"
+  /// "pool" | "today" | "archive" (완료한 일정 보관)
   placement   String
   /// placement 가 "today" 일 때만 값이 있다. 로컬 기준 YYYY-MM-DD.
   todayDate   String?  @map("today_date")
@@ -34,9 +34,21 @@ model Issue {
   position    Int
 
   completions Completion[]
+  schedule    IssueSchedule?
 
   @@index([placement, position])
   @@map("issue")
+}
+
+/// 기존 이슈에 연결한 일정. 기간을 지워도 revision 행은 보존한다.
+model IssueSchedule {
+  issueId   String   @id @map("issue_id")
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  startDate String?  @map("start_date")
+  endDate   String?  @map("end_date")
+  revision  Int      @default(1)
+
+  @@map("issue_schedule")
 }
 
 /// 완료 이력. 제목과 프로젝트를 복사해 두어 원본 이슈를 지워도 이력이 남는다.

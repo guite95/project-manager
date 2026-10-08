@@ -11,6 +11,7 @@ import { ButtonsSection } from "./buttons-section";
 import { TokensSection } from "./tokens-section";
 import { TypographySection } from "./typography-section";
 import { TableFilterSection } from "./table-filter-section";
+import { GanttSection } from './gantt-section';
 
 export function UiReferenceGallery() {
   return (
@@ -25,6 +26,7 @@ export function UiReferenceGallery() {
       <ButtonsSection />
       <FormsSection />
       <DatePickerSection />
+      <GanttSection />
       <BadgesSection />
       <TableFilterSection />
       <FilterPanelSection />

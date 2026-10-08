@@ -10,6 +10,7 @@ import { prisma } from "../db.ts";
 import type { ProjectNote } from "../project-notes.ts";
 import { planRollover } from "../rollover.ts";
 import { PERSONAL_ISSUES_SLUG } from "../today-board.ts";
+import { parseIssueSchedule, type IssueSchedule } from '../task-schedule.ts';
 import { assertTaskIssues, assertTaskProject, mergeTaskSlugs, taskProjectFilter, visibleTaskSlugs, type TaskAccess } from './task-access.ts';
 import type {
   CustomProject,
@@ -87,13 +88,19 @@ async function runRollover(today: string, access?: TaskAccess): Promise<void> {
 
   if (!plan.returnToPool.length && !plan.remove.length) return;
 
-  await prisma.$transaction([
-    prisma.issue.updateMany({
-      where: { id: { in: plan.returnToPool }, projectSlug: taskProjectFilter(access) },
-      data: { placement: "pool", todayDate: null, done: false },
-    }),
-    prisma.issue.deleteMany({ where: { id: { in: plan.remove }, projectSlug: taskProjectFilter(access) } }),
-  ]);
+  await prisma.$transaction(async tx => {
+    const ids = JSON.stringify([...plan.returnToPool, ...plan.remove]);
+    await tx.$queryRaw`SELECT id FROM issue WHERE id IN (SELECT jsonb_array_elements_text(${ids}::jsonb)) ORDER BY id FOR UPDATE`;
+    const current = await tx.issue.findMany({
+      where: { id: { in: [...plan.returnToPool, ...plan.remove] }, placement: 'today', projectSlug: taskProjectFilter(access) },
+      include: { schedule: true },
+    });
+    const latest = planRollover(current.map(row => ({ ...row, todayDate: row.todayDate ?? today })), today);
+    const archived = current.filter(row => latest.remove.includes(row.id) && row.schedule?.startDate).map(row => row.id);
+    await tx.issue.updateMany({ where: { id: { in: latest.returnToPool } }, data: { placement: 'pool', todayDate: null, done: false } });
+    await tx.issue.updateMany({ where: { id: { in: archived } }, data: { placement: 'archive', todayDate: null } });
+    await tx.issue.deleteMany({ where: { id: { in: latest.remove.filter(id => !archived.includes(id)) } } });
+  });
 }
 
 export async function loadBoard(today: string, access?: TaskAccess): Promise<TodayBoard> {
@@ -135,8 +142,10 @@ export async function createIssue(input: {
   projectSlug: string;
   title: string;
   now: string;
+  schedule?: IssueSchedule;
 }, access?: TaskAccess): Promise<Issue> {
   assertTaskProject(input.projectSlug, access);
+  const schedule = input.schedule ? parseIssueSchedule(input.schedule) : null;
   return prisma.$transaction(async tx => {
     // 프로젝트 표시 변경과 이슈 추가가 교차할 때도 잠금 순서대로 판정한다.
     const projects = await tx.$queryRaw<{ showInTasks: boolean }[]>`SELECT show_in_tasks AS "showInTasks" FROM flow_project WHERE slug = ${input.projectSlug} FOR SHARE`;
@@ -151,6 +160,7 @@ export async function createIssue(input: {
         todayDate: null,
         done: false,
         position: await nextPosition("pool", tx),
+        ...(schedule?.startDate ? { schedule: { create: { startDate: schedule.startDate, endDate: schedule.endDate } } } : {}),
       },
     });
     return toIssue(row);
@@ -287,12 +297,17 @@ export async function setIssueDone(input: {
 }, access?: TaskAccess): Promise<void> {
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM issue WHERE id = ${input.id} FOR UPDATE`;
-    const issue = await tx.issue.findUnique({ where: { id: input.id } });
+    const issue = await tx.issue.findUnique({ where: { id: input.id }, include: { schedule: true } });
     if (!issue) return;
     assertTaskProject(issue.projectSlug, access);
+    if (issue.done === input.done) return;
     await tx.issue.update({
       where: { id: input.id },
-      data: { done: input.done },
+      data: {
+        done: input.done,
+        ...(input.done && issue.placement === 'pool' && issue.schedule?.startDate ? { placement: 'archive', todayDate: null } : {}),
+        ...(!input.done && issue.placement === 'archive' ? { placement: 'pool', position: await nextPosition('pool', tx) } : {}),
+      },
     });
 
     if (input.done) {

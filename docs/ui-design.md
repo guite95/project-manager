@@ -31,6 +31,7 @@
 | 여러 줄 입력 | `TextArea`와 `FieldLabel` 또는 연결된 기존 라벨 |
 | 체크박스 | `Checkbox`, 폼에서는 `CheckboxField` |
 | 날짜·기간 | `DatePicker`, `DateField`, `DateRangeFilter` |
+| 프로젝트 기간 차트 | `GanttChart`. 프로젝트별 전체 기간과 개별 할 일을 같은 날짜 축에 표시한다. |
 | 실행 버튼·아이콘 버튼 | `Button`. 이동 링크는 링크 의미를 유지하면서 `buttonClassName`을 사용한다. |
 | 검색·필터 | `ListToolbar`, `FilterBar`, `SegmentedFilter`, `FilterPanel`, `FilterChips` |
 | 표 | 열 정의 기반 `DataTable`, 기존 `thead`·`tbody`·`colgroup`을 조합할 때 `DataGridTable` |
@@ -61,3 +62,13 @@ node --experimental-strip-types --test lib/ui-reference/component-reuse.test.mjs
 CSS 초기화는 base 레이어에 두어 버튼 색상·글자 크기 유틸리티를 덮지 않게 한다. Zespro 스타일은 `--bi-*` 토큰을 참조한다. `bi-*` 공통 클래스는 대상을 명시한 컴포넌트에만 붙인다.
 
 검증은 관련 단위 테스트, 타입 검사와 빌드로 진행한다. 브라우저 검증은 프로젝트 규칙에 따라 명시적 요청이 있을 때 수행한다.
+
+## 할 일 간트 보기
+
+`/today`의 목록과 간트는 공통 `Tabs`로 전환하며 동일한 이슈를 사용한다. 주·월 날짜 축과
+고정된 프로젝트명 열을 두고, 좁은 화면에서는 차트 영역만 가로로 스크롤한다. 프로젝트는 처음에
+모두 접고 한 번에 하나만 펼친다. 펼침 상태는 저장하지 않는다. 미완료는 네이비, 완료는 성공색,
+마감일이 지난 미완료는 오류색을 사용하며 상태 텍스트와 접근성 이름을 함께 제공한다.
+기간 막대와 제목은 공통 `Button`, 완료 조작은 `Checkbox`, 기간 입력은 `DateField`와
+`FormModal`을 사용한다. 일정이 없는 이슈는 별도 목록에서 기간을 지정한다.
+레퍼런스의 `GanttSection`은 샘플 데이터로만 동작하며 API·DB 쓰기를 하지 않는다.

@@ -7,8 +7,8 @@ import { TodayBoardView } from "@/components/today-board/today-board";
 import { requireTaskAccess } from '@/lib/access/http';
 
 export const metadata: Metadata = {
-  title: "오늘의 할 일 — 프로젝트 매니지먼트",
-  description: "프로젝트별로 쌓인 이슈를 오늘 할 일로 옮겨 체크합니다.",
+  title: "할 일 — 프로젝트 매니지먼트",
+  description: "프로젝트별 할 일과 시작일·마감일을 목록과 간트차트로 관리합니다.",
 };
 
 export default async function TodayPage() {
@@ -19,8 +19,8 @@ export default async function TodayPage() {
     <div className="flex min-w-0 w-full flex-col lg:h-full">
       <div className="shrink-0">
         <PageHeader
-          description="프로젝트별 이슈를 오늘 할 일로 옮기고, 마친 업무를 체크하세요."
-          title="오늘의 할 일"
+          description="프로젝트별 할 일을 체크하고, 간트차트에서 시작일과 마감일을 관리하세요."
+          title="할 일"
           actions={<Link className={buttonClassName({ variant: "secondary" })} href="/today/history">완료 이력 보기</Link>}
         />
       </div>

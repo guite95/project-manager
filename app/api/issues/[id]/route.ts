@@ -7,15 +7,28 @@ import {
   setIssueTitle,
 } from "@/lib/server/board-store";
 import { todayDateString } from "@/lib/today-board";
-import { taskResponse } from '@/lib/access/http';
+import { jsonBody, taskResponse } from '@/lib/access/http';
+import { parseIssueSchedule, TaskScheduleError } from '@/lib/task-schedule';
+import { setIssueSchedule } from '@/lib/server/task-schedule-store';
 
 type Context = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: Context) {
   return taskResponse(async access => {
     const { id } = await context.params;
-    const body = await readJson(request);
+    const body = await readJson(request.clone());
     const today = todayDateString(new Date());
+
+    if (body.schedule !== undefined) {
+      await jsonBody(request);
+      if (Object.keys(body).length !== 1) return jsonError('일정 변경은 다른 수정과 별도로 저장해 주세요.', 400);
+      try {
+        return NextResponse.json(await setIssueSchedule(id, parseIssueSchedule(body.schedule), access));
+      } catch (error) {
+        if (error instanceof TaskScheduleError) return jsonError(error.message, error.status);
+        throw error;
+      }
+    }
 
     const title = typeof body.title === "string" ? body.title.trim() : undefined;
 
