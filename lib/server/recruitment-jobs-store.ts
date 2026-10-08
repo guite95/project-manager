@@ -21,6 +21,9 @@ export async function getRecruitmentJob(id: string): Promise<JobDetail | null> {
 export async function deleteRecruitmentJob(id: string) {
   return store().remove(requireJobId(id));
 }
+export async function completeRecruitmentJobCoverLetter(id: string) {
+  return store().completeCoverLetter(requireJobId(id));
+}
 export async function requestJobCollection() {
   return store().requestManual();
 }

@@ -32,9 +32,9 @@ export function RecruitmentJobs() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
   const [detailError, setDetailError] = useState('');
-  const [deleteError, setDeleteError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [notice, setNotice] = useState('');
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [mutation, setMutation] = useState<{ id: string; action: 'delete' | 'complete' } | null>(null);
   const [refresh, setRefresh] = useState(0);
   const listVersion = useRef(0);
   const mutating = useRef(false);
@@ -97,26 +97,33 @@ export function RecruitmentJobs() {
     return () => controller.abort();
   }, [selectedId, refresh]);
 
-  async function remove(job: JobSummary) {
+  async function updateJob(job: JobSummary, action: 'delete' | 'complete') {
     if (mutating.current) return;
-    if (!await confirm({ message: `“${job.title}” 공고를 삭제할까요?\n\n동일한 원문으로 확인된 다른 플랫폼의 공고도 함께 삭제됩니다. 다시 수집돼도 표시하지 않으며, 삭제는 되돌릴 수 없습니다.`, tone: "danger", confirmLabel: "삭제" }) || mutating.current) return;
+    if (action === 'delete' && !await confirm({ message: `“${job.title}” 공고를 삭제할까요?\n\n동일한 원문으로 확인된 다른 플랫폼의 공고도 함께 삭제됩니다. 다시 수집돼도 표시하지 않으며, 삭제는 되돌릴 수 없습니다.`, tone: "danger", confirmLabel: "삭제" })) return;
+    if (mutating.current) return;
     mutating.current = true;
     ++listVersion.current;
-    setDeleting(job.id);
-    setDeleteError('');
+    setMutation({ id: job.id, action });
+    setActionError('');
     setNotice('');
     try {
-      const result = await responseJson<{ deletedIds?: string[] }>(await fetch(`/api/recruitment/jobs/${job.id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: '{}' }));
-      const deletedIds = new Set([job.id, ...(result.deletedIds ?? [])]);
-      setData(current => current ? { ...current, items: current.items.filter(item => !deletedIds.has(item.id) && (item.source !== job.source || item.url !== job.url)) } : null);
+      const result = await responseJson<{ deletedIds?: string[]; hiddenIds?: string[] }>(await fetch(`/api/recruitment/jobs/${job.id}`, {
+        method: action === 'delete' ? 'DELETE' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(action === 'delete' ? {} : { userState: 'COVER_LETTER_WRITTEN' }),
+      }));
+      const hiddenIds = new Set([job.id, ...(result.deletedIds ?? result.hiddenIds ?? [])]);
+      setData(current => current ? { ...current, items: current.items.filter(item => !hiddenIds.has(item.id) && (item.source !== job.source || item.url !== job.url)) } : null);
       setSelectedId(null);
       setDetail(null);
-      setNotice('삭제했습니다. 동일 원문으로 확인된 공고는 다른 플랫폼에서 수집돼도 표시하지 않습니다.');
+      setNotice(action === 'delete'
+        ? '삭제했습니다. 동일 원문으로 확인된 공고는 다른 플랫폼에서 수집돼도 표시하지 않습니다.'
+        : '자소서 작성 완료로 표시했습니다. 공고 내용은 보관하며, 같은 원문의 공고는 다시 수집돼도 목록에 표시하지 않습니다.');
     } catch (failure) {
-      setDeleteError(failure instanceof Error ? failure.message : '삭제하지 못했습니다. 다시 시도해 주세요.');
+      setActionError(failure instanceof Error ? failure.message : '공고를 처리하지 못했습니다. 다시 시도해 주세요.');
     } finally {
       mutating.current = false;
-      setDeleting(null);
+      setMutation(null);
       setRefresh(value => value + 1);
     }
   }
@@ -126,17 +133,17 @@ export function RecruitmentJobs() {
   return <div className="space-y-4 p-4 md:p-6">
     <JobCollectionControl onComplete={() => setRefresh(value => value + 1)} />
     <p className="text-xs leading-5 text-[var(--bi-muted)]">신입~3년 경력으로 지원 가능한 IT 공고를 표시합니다. 보안 직무·단순 사무·출장 수리·현장 복구와 경력 조건을 확인하지 못한 공고는 제외합니다.</p>
-    <p className="text-xs leading-5 text-[var(--bi-muted)]">같은 원문 주소로 확인된 공고는 플랫폼이 달라도 한 항목으로 묶고, 삭제도 함께 적용합니다. 원문 연결을 확인하지 못한 공고는 별도 항목입니다.</p>
+    <p className="text-xs leading-5 text-[var(--bi-muted)]">자소서를 작성한 공고는 ‘자소서 작성 완료’를 누르면 목록에서 숨겨집니다. 같은 원문으로 확인된 공고에는 삭제·작성 완료를 함께 적용합니다.</p>
     <form className="flex flex-wrap items-end gap-3" onSubmit={event => { event.preventDefault(); setPage(1); setQuery(search.trim()); }}>
       <label className="grid min-w-48 flex-1 gap-1.5 text-xs font-medium">공고 검색
         <TextInput type="search" maxLength={150} value={search} onChange={event => setSearch(event.target.value)} placeholder="공고명, 회사, 지역" />
       </label>
       <div className="min-w-40"><SelectField label="채용 사이트" value={source} onChange={value => { setSource(value); setPage(1); }} options={[{ value: '', label: '전체 사이트' }, ...Object.entries(jobSources).map(([value, label]) => ({ value, label }))]} /></div>
       <div className="min-w-36"><SelectField label="모집 상태" value={status} onChange={value => { setStatus(value); setPage(1); }} options={[{ value: '', label: '전체 상태' }, ...Object.entries(jobStatuses).map(([value, label]) => ({ value, label }))]} /></div>
-      <Button type="submit" disabled={!!deleting}>검색</Button>
-      <Button variant="secondary" disabled={loading || !!deleting} onClick={() => setRefresh(value => value + 1)}>새로고침</Button>
+      <Button type="submit" disabled={!!mutation}>검색</Button>
+      <Button variant="secondary" disabled={loading || !!mutation} onClick={() => setRefresh(value => value + 1)}>새로고침</Button>
     </form>
-    {(error || deleteError) && <p role="alert" className="text-sm text-[var(--bi-error)]">{deleteError || error}</p>}
+    {(error || actionError) && <p role="alert" className="text-sm text-[var(--bi-error)]">{actionError || error}</p>}
     {notice && <p role="status" className="text-sm text-[var(--bi-accent)]">{notice}</p>}
     <div className="flex items-center justify-between gap-3 text-xs text-[var(--bi-muted)]">
       <p role="status">{loading && !data ? '공고를 불러오는 중…' : data ? `검색 결과 ${data.total.toLocaleString()}건 · 처음 수집한 날짜순` : '목록을 불러오지 못했습니다.'}</p>
@@ -145,7 +152,7 @@ export function RecruitmentJobs() {
     <div className={`grid min-w-0 gap-4 ${selectedId ? 'xl:grid-cols-2' : ''}`}>
       <section aria-label="채용공고 목록" aria-busy={loading} className="min-w-0">
         {data?.items.length === 0 && <div className="rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-8 text-center text-sm text-[var(--bi-muted)]">
-          {query || source || status ? '검색 조건에 맞는 공고가 없습니다.' : '현재 수집한 공고 중 직군·경력 조건이 확인된 공고가 없습니다.'}
+          {query || source || status ? '검색 조건에 맞는 공고가 없습니다.' : '현재 목록에 표시할 공고가 없습니다.'}
         </div>}
         <ul className="space-y-3">
           {data?.items.map(job => <li key={job.id} className={`min-w-0 rounded border bg-[var(--bi-card-bg)] ${selectedId === job.id ? 'border-[var(--bi-accent)]' : 'border-[var(--bi-border)]'}`}>
@@ -158,17 +165,18 @@ export function RecruitmentJobs() {
             </button>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--bi-border)] px-4 py-2">
               <span className="text-xs text-[var(--bi-muted)]">마감 {date(job.deadline)}</span>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 <a href={job.url} target="_blank" rel="noopener noreferrer" className={buttonClassName({ variant: 'ghost', className: 'min-h-11' })} aria-label={`${job.title} 원문 보기 (새 탭)`}>원문 보기 ↗</a>
-                <Button variant="danger-ghost" className="min-h-11" loading={deleting === job.id} disabled={!!deleting} aria-label={`${job.title} 삭제`} onClick={() => void remove(job)}>삭제</Button>
+                <Button variant="secondary" className="min-h-11" loading={mutation?.id === job.id && mutation.action === 'complete'} disabled={!!mutation} aria-label={`${job.title} 자소서 작성 완료`} onClick={() => void updateJob(job, 'complete')}>자소서 작성 완료</Button>
+                <Button variant="danger-ghost" className="min-h-11" loading={mutation?.id === job.id && mutation.action === 'delete'} disabled={!!mutation} aria-label={`${job.title} 삭제`} onClick={() => void updateJob(job, 'delete')}>삭제</Button>
               </div>
             </div>
           </li>)}
         </ul>
         {data && data.total > 0 && <nav aria-label="공고 페이지" className="mt-4 flex items-center justify-center gap-3">
-          <Button variant="secondary" disabled={loading || !!deleting || page <= 1} onClick={() => setPage(value => value - 1)}>이전</Button>
+          <Button variant="secondary" disabled={loading || !!mutation || page <= 1} onClick={() => setPage(value => value - 1)}>이전</Button>
           <span className="text-xs">{page} / {pages}</span>
-          <Button variant="secondary" disabled={loading || !!deleting || page >= pages} onClick={() => setPage(value => value + 1)}>다음</Button>
+          <Button variant="secondary" disabled={loading || !!mutation || page >= pages} onClick={() => setPage(value => value + 1)}>다음</Button>
         </nav>}
       </section>
       <section ref={detailPanel} tabIndex={-1} id="recruitment-job-detail" aria-label="선택한 공고 본문" aria-busy={detailLoading} hidden={!selectedId} className="order-first min-w-0 self-start rounded border border-[var(--bi-border)] bg-[var(--bi-card-bg)] p-4 focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] xl:sticky xl:top-4 xl:order-last">
