@@ -73,8 +73,14 @@ function Samples() {
         <ExecutiveDashboard><ExecutiveDashboardNotice tone="info">샘플 지표입니다.</ExecutiveDashboardNotice><ExecutiveDashboardKpiGrid columns={3}><ExecutiveDashboardKpi label="전체 작업" value="2건" /><ExecutiveDashboardKpi label="진행 중" value="2건" /><ExecutiveDashboardKpi label="완료" value="0건" /></ExecutiveDashboardKpiGrid></ExecutiveDashboard>
         <div className="flex flex-wrap gap-4">
           <AppSidebar title="단일 사이드바" groups={[{ title: "작업", items: [{ label: "레퍼런스", href: "#zespro-components", active: true }] }]} />
-          <DualSidebar groups={[{ railLabel: "작업", title: "이중 사이드바", items: [{ label: "레퍼런스", href: "#zespro-components", active: true }] }]} />
+          <div className="h-64 w-[295px] max-w-full">
+            <DualSidebar defaultPanelCollapsed groups={[
+              { railLabel: "작업", title: "작업 메뉴", description: "펼치기 버튼으로 고정", items: [{ label: "레퍼런스", href: "#zespro-components", active: true }] },
+              { railLabel: "자료", title: "자료 메뉴", items: [{ label: "자료 예시", href: "#zespro-components" }] },
+            ]} />
+          </div>
         </div>
+        <p className="text-xs text-[var(--bi-muted)]">접힌 레일에 마우스를 올리거나 키보드 포커스를 두면 메뉴가 잠깐 열립니다. 패널 오른쪽 위 버튼으로 펼친 상태를 고정하고, Esc로 임시 메뉴를 닫습니다.</p>
         <SplitLoginLayout className="zespro-login-preview" heroMedia={<div className="h-full bg-[var(--bi-accent)]" />} heroContent={<p className="text-white">프로젝트 관리</p>} brand="분할 로그인 레이아웃" footer="레이아웃 예시">
           <p>로그인 폼을 넣을 수 있는 영역입니다.</p>
         </SplitLoginLayout>

@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { HiOutlineBriefcase, HiOutlineDocumentText, HiOutlineCog, HiOutlineChip, HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineChevronDoubleLeft, HiOutlineChevronDoubleRight, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
+import { HiOutlineBriefcase, HiOutlineDocumentText, HiOutlineCog, HiOutlineChip, HiOutlineBookOpen, HiOutlineCalendar, HiOutlineOfficeBuilding, HiOutlineUser, HiOutlineMenu, HiOutlineX, HiChevronRight } from "react-icons/hi";
 import type { FlowNavigationProject } from "@/lib/navigation/flow-navigation";
 import { useSharedPreferences } from "@/components/erp/use-shared-preferences";
+import { useSidebarPanel } from "@/components/erp/use-sidebar-panel";
+import { SidebarPanelToggle } from "@/components/erp/sidebar-panel-toggle";
 import { resolveFocusTrapTarget } from "@/components/erp/focus-trap";
 import { type UiPreferences } from "@/lib/ui-preferences";
 import { PersonalProjectGroupsProvider } from "@/components/personal/project-groups";
@@ -74,11 +76,15 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<Section | null>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
-  const panel = useRef<HTMLElement>(null);
   const canCustomizeNavigation = account.role === "OWNER";
   const prefs = useSharedPreferences("navigation", initialPreferences, undefined, { readOnly: !canCustomizeNavigation });
   const collapsed = canCustomizeNavigation && prefs.values.panelCollapsed === true;
-  const section = allSections.find(item => item.id === currentSection);
+  const sidebar = useSidebarPanel<Section>({
+    collapsed, activeId: currentSection, routeKey: pathname, enabled: !mobileOpen,
+    onCollapsedChange: panelCollapsed => prefs.update({ panelCollapsed }),
+  });
+  const panel = sidebar.panelRef;
+  const section = availableSections.find(item => item.id === sidebar.shownId);
 
   useEffect(() => { setProjectOrder(initialProjectOrder); }, [initialProjectOrder]);
   useEffect(() => { setNavigationProjects(flowProjects); }, [flowProjects]);
@@ -143,7 +149,6 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
     };
   }, [mobileOpen]);
 
-  const togglePanel = () => prefs.update({ panelCollapsed: !collapsed });
   const renderSectionMenu = (id: Section, inline = false) => {
     if (id === "projects" || id === "personal") return (
       <AppSidebar key={id} personal={id === "personal"} flowProjects={navigationProjects.filter(project => isPersonalProject(project) === (id === "personal"))} projectOrder={projectOrder}
@@ -173,8 +178,9 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
     );
   };
   const renderRailLink = (item: (typeof allSections)[number]) => (
-    <Link key={item.id} href={workspaceSectionHref(item.id, account.role, navigationProjects)} title={item.title} aria-current={currentSection === item.id ? "true" : undefined}
-      className={`flex min-h-[64px] flex-col items-center justify-center gap-1 border-l-[3px] px-1 py-2 text-center text-[11px] leading-[1.35] transition-colors duration-[var(--bi-motion-fast)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${currentSection === item.id
+    <Link key={item.id} {...sidebar.railProps(item.id)} href={workspaceSectionHref(item.id, account.role, navigationProjects)} title={item.title}
+      aria-current={currentSection === item.id ? "true" : undefined} aria-controls="workspace-panel" aria-expanded={sidebar.shownId === item.id && (!collapsed || sidebar.peeking)}
+      className={`flex min-h-[64px] flex-col items-center justify-center gap-1 border-l-[3px] px-1 py-2 text-center text-[11px] leading-[1.35] transition-colors duration-[var(--bi-motion-fast)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-white ${sidebar.shownId === item.id
         ? "border-[var(--bi-rail-indicator)] bg-[var(--bi-rail-active)] font-semibold text-white"
         : "border-transparent hover:bg-[var(--bi-rail-active)] hover:text-white"}`}>
       <item.icon size={20} aria-hidden /><span className="max-w-10 whitespace-pre-line break-keep">{item.railTitle}</span>
@@ -193,14 +199,11 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
         <Link href="/flows" className="truncate text-[13px] font-bold">{brand}</Link>
       </header>
 
+      <div {...sidebar.rootProps} className="relative flex min-h-0 shrink-0 md:h-full">
       <nav aria-label="주 메뉴" className="hidden w-[60px] shrink-0 flex-col bg-[var(--bi-rail-bg)] text-[var(--bi-rail-muted)] md:flex">
         <Link href="/flows" aria-label={brand} title={brand} className="flex h-14 shrink-0 items-center justify-center border-b border-white/10 text-white">
           <span className="flex h-9 w-9 items-center justify-center rounded-[3px] border border-white/30 text-[12px] font-bold">PM</span>
         </Link>
-        {collapsed ? <button type="button" onClick={togglePanel} disabled={!prefs.ready} aria-label="사이드바 펼치기" title="사이드바 펼치기"
-          className="flex min-h-14 shrink-0 flex-col items-center justify-center gap-1 border-b border-white/10 text-[10px] hover:bg-[var(--bi-rail-active)] hover:text-white focus-visible:outline-2 focus-visible:outline-white">
-          <HiOutlineChevronDoubleRight size={16} aria-hidden />펼치기
-        </button> : null}
         <div className="min-h-0 flex-1 overflow-y-auto">
           {primarySections.map(renderRailLink)}
         </div>
@@ -218,7 +221,7 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
 
       <aside id="workspace-panel" ref={panel} role={mobileOpen ? "dialog" : undefined} aria-modal={mobileOpen ? true : undefined}
         aria-label={mobileOpen ? "탐색 메뉴" : "상세 사이드바"}
-        className={`${mobileOpen ? "fixed inset-0 z-50 flex" : "hidden"} ${collapsed ? "md:hidden" : "md:flex"} min-h-0 flex-col border-r border-[var(--bi-border)] bg-[var(--bi-sidebar-bg)] md:static md:z-auto md:w-[235px] md:shrink-0`}
+        className={`${mobileOpen ? "fixed inset-0 z-50 flex" : "hidden"} ${sidebar.peeking ? "md:absolute md:inset-y-0 md:left-[60px] md:z-40 md:flex md:shadow-lg" : collapsed ? "md:hidden" : "md:static md:z-auto md:flex"} min-h-0 flex-col border-r border-[var(--bi-border)] bg-[var(--bi-sidebar-bg)] md:w-[235px] md:shrink-0`}
         onClick={event => {
           if (mobileOpen && event.target instanceof Element && event.target.closest("a[href]")) setMobileOpen(false);
         }}>
@@ -258,15 +261,14 @@ export function WorkspaceShell({ brand, flowProjects, initialProjectOrder, initi
               <h2 className="m-0 truncate text-[14px] font-semibold">{section?.title ?? "접근 가능한 메뉴 없음"}</h2>
               <p className="mt-0.5 mb-0 truncate text-[11px] text-[var(--bi-muted)]">{section?.description ?? "관리자에게 프로젝트 권한을 요청하세요."}</p>
             </div>
-            {canCustomizeNavigation ? <button type="button" onClick={togglePanel} disabled={!prefs.ready} aria-label="사이드바 접기" title="사이드바 접기"
-              className="hidden h-8 w-8 shrink-0 items-center justify-center rounded text-[var(--bi-muted)] hover:bg-[var(--bi-sidebar-active)] focus-visible:outline-2 focus-visible:outline-[var(--bi-accent)] md:flex">
-              <HiOutlineChevronDoubleLeft size={14} aria-hidden />
-            </button> : null}
+            {canCustomizeNavigation ? <SidebarPanelToggle collapsed={collapsed} panelId="workspace-panel"
+              onClick={sidebar.togglePanel} disabled={!prefs.ready} /> : null}
           </header>
           {section ? renderSectionMenu(section.id) : <p className="m-4 text-[12px] leading-5 text-[var(--bi-muted)]">현재 접근 가능한 프로젝트가 없습니다.</p>}
         </>}
         <SidebarAccount account={account} />
       </aside>
+      </div>
 
       <main id="workspace-content" tabIndex={-1} inert={mobileOpen} className="min-h-0 min-w-0 flex-1 overflow-y-auto focus-visible:-outline-offset-2">{children}</main>
       {prefs.error ? <p role="alert" className="fixed right-3 bottom-3 left-3 z-[60] m-0 rounded border border-[var(--bi-error)] bg-[var(--bi-card-bg)] px-3 py-2 text-[12px] text-[var(--bi-error)] md:left-auto md:max-w-sm">{prefs.error}</p> : null}

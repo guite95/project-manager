@@ -251,6 +251,7 @@
   --pds-dual-sidebar-rail-active-fg: #ffffff;
   --pds-dual-sidebar-rail-active-bg: rgb(255 255 255 / 13%);
   --pds-dual-sidebar-header-height: 56px;
+  position: relative;
   display: flex;
   flex-shrink: 0;
   height: 100%;
@@ -340,12 +341,22 @@
 .pds-dual-sidebar__panel-header {
   display: flex;
   height: var(--pds-dual-sidebar-header-height);
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
   justify-content: center;
   padding: 0 16px;
   border-bottom: 1px solid var(--pds-border);
 }
+.pds-dual-sidebar__panel[hidden] { display: none; }
+.pds-dual-sidebar__panel.is-peek {
+  position: absolute;
+  inset-block: 0;
+  left: var(--pds-dual-sidebar-rail-width);
+  z-index: 40;
+  box-shadow: 6px 0 16px rgb(0 0 0 / 12%);
+}
+.pds-dual-sidebar__panel-heading { min-width: 0; flex: 1; }
 .pds-dual-sidebar__panel-title {
   color: var(--pds-fg);
   font-size: 14px;

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useId, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
+import { useSidebarPanel } from "../../use-sidebar-panel";
+import { SidebarPanelToggle } from "../../sidebar-panel-toggle";
 import { cx } from "../lib/class-names";
 import { ExternalLinkIcon } from "./icons";
 
@@ -67,6 +69,8 @@ export type DualSidebarProps = {
   renderLink?: (props: DualSidebarRenderLinkProps) => ReactNode;
   /** 서브 패널 최하단 슬롯 — 제품명·데모 문구 등 */
   footer?: ReactNode;
+  defaultPanelCollapsed?: boolean;
+  onPanelCollapsedChange?: (collapsed: boolean) => void;
   railLabel?: string;
   panelLabel?: string;
   badgeAriaLabel?: (count: number) => string;
@@ -109,6 +113,8 @@ export function DualSidebar({
   onItemSelect,
   renderLink,
   footer,
+  defaultPanelCollapsed = false,
+  onPanelCollapsedChange,
   railLabel = "업무 영역",
   panelLabel = "세부 메뉴",
   badgeAriaLabel = (count) => `대기 ${count}건`,
@@ -116,12 +122,8 @@ export function DualSidebar({
   className,
   style
 }: DualSidebarProps) {
-  const [manualIndex, setManualIndex] = useState<number | null>(null);
-
-  // 경로가 바뀌면 수동 선택을 해제해 현재 화면이 속한 영역이 열리게 한다
-  useEffect(() => {
-    setManualIndex(null);
-  }, [currentPath]);
+  const panelId = useId();
+  const [collapsed, setCollapsed] = useState(defaultPanelCollapsed);
 
   const pathIndex = groups.findIndex((group) =>
     sectionsOf(group).some((section) => section.items.some((item) => isItemActive(item, currentPath)))
@@ -135,11 +137,15 @@ export function DualSidebar({
             (prefix) => currentPath === prefix || currentPath.startsWith(`${prefix.replace(/\/$/, "")}/`)
           )
         );
-  const activeIndex = manualIndex ?? (pathIndex >= 0 ? pathIndex : prefixIndex >= 0 ? prefixIndex : 0);
+  const sidebar = useSidebarPanel({
+    collapsed, activeId: pathIndex >= 0 ? pathIndex : prefixIndex >= 0 ? prefixIndex : 0, routeKey: currentPath,
+    onCollapsedChange: value => { setCollapsed(value); onPanelCollapsedChange?.(value); },
+  });
+  const activeIndex = sidebar.shownId ?? 0;
   const activeGroup = groups[activeIndex];
 
   return (
-    <div className={cx("pds", "pds-dual-sidebar", className)} style={style}>
+    <div {...sidebar.rootProps} className={cx("pds", "pds-dual-sidebar", className)} style={style}>
       <nav className="pds-dual-sidebar__rail" aria-label={railLabel}>
         {brand ? <div className="pds-dual-sidebar__brand">{brand}</div> : null}
         {groups.map((group, index) => {
@@ -153,12 +159,15 @@ export function DualSidebar({
           return (
             <button
               key={group.id ?? index}
+              {...sidebar.railProps(index)}
               type="button"
               className={cx("pds-dual-sidebar__rail-button", active && "is-active")}
               title={title}
               aria-current={active ? "true" : undefined}
+              aria-controls={panelId}
+              aria-expanded={active && (!collapsed || sidebar.peeking)}
               onClick={() => {
-                setManualIndex(index);
+                sidebar.railProps(index).onClick();
                 onGroupSelect?.(group);
               }}
             >
@@ -178,12 +187,16 @@ export function DualSidebar({
         })}
       </nav>
 
-      <div className="pds-dual-sidebar__panel">
+      <div ref={element => { sidebar.panelRef.current = element; }} id={panelId} hidden={collapsed && !sidebar.peeking}
+        className={cx("pds-dual-sidebar__panel", sidebar.peeking && "is-peek")}>
         <header className="pds-dual-sidebar__panel-header">
-          <div className="pds-dual-sidebar__panel-title">{activeGroup?.title}</div>
-          {activeGroup?.description ? (
-            <div className="pds-dual-sidebar__panel-description">{activeGroup.description}</div>
-          ) : null}
+          <div className="pds-dual-sidebar__panel-heading">
+            <div className="pds-dual-sidebar__panel-title">{activeGroup?.title}</div>
+            {activeGroup?.description ? (
+              <div className="pds-dual-sidebar__panel-description">{activeGroup.description}</div>
+            ) : null}
+          </div>
+          <SidebarPanelToggle collapsed={collapsed} panelId={panelId} label={panelLabel} onClick={sidebar.togglePanel} />
         </header>
 
         <nav className="pds-dual-sidebar__panel-nav" aria-label={panelLabel}>
