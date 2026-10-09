@@ -61,6 +61,8 @@ export async function careerHttp(request:Request):Promise<Response> {
     const code=error instanceof CareerError?error.code:'CAREER_SERVICE_UNAVAILABLE';
     const unauthorized=['MCP_UNAUTHORIZED','MCP_SCOPE_REQUIRED','MCP_OWNER_REQUIRED'].includes(code);
     const metadata=new URL(METADATA_PATH,config.resource).href;
-    return Response.json({error:code},{status:unauthorized?401:code==='MCP_ORIGIN_DENIED'?403:503,headers:{...privateHeaders,...(unauthorized?{'WWW-Authenticate':`Bearer resource_metadata="${metadata}", scope="career:read"`}:{})}});
+    // MCP clients prioritize challenge scopes over their configured scopes. Request the
+    // read/write career workflow at connection; paid evaluation remains a separate scope.
+    return Response.json({error:code},{status:unauthorized?401:code==='MCP_ORIGIN_DENIED'?403:503,headers:{...privateHeaders,...(unauthorized?{'WWW-Authenticate':`Bearer resource_metadata="${metadata}", scope="career:read career:write"`}:{})}});
   }
 }

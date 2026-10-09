@@ -44,9 +44,12 @@ export function oauthRouteKind(path:string,method:string):'server'|'browser'|'au
   return null;
 }
 export function validateOAuthQuery(query:URLSearchParams,config:OAuthConfig|null):URLSearchParams {
-  const allowed=['client_id','redirect_uri','response_type','resource','scope','state','code_challenge','code_challenge_method','ui_locales'];
+  const allowed=['client_id','redirect_uri','response_type','resource','scope','state','code_challenge','code_challenge_method','ui_locales','prompt'];
   const client=config?findOAuthClient(config,query.get('client_id')):undefined;
   if(!config||!client||[...query.keys()].some(k=>!allowed.includes(k)||query.getAll(k).length!==1)||query.toString().length>2500||query.get('redirect_uri')!==client.redirectUri||query.get('resource')!==config.resource||query.get('response_type')!=='code'||query.get('code_challenge_method')!=='S256'||!/^[-_A-Za-z0-9]{43}$/.test(query.get('code_challenge')??'')||!query.get('state')||query.get('state')!.length>512)throw new Error('OAUTH_INVALID_REQUEST');
+  // MCP clients request explicit consent for offline access. Never allow silent/login prompt variants.
+  const prompt=query.get('prompt');
+  if(prompt!==null&&prompt!=='consent')throw new Error('OAUTH_INVALID_REQUEST');
   // Locale hints never affect identity or grants; preserve the exact browser-bound query.
   const locales=query.get('ui_locales');
   if(locales!==null&&(locales.length>128||locales.trim()!==locales||!/^[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*(?: [A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*)*$/.test(locales)))throw new Error('OAUTH_INVALID_REQUEST');

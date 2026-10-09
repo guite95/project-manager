@@ -89,6 +89,13 @@ DB의 암호화된 키를 읽는 데 OAuth 비밀이 필요하므로 이 비밀�
 
 완전한 비대화형 프로세스는 첫 동의를 대신할 수 없다. 만료·폐기로 refresh가 불가능하면 다시 명시적으로 로그인한다. 이 서버는 device grant도 제공하지 않으므로 `--flow device`는 사용하지 않는다. 선택한 `27890` 포트를 Hermes 내부에서 쓸 수 없으면 서버의 정확한 callback과 Hermes의 `redirect_port`를 함께 바꾼다. Desktop/dashboard의 callback 자동 대체나 임의 포트 선택을 사용하지 않는다.
 
+Hermes가 사용하는 MCP SDK는 `offline_access` 요청에 `prompt=consent`를 자동 추가한다.
+authorize에서는 이 값만 허용하며 중복, `none`, 다른 prompt 조합은 거부한다. 원래 요청은
+재작성하지 않고 기존 OWNER 확인·브라우저 결합·PKCE 검사를 모두 유지한다.
+SDK는 서버의 401 challenge scope를 클라이언트 설정보다 우선하므로 초기 challenge에는
+`career:read career:write`를 안내한다. 실제 권한은 소유자 동의 후에만 발급되며 기존 읽기 전용
+토큰을 승격하지 않는다. `career:evaluate`는 이 기본 연결 권한에 포함하지 않는다.
+
 추가 클라이언트 설정은 최대 8개이며 ID·정규화된 callback은 기존 ChatGPT 등록을 포함해 중복될 수 없다. 추가 callback은 정확한 HTTPS URL 또는 `http://127.0.0.1:<1024..65535>/callback`만 허용한다. wildcard, userinfo, query, fragment, localhost 별칭과 URL 정규화에 의존하는 표현은 거부한다. 잘못된 JSON·알 수 없는 필드·빈 문자열은 설정 전체를 fail-closed 처리한다. 미설정과 `[]`만 추가 클라이언트가 없는 상태다.
 
 authorize·consent·code/refresh·revoke와 MCP JWT에서 등록 ID를 검사한다. `client_id`와 `azp`가 함께 있으면 같은 ID여야 한다. 클라이언트 ID와 다른 클라이언트의 callback/code/refresh를 섞을 수 없다. 설정에서 클라이언트를 제거하면 그 ID의 기존 access JWT·refresh·진행 중인 동의도 즉시 거부한다. DB의 provider 이력은 삭제하지 않으므로 같은 ID를 재등록하면 아직 유효한 grant를 다시 사용할 수 있다. 영구 폐기가 필요하면 제거 전에 연결 관리에서 epoch를 올려 **모든 앱**의 연결을 해제한다. callback만 바꾸는 것은 기존 토큰의 폐기를 의미하지 않는다.
