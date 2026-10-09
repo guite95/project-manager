@@ -35,6 +35,11 @@ export function RecruitmentWorkspace({ kind }: { kind: RecruitmentKind }) {
   const dirty = editing && JSON.stringify(draft) !== JSON.stringify(document);
 
   useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (id && /^[A-Za-z0-9_-]{1,100}$/.test(id)) setSelectedId(id);
+  }, []);
+
+  useEffect(() => {
     const abort = new AbortController();
     let pending = false;
     const refresh = async () => {

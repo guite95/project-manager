@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { todayInSeoul } from '../format/date-time.ts';
+import { PERSONAL_ISSUES_SLUG } from '../today-board.ts';
 
 export function parseTodayOptions(args: string[]) {
   if (!args.length) return { status: 'all' };
@@ -13,6 +14,7 @@ export async function readTodayTasks(db: Pick<PrismaClient, 'issue'>, input: Ret
   const tasks = await db.issue.findMany({
     where: {
       placement: 'today',
+      projectSlug: { not: PERSONAL_ISSUES_SLUG },
       OR: [{ todayDate: { gte: date } }, { todayDate: null }],
       ...(input.status === 'all' ? {} : { done: input.status === 'done' }),
     },
@@ -40,6 +42,7 @@ export function parseTaskOptions(projectSlug: string, args: string[]) {
 
 /** 개인 SSH CLI 전용 읽기. 보드 rollover나 완료 이력 변경을 수행하지 않는다. */
 export async function readProjectTasks(db: Pick<PrismaClient, 'flowProject' | 'issue'>, input: ReturnType<typeof parseTaskOptions>) {
+  if (input.projectSlug === PERSONAL_ISSUES_SLUG) throw new Error('개인 업무는 웹 화면 또는 MCP에서 조회해 주세요.');
   const project = await db.flowProject.findUnique({
     where: { slug: input.projectSlug },
     select: { slug: true, title: true, scope: true, showInTasks: true },

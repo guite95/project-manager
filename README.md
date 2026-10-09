@@ -78,6 +78,10 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 
 일반 Chat용 자기소개서 품질 평가·Jev MCP와 플러그인 후보는 [구현 및 연결 준비](docs/career-quality-runtime.md)를 본다. 기본 비활성이며 OAuth·Vault 설정, 배포와 플러그인 게시는 별도 작업이다.
 
+채용 → **지원 현황**에서 공고·경험·자소서·포트폴리오·개인 할 일을 지원 건 하나로 연결한다.
+개인 업무는 웹과 Career MCP로 관리하며 프로젝트 CLI에는 노출하지 않는다.
+[지원 현황과 MCP](docs/recruitment-applications.md), [Hermes OAuth 연결](docs/career-oauth.md)을 참고한다.
+
 ## 라우트
 
 | 경로 | 내용 |
@@ -95,6 +99,7 @@ pg_dump project_management | gzip > backup-$(date +%F).sql.gz
 | `/flows/common/notes` | 명심할 점 — 4단계 우선순위와 서버 자동 저장. 공통 프로젝트에만 있다 |
 | `/personal` | 개인 프로젝트 목록 — 프로젝트별 자료·기록·회의록 |
 | `/records/work-records` | Git 기반 프로젝트별 기여 요약·기간·대표 근거·최근 커밋 |
+| `/recruitment/applications` | OWNER 전용 지원 현황·자료 연결·개인 할 일·변경 이력과 복원 |
 | `/recruitment/jobs` | OWNER 전용 수집 공고 목록·검색·상세·삭제 및 재수집 제외 |
 | `/portfolio` | 채용 하위의 포트폴리오 기본 화면 — 편집 기능은 추후 추가 |
 | `/guide` | 플로우차트 작성 가이드 (MDX) |

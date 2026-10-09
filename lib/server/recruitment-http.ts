@@ -6,6 +6,7 @@ import { RecruitmentError } from '../recruitment.ts';
 export async function requireRecruitmentOwner() {
   const actor = await requireActor();
   if (actor.role !== 'OWNER') throw new AccessError('채용 자료는 소유자만 사용할 수 있습니다.', 403);
+  return actor;
 }
 export async function recruitmentResponse(action: () => Promise<Response>) {
   try {

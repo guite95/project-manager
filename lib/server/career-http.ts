@@ -2,7 +2,7 @@ import {createRemoteJWKSet} from 'jose';
 import {WebStandardStreamableHTTPServerTransport} from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import {CareerError, fail, hash} from '../career/core.ts';
 import {careerConfig, authorizeCareer, METADATA_PATH, SCOPES, verifyRequestOrigin} from '../career/auth.ts';
-import {createCareerMcp, type CareerServices} from '../career/mcp.ts';
+import {createCareerMcp, type CareerServices, type CareerApplicationServices} from '../career/mcp.ts';
 import {createJevProvider} from '../career/jev.ts';
 import {prisma} from '../db.ts';
 import {getRuntimeSecret} from './runtime-secrets.mjs';
@@ -12,6 +12,8 @@ import {getCareerSession,requireCareerOwner,startCareerEvaluation,rewriteCareerE
 import {throttle} from '../access/store.ts';
 import {assertCareerOAuthEpoch} from './career-oauth-store.ts';
 import {careerAuthorization} from '../career/authorization-context.ts';
+import {listApplications,getApplication,saveApplication,listApplicationTasks,saveApplicationTask,listApplicationHistory,restoreApplication,saveApplicationDraft} from './recruitment-applications-store.ts';
+import {listRecruitmentJobs,getRecruitmentJob} from './recruitment-jobs-store.ts';
 
 const privateHeaders={'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow'};
 const keySets=new Map<string,ReturnType<typeof createRemoteJWKSet>>();
@@ -40,7 +42,18 @@ export async function careerHttp(request:Request):Promise<Response> {
       rewrite:request=>rewriteCareerEvaluation(actor.ownerId,request,provider()),
       session:id=>getCareerSession(actor.ownerId,id),save:(id,input)=>saveCareerDraft(actor.ownerId,id,input),
     };
-    const server=createCareerMcp(actor,services);
+    const applications:CareerApplicationServices={
+      listApplications:query=>listApplications(actor.ownerId,query),
+      getApplication:id=>getApplication(actor.ownerId,id),
+      saveApplication:(id,application,expectedRevision,requestId)=>saveApplication(actor.ownerId,id,application,expectedRevision,requestId),
+      listApplicationTasks:applicationId=>listApplicationTasks(actor.ownerId,applicationId),
+      saveApplicationTask:(id,task,expectedRevision,requestId)=>saveApplicationTask(actor.ownerId,id,task,expectedRevision,requestId),
+      listApplicationHistory:id=>listApplicationHistory(actor.ownerId,id),
+      restoreApplication:(id,revision,expectedRevision,requestId)=>restoreApplication(actor.ownerId,id,revision,expectedRevision,requestId),
+      saveApplicationDraft:(id,input)=>saveApplicationDraft(actor.ownerId,id,input),
+      listJobs:listRecruitmentJobs,getJob:getRecruitmentJob,
+    };
+    const server=createCareerMcp(actor,services,applications);
     const transport=new WebStandardStreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true,maxRequestBodySize:350000});
     try {await server.connect(transport);const response=await careerAuthorization.run(actor,()=>transport.handleRequest(request));for(const [key,value]of Object.entries(privateHeaders))response.headers.set(key,value);return response;}
     finally {await server.close();}

@@ -9,7 +9,7 @@ import type {AccessUser,Prisma} from '@prisma/client';
 import {prisma} from '../db.ts';
 import {tokenHash,throttle} from '../access/store.ts';
 import {SESSION_COOKIE_NAME} from '../session.ts';
-import {AUTH_PATH,OAUTH_SCOPES,oauthRouteKind,readOAuthConfig,validateOAuthQuery,type OAuthConfig} from '../career/oauth-policy.ts';
+import {AUTH_PATH,OAUTH_SCOPES,findOAuthClient,oauthRouteKind,readOAuthConfig,validateOAuthQuery,type OAuthClient,type OAuthConfig} from '../career/oauth-policy.ts';
 import {getRuntimeSecret} from './runtime-secrets.mjs';
 import {lockOAuthOwner,revokeInTransaction} from './career-oauth-store.ts';
 
@@ -37,13 +37,14 @@ export async function careerConnectionView(requestHeaders:Headers,stage:'login'|
     if(!owner?.active||owner.role!=='OWNER')return null;
     let signedIn=false;
     try{await requireWebOwner(prisma,request,owner);signedIn=true;}catch{}
-    if(stage==='manage')return signedIn?{signedIn,scopes:[] as string[],redirectUri:config.redirectUri}:null;
+    if(stage==='manage')return signedIn?{signedIn,scopes:[] as string[],redirectUri:config.redirectUri,clientName:'취업 지원 도구'}:null;
     const token=cookie(request,flowCookie);
     if(!/^[A-Za-z0-9_-]{43}$/.test(token))return null;
     const flow=await prisma.careerOAuthRequest.findUnique({where:{id:hash(token)}});
     if(!flow||flow.stage!==stage||flow.expiresAt<=new Date()||stage==='consent'&&(!signedIn||flow.ownerEpoch!==owner.oauthEpoch))return null;
     const query=validateOAuthQuery(new URLSearchParams(flow.query),config);
-    return {signedIn,scopes:query.get('scope')!.split(' '),redirectUri:config.redirectUri};
+    const client=findOAuthClient(config,query.get('client_id'))!;
+    return {signedIn,scopes:query.get('scope')!.split(' '),redirectUri:client.redirectUri,clientName:client.name};
   }catch{return null;}
 }
 
@@ -81,14 +82,14 @@ function provider(tx:Prisma.TransactionClient,config:OAuthConfig,owner:AccessUse
   });
 }
 
-async function provision(tx:Prisma.TransactionClient,config:OAuthConfig,owner:AccessUser){
+async function provision(tx:Prisma.TransactionClient,config:OAuthConfig,owner:AccessUser,registered:OAuthClient){
   const now=new Date();
   await tx.careerOAuthUser.upsert({where:{id:owner.id},create:{id:owner.id,name:'Owner',email:`${hash(owner.id)}@owner.invalid`,emailVerified:false,createdAt:now,updatedAt:now},update:{}});
-  const client={clientId:config.clientId,name:'ChatGPT career tools',userId:owner.id,redirectUris:[config.redirectUri],scopes:OAUTH_SCOPES,grantTypes:['authorization_code','refresh_token'],responseTypes:['code'],tokenEndpointAuthMethod:'none',requirePKCE:true,skipConsent:false,disabled:false,updatedAt:now};
-  await tx.careerOAuthClient.upsert({where:{clientId:config.clientId},create:{id:hash(config.clientId),createdAt:now,...client},update:client});
+  const client={clientId:registered.clientId,name:registered.name,userId:owner.id,redirectUris:[registered.redirectUri],scopes:OAUTH_SCOPES,grantTypes:['authorization_code','refresh_token'],responseTypes:['code'],tokenEndpointAuthMethod:'none',requirePKCE:true,skipConsent:false,disabled:false,updatedAt:now};
+  await tx.careerOAuthClient.upsert({where:{clientId:registered.clientId},create:{id:hash(registered.clientId),createdAt:now,...client},update:client});
   const resource={identifier:config.resource,name:'Private career MCP',accessTokenTtl:900,refreshTokenTtl:30*86400,signingAlgorithm:'ES256',allowedScopes:OAUTH_SCOPES,disabled:false,updatedAt:now};
   await tx.careerOAuthResource.upsert({where:{identifier:config.resource},create:{id:hash(config.resource),createdAt:now,...resource},update:resource});
-  await tx.careerOAuthClientResource.upsert({where:{clientId_resourceId:{clientId:config.clientId,resourceId:config.resource}},create:{id:hash(config.clientId+' '+config.resource),clientId:config.clientId,resourceId:config.resource,createdAt:now},update:{}});
+  await tx.careerOAuthClientResource.upsert({where:{clientId_resourceId:{clientId:registered.clientId,resourceId:config.resource}},create:{id:hash(registered.clientId+' '+config.resource),clientId:registered.clientId,resourceId:config.resource,createdAt:now},update:{}});
 }
 
 async function boundedBody(request:Request){
@@ -130,10 +131,11 @@ export async function careerOAuthHttp(request:Request):Promise<Response>{
       if(request.headers.get('content-type')?.split(';')[0]!=='application/x-www-form-urlencoded')fail();
       const form=new URLSearchParams(raw);
       const allowed=url.pathname.endsWith('/token')?['client_id','grant_type','code','code_verifier','redirect_uri','resource','refresh_token','scope']:['client_id','token','token_type_hint'];
-      if([...form.keys()].some(k=>!allowed.includes(k)||form.getAll(k).length!==1)||form.get('client_id')!==config.clientId)fail();
+      const client=findOAuthClient(config,form.get('client_id'));
+      if(!client||[...form.keys()].some(k=>!allowed.includes(k)||form.getAll(k).length!==1))fail();
       if(url.pathname.endsWith('/token')){
         if(!['authorization_code','refresh_token'].includes(form.get('grant_type')??'')||form.get('resource')!==config.resource)fail();
-        if(form.get('grant_type')==='authorization_code'&&form.get('redirect_uri')!==config.redirectUri)fail();
+        if((form.get('grant_type')==='authorization_code'||form.has('redirect_uri'))&&form.get('redirect_uri')!==client.redirectUri)fail();
         if(form.has('scope')&&form.get('scope')!.split(' ').some(s=>!OAUTH_SCOPES.includes(s)))fail();
       }
     }
@@ -160,8 +162,8 @@ export async function careerOAuthHttp(request:Request):Promise<Response>{
       }
       if(url.pathname===AUTH_PATH+'/owner-bridge'){
         if(Object.keys(body).length||!validFlow||flow.stage!=='login')fail();
-        validateOAuthQuery(new URLSearchParams(flow.query),fixed);
-        await provision(tx,fixed,owner);
+        const query=validateOAuthQuery(new URLSearchParams(flow.query),fixed);
+        await provision(tx,fixed,owner,findOAuthClient(fixed,query.get('client_id'))!);
         const auth=provider(tx,fixed,owner);
         const bridge=await auth.handler(new Request(request.url,{method:'POST',headers:request.headers,body:'{}'}));
         if(!bridge.ok)throw new Error('OAUTH_BRIDGE_FAILED');
@@ -172,6 +174,7 @@ export async function careerOAuthHttp(request:Request):Promise<Response>{
       }
       if(url.pathname===AUTH_PATH+'/oauth2/consent'){
         if(!validFlow||flow.stage!=='consent'||flow.ownerEpoch!==owner.oauthEpoch||typeof body.oauth_query!=='string'||hash(body.oauth_query)!==flow.consentHash||typeof body.accept!=='boolean'||Object.keys(body).some(k=>!['accept','oauth_query'].includes(k)))fail();
+        validateOAuthQuery(new URLSearchParams(flow.query),fixed);
         // Single-use, browser-bound context; Better Auth additionally validates its query signature.
         await tx.careerOAuthRequest.delete({where:{id:flow.id}});
       }

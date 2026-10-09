@@ -1,14 +1,14 @@
-# 기존 OWNER 계정으로 ChatGPT 연결
+# 기존 OWNER 계정으로 ChatGPT·Hermes 연결
 
-Better Auth / OAuth Provider **1.7.6**을 서버 내부에서 운영하는 구현이다. 카카오·Auth0 가입, 소셜 로그인, 새 비밀번호는 없다. 일반 웹 ChatGPT용 연결이며 Work를 요구하지 않는다. 운영 DB 적용·시크릿 등록·앱 배포·ChatGPT 연결·플러그인 교체는 별도 단계이며, 실제 적용 상태는 아래 서버 준비 이력을 따른다.
+Better Auth / OAuth Provider **1.7.6**을 서버 내부에서 운영하는 구현이다. 카카오·Auth0 가입, 소셜 로그인, 새 비밀번호는 없다. 기존 일반 웹 ChatGPT 연결을 유지하며, 명시적으로 설정한 추가 public client만 허용한다. 운영 DB 적용·시크릿 등록·앱 배포·클라이언트 설정·실제 연결·플러그인 교체는 별도 단계이며, 실제 적용 상태는 아래 서버 준비 이력을 따른다.
 
 ## 인증 흐름
 
-1. ChatGPT가 PKCE S256, 고정 client/callback/resource와 요청 scope를 보내면 서버가 5분짜리 연결 요청을 보관한다. 무작위 HttpOnly/Secure/SameSite=Lax 쿠키의 해시로 브라우저에 결합한다.
+1. 등록된 앱이 PKCE S256, 클라이언트별 고정 client/callback/resource와 요청 scope를 보내면 서버가 5분짜리 연결 요청을 보관한다. 무작위 HttpOnly/Secure/SameSite=Lax 쿠키의 해시로 브라우저에 결합한다.
 2. `/career/connect`에서 기존 소유자 계정으로 로그인하거나 현재 소유자 세션으로 계속한다. bootstrap·ADMIN·MEMBER는 불가하다. 기존 로그인 API의 비밀번호 검사·로그인 제한을 그대로 사용한다.
 3. 소유자 확인 POST에서만 OAuth 내부 사용자/등록 client/resource를 준비한다. 사용자 비밀번호를 복사하지 않는다. 필수 이메일은 비전달용 `@owner.invalid` 내부 식별자이며 검증 완료나 실제 이메일로 취급하지 않는다.
-4. `/career/consent`에 실제 요청 권한을 표시한다. Better Auth의 서명 쿼리와 브라우저 결합 해시를 모두 확인하며 동의 요청은 일회용이다. 기존에 동의한 권한은 provider가 재사용할 수 있지만 새 연결은 항상 현재 PM 소유자 확인을 거친다.
-5. ChatGPT 서버가 code/PKCE를 교환한다. 접근 토큰은 ES256 JWT, 최대 15분이다. `offline_access`가 있으면 회전하는 갱신 토큰으로 원래 연결 시점부터 최대 30일 동안 유지된다. MCP는 JWT 만료 외에 원래 grant 만료도 검사한다.
+4. `/career/consent`에 등록된 앱 이름과 실제 요청 권한을 표시한다. Better Auth의 서명 쿼리와 브라우저 결합 해시를 모두 확인하며 동의 요청은 일회용이다. 기존에 동의한 권한은 provider가 재사용할 수 있지만 새 연결은 항상 현재 PM 소유자 확인을 거친다.
+5. 요청한 앱이 code/PKCE를 교환한다. 접근 토큰은 ES256 JWT, 최대 15분이다. `offline_access`가 있으면 회전하는 갱신 토큰으로 원래 연결 시점부터 최대 30일 동안 유지된다. MCP는 JWT 만료 외에 원래 grant 만료도 검사한다.
 
 권한은 `career:read`, `career:evaluate`, `career:write`, `offline_access`이다. 모든 연결에 read가 필요하다. OAuth 동의와 Jev 외부 전송/비용 동의, 최종 문서 저장 동의는 별개다.
 
@@ -16,7 +16,7 @@ Better Auth / OAuth Provider **1.7.6**을 서버 내부에서 운영하는 구�
 
 - `access_user`가 신원 원본이다. 추가 `oauth_epoch`는 비밀번호·역할·활성 상태 변경 시 DB trigger로 증가한다. 연결 해제도 증가시키고 기존 동의를 제거한다.
 - 기존 OWNER 행 잠금으로 발급/갱신/폐기를 직렬화한다. OAuth 세션은 생성 시 세대를 고정하므로 refresh로 새 세대에 승격되지 않는다. MCP는 매 요청, 후속 Jev 호출 전 및 잠긴 문서 저장 트랜잭션 안에서 현재 세대를 검사한다. 이미 전송된 외부 호출은 취소·환불할 수 없다.
-- `/career/connection`의 연결 해제는 기존 접근·갱신 토큰을 모두 무효화한다. 일반 PM 웹 로그아웃은 OAuth 연결을 끊지 않으며, 어느 쪽도 저장된 취업 문서를 삭제하지 않는다.
+- `/career/connection`의 연결 해제는 ChatGPT·Hermes 등 모든 클라이언트의 기존 접근·갱신 토큰을 모두 무효화한다. 일반 PM 웹 로그아웃은 OAuth 연결을 끊지 않으며, 어느 쪽도 저장된 취업 문서를 삭제하지 않는다.
 - 표준 `/oauth2/revoke`는 refresh token을 폐기할 수 있지만 이미 발급한 JWT는 최대 15분 동안 남는다. provider는 JWT access token 자체의 revoke를 지원하지 않는다. 즉시 양쪽을 폐기하려면 소유자 화면의 연결 해제를 사용한다.
 - `career_oauth_*` 테이블은 OAuth 상태 전용이다. refresh token은 provider의 해시 저장 기본값을 사용한다. 서명 private key는 `CAREER_OAUTH_SECRET`으로 암호화되며 JWKS에는 public key만 노출한다. 키 회전 30일, 이전 공개키 유지 유예 1일이다.
 - 공개 endpoint는 정확한 경로/메서드만 허용한다. 공개 가입·client 등록·DCR/CIMD·userinfo·일반 Better Auth session API는 열지 않는다. 토큰 교환은 브라우저 쿠키를 무시하며, bridge/동의/연결 해제는 현재 PM 세션 및 정확한 Origin을 요구한다.
@@ -32,6 +32,7 @@ Better Auth / OAuth Provider **1.7.6**을 서버 내부에서 운영하는 구�
 | CAREER_MCP_OWNER_ID | 실제 활성 OWNER의 기존 DB ID |
 | CAREER_MCP_CLIENT_ID | ChatGPT 연결에 등록할 고정 client ID |
 | CAREER_OAUTH_REDIRECT_URI | ChatGPT에서 확인한 정확한 `https://chatgpt.com/connector/oauth/...` callback |
+| CAREER_OAUTH_ADDITIONAL_CLIENTS | 선택적 `{clientId,name,redirectUri}` JSON 배열. 미설정 또는 `[]`이면 기존 ChatGPT만 허용 |
 | CAREER_OAUTH_SECRET | 별도 무작위 32바이트 이상 서버 비밀; Vault runtime 파일 |
 | OPENROUTER_API_KEY | 기존 Jev 키; Vault runtime 파일 |
 
@@ -52,6 +53,47 @@ Better Auth / OAuth Provider **1.7.6**을 서버 내부에서 운영하는 구�
 6. 실제 OWNER 로그인 → 동의 → MCP 목록/문서 읽기 → 별도 동의된 Jev 호출 → 새 대화에서 연결 재사용 → 연결 해제 후 거부를 확인한다. 그 후에 플러그인 교체/게시한다.
 
 DB의 암호화된 키를 읽는 데 OAuth 비밀이 필요하므로 이 비밀을 임의로 교체하면 기존 키/세션이 동작하지 않는다. 회전·복구는 백업과 재연결을 포함한 별도 운영 작업으로 다룬다.
+
+## Hermes 사전 등록과 격리 컨테이너 연결
+
+2026-10-09 [Hermes 공식 MCP 문서](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp)와 [설정 레퍼런스](https://hermes-agent.nousresearch.com/docs/reference/mcp-config-reference/)를 확인했다. Hermes는 `oauth.client_id`로 사전 등록한 public client를 사용하고 PKCE 코드 교환·refresh를 수행할 수 있다. [공식 OAuth 소스](https://github.com/NousResearch/hermes-agent/blob/main/tools/mcp_oauth.py)의 `_maybe_preregister_client`, `_build_client_metadata`, `_resolve_redirect_uri`와 [provider 구성](https://github.com/NousResearch/hermes-agent/blob/main/tools/mcp_oauth_provider.py)의 `build_provider_kwargs`가 이 설정을 처리한다. 따라서 DCR·CIMD·장기 API 키를 추가하지 않는다. 설치된 Hermes 버전에 해당 옵션과 paste-back 지원이 있는지 연결 전에 확인한다.
+
+다음 예시는 운영에 적용하지 않은 설정 안내다. 추가 DB migration은 필요하지 않으며 운영 환경 반영·앱 배포·실제 OWNER 로그인은 별도 작업이다.
+
+1. 기존 ChatGPT ID·callback을 그대로 둔 채 PM 서버에 다음 **비밀이 아닌** JSON 설정을 전달한다. 컨테이너 환경에도 이 변수가 전달되어야 한다.
+
+   ```dotenv
+   CAREER_OAUTH_ADDITIONAL_CLIENTS=[{"clientId":"career-hermes","name":"Hermes","redirectUri":"http://127.0.0.1:27890/callback"}]
+   ```
+
+2. Hermes를 실행하는 동일 프로필의 `config.yaml`에 다음 서버를 추가한다. 실제 MCP 요청 URL과 PM의 resource 값은 정확히 같아야 한다. `client_secret`을 넣지 않는다. 평가는 별도 기능이므로 필요한 경우에만 `career:evaluate` scope를 추가한다.
+
+   ```yaml
+   mcp_servers:
+     career:
+       url: https://project.dev-uk.shop/mcp/career
+       auth: oauth
+       oauth:
+         client_id: career-hermes
+         client_name: Hermes
+         token_endpoint_auth_method: none
+         redirect_host: 127.0.0.1
+         redirect_port: 27890
+         scope: "career:read career:write offline_access"
+         timeout: 300
+   ```
+
+3. 같은 컨테이너·같은 OS 사용자·같은 Hermes 프로필에서 대화형 터미널로 `hermes mcp login career`를 실행한다. 표시된 authorize URL을 개인 브라우저에서 열고 PM OWNER로 로그인·동의한다. 서버의 연결 요청은 5분, 발급 코드는 2분 동안만 유효하다.
+4. 컨테이너에 포트를 공개하지 않은 환경에서는 브라우저의 `http://127.0.0.1:27890/callback?...` 접속 실패가 예상된다. 주소창의 전체 콜백 URL 또는 `?code=...&state=...` 부분을 **진행 중인 Hermes 터미널의 paste-back 프롬프트에만** 붙여 넣는다. Hermes가 받은 state를 확인하고 보관 중인 PKCE verifier로 교환한다. 이 일회용 URL을 채팅·문서·로그에 남기거나 다른 세션에서 사용하지 않는다. 컨테이너 포트 게시, 방화벽 개방, VM의 사설망 차단 해제는 필요하지 않다.
+5. 토큰은 Hermes의 해당 프로필 저장소에만 유지한다. 문서상 기본 위치는 `~/.hermes/mcp-tokens/`, 파일 권한은 `0600`이다. 프로필/컨테이너를 바꾸면 캐시 위치도 달라질 수 있으므로 gateway와 로그인 프로세스가 같은 프로필을 써야 한다. 이후 gateway를 재시작하거나 세션에서 `/reload-mcp`로 갱신하고 읽기 호출을 검증한다. 쓰기는 명시적 요청과 requestId/revision 계약을 따른다.
+
+완전한 비대화형 프로세스는 첫 동의를 대신할 수 없다. 만료·폐기로 refresh가 불가능하면 다시 명시적으로 로그인한다. 이 서버는 device grant도 제공하지 않으므로 `--flow device`는 사용하지 않는다. 선택한 `27890` 포트를 Hermes 내부에서 쓸 수 없으면 서버의 정확한 callback과 Hermes의 `redirect_port`를 함께 바꾼다. Desktop/dashboard의 callback 자동 대체나 임의 포트 선택을 사용하지 않는다.
+
+추가 클라이언트 설정은 최대 8개이며 ID·정규화된 callback은 기존 ChatGPT 등록을 포함해 중복될 수 없다. 추가 callback은 정확한 HTTPS URL 또는 `http://127.0.0.1:<1024..65535>/callback`만 허용한다. wildcard, userinfo, query, fragment, localhost 별칭과 URL 정규화에 의존하는 표현은 거부한다. 잘못된 JSON·알 수 없는 필드·빈 문자열은 설정 전체를 fail-closed 처리한다. 미설정과 `[]`만 추가 클라이언트가 없는 상태다.
+
+authorize·consent·code/refresh·revoke와 MCP JWT에서 등록 ID를 검사한다. `client_id`와 `azp`가 함께 있으면 같은 ID여야 한다. 클라이언트 ID와 다른 클라이언트의 callback/code/refresh를 섞을 수 없다. 설정에서 클라이언트를 제거하면 그 ID의 기존 access JWT·refresh·진행 중인 동의도 즉시 거부한다. DB의 provider 이력은 삭제하지 않으므로 같은 ID를 재등록하면 아직 유효한 grant를 다시 사용할 수 있다. 영구 폐기가 필요하면 제거 전에 연결 관리에서 epoch를 올려 **모든 앱**의 연결을 해제한다. callback만 바꾸는 것은 기존 토큰의 폐기를 의미하지 않는다.
+
+이 단계는 서버·클라이언트의 설정 계약과 로컬 테스트를 제공한다. 실제 Hermes 버전, 브라우저 승인, 컨테이너 캐시 유지와 운영 MCP 실연결은 검증하지 않았다.
 
 ## 서버 준비 이력 — 2026-09-29
 

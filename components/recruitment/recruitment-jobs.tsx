@@ -186,6 +186,7 @@ export function RecruitmentJobs() {
         {selected && <>
           <h3 className="break-words text-base font-semibold">{selected.title}</h3>
           <p className="mt-1 text-sm">{selected.company || '회사 미확인'}</p>
+          <a href={`/recruitment/applications?jobId=${encodeURIComponent(selected.id)}`} className={buttonClassName({ className: 'mt-3' })}>이 공고로 지원 건 만들기</a>
           <dl className="my-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-xs leading-5">
             <dt className="text-[var(--bi-muted)]">고용 형태</dt><dd>{selected.employmentType.join(' · ') || '미확인'}</dd>
             <dt className="text-[var(--bi-muted)]">학력</dt><dd>{selected.education || '미확인'}</dd>

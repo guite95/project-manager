@@ -12,6 +12,7 @@ import { planRollover } from "../rollover.ts";
 import { PERSONAL_ISSUES_SLUG } from "../today-board.ts";
 import { parseIssueSchedule, type IssueSchedule } from '../task-schedule.ts';
 import { assertTaskIssues, assertTaskProject, mergeTaskSlugs, taskProjectFilter, visibleTaskSlugs, type TaskAccess } from './task-access.ts';
+import { privateCareerTaskIds } from './recruitment-task-privacy.ts';
 import type {
   CustomProject,
   Issue,
@@ -96,7 +97,8 @@ async function runRollover(today: string, access?: TaskAccess): Promise<void> {
       include: { schedule: true },
     });
     const latest = planRollover(current.map(row => ({ ...row, todayDate: row.todayDate ?? today })), today);
-    const archived = current.filter(row => latest.remove.includes(row.id) && row.schedule?.startDate).map(row => row.id);
+    const careerTasks = await privateCareerTaskIds(tx, latest.remove);
+    const archived = current.filter(row => latest.remove.includes(row.id) && (row.schedule?.startDate || careerTasks.has(row.id))).map(row => row.id);
     await tx.issue.updateMany({ where: { id: { in: latest.returnToPool } }, data: { placement: 'pool', todayDate: null, done: false } });
     await tx.issue.updateMany({ where: { id: { in: archived } }, data: { placement: 'archive', todayDate: null } });
     await tx.issue.deleteMany({ where: { id: { in: latest.remove.filter(id => !archived.includes(id)) } } });
@@ -218,6 +220,9 @@ export async function movePoolIssues(input:
     }
 
     if (input.action === "project") {
+      if (input.projectSlug !== PERSONAL_ISSUES_SLUG && (await privateCareerTaskIds(tx, ids)).size) {
+        throw new IssueBatchError('지원 관련 할 일은 개인 영역에 보관해야 합니다.');
+      }
       const changed = rows.filter((row) => row.projectSlug !== input.projectSlug).map((row) => row.id);
       if (!changed.length) return 0;
       const result = await tx.issue.updateMany({
@@ -301,11 +306,12 @@ export async function setIssueDone(input: {
     if (!issue) return;
     assertTaskProject(issue.projectSlug, access);
     if (issue.done === input.done) return;
+    const preserve = Boolean(issue.schedule?.startDate) || (await privateCareerTaskIds(tx, [issue.id])).has(issue.id);
     await tx.issue.update({
       where: { id: input.id },
       data: {
         done: input.done,
-        ...(input.done && issue.placement === 'pool' && issue.schedule?.startDate ? { placement: 'archive', todayDate: null } : {}),
+        ...(input.done && issue.placement === 'pool' && preserve ? { placement: 'archive', todayDate: null } : {}),
         ...(!input.done && issue.placement === 'archive' ? { placement: 'pool', position: await nextPosition('pool', tx) } : {}),
       },
     });
